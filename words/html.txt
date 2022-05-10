@@ -6,8 +6,16 @@ Wordpress has empowered a self-publishing revolution on the web, but to tell you
 
 I was looking at static site generator to manage the content here, but it seems like they just outsource the bloat and overhead to your computer. They also seem to be designed for use by engineers. In any case it was not immediately obvious how to setup any of the ones I tried (with github pages, where this site lives).
 
-So I guess I'm happy to just create files and upload them. I really wanted to write in html - and while I can do that, there is suprisingly no program for mac that can create, open and edit a single html file in WYSYWIG. So I'll need to write html in code, which is also fine, just a little tedius. Which is why this is a text file. 
+So I guess I'm happy to just create files and upload them. I really wanted to write in html - and while I can do that, there is suprisingly no program for mac that can create, open and edit a single html file in WYSIWYG. So I'll need to write html in code, which is also fine, just a little tedius. Which is why this is a text file. 
 
 I guess this amounts to a rant. I've often wondered about the future of the web - teh current level of bloat doesn't seem sustainable, and it's not conducive to democratised publishing because of the various layers technologies and specialisations required. We should be able to write and push content simply.
 
 Text files aren't great, because you can't format text, or include images. They are the world's most compatible digital format though. 
+
+There is no reason for me to be writing this. Anyone who really cares about publishing on the web is building their own site generator. I fall into this very small group of non-programmers who love the web. Most of the people who think like me are over 60, having been in their 30s in the aforementioned glory days of HTML self-publishing. And those folk are watching the world turn on it's chaotic axis with a feeling of detatched hopelessness and wonder - and probably consider the new ways to publish to the web as improvements. 
+
+But they'd be wrong. We need some kind of middle ground. I was suprised even with how hard it was to setup github pages - again, built by engineers for engineers. I guess they assume, pretty rightly so, that everyone else will use wordpress, or similar. Again, i'm a small dot in a venn diagram. STORY OF MY LIFE. 
+
+But yeah, it would be nice to have a geocities like service where you could edit HTML in WYSIWYG format, connect a domain, ignore javascript and other thigns that make interactive websites possible, but really just get in the way of self-publishing. 
+
+This was absolutely a rant and a disorganised one at that. Not to mention purposeless as I'm not going to do anything about this.
