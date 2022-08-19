@@ -18,3 +18,5 @@ BlankSlate is distributed under the terms of the GNU GPL
 */
 
 body {max-width: 700px; margin: 5% auto;}
+
+.home h1.entry-title {display: none!important;}
