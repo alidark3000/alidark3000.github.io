@@ -17,6 +17,59 @@ BlankSlate WordPress Theme © 2011-2022 TidyThemes
 BlankSlate is distributed under the terms of the GNU GPL
 */
 
-body {max-width: 700px; margin: 5% auto; padding: 1em;}
+body {max-width: 700px; margin: 5% auto; padding: 1em; font-family: sans-serif; font-size: 1.2em; line-height: 1.2; }
 
+article {font-family: serif;}
+
+h1, h2, h3, h4, caption, figcaption, .entry-meta {
+	font-family: sans-serif;
+}
+
+#header h1 {
+	margin-bottom: 0;
+}
+
+h2, h3, h4 {margin-top: 2em;}
+
+nav ul {
+	list-style-type: none;
+	padding-inline-start: 0px; 
+	margin-block-start: 0;
+	margin-top: 0;
+}
+nav ul li {
+	display: inline;
+	padding-right: 1em;
+}
+
+.single nav {
+	display: none;
+}
+
+header#header {
+	margin-bottom: 3em;
+}
+#footer {
+	margin-top: 3em;
+	font-size: 0.8em;
+}
 .home h1.entry-title {display: none!important;}
+
+header#header h1 {
+	font-size: 1em;
+}
+.home header#header h1 {
+	font-size: 2em;
+}
+
+.current_page_item {display: none; }
+
+.site-title {font-weight: bold;}
+
+
+
+a, a:visited {color: black; }
+
+a:hover {text-decoration-color: red; }
+
+
