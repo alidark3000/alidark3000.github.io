@@ -17,6 +17,6 @@ BlankSlate WordPress Theme © 2011-2022 TidyThemes
 BlankSlate is distributed under the terms of the GNU GPL
 */
 
-body {max-width: 700px; margin: 5% auto;}
+body {max-width: 700px; margin: 5% auto; padding: 1em;}
 
 .home h1.entry-title {display: none!important;}
