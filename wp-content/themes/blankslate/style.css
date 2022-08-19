@@ -16,3 +16,5 @@ Text Domain: blankslate
 BlankSlate WordPress Theme © 2011-2022 TidyThemes
 BlankSlate is distributed under the terms of the GNU GPL
 */
+
+body {max-width: 700px; margin: 5% auto;}
