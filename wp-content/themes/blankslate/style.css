@@ -17,7 +17,7 @@ BlankSlate WordPress Theme © 2011-2022 TidyThemes
 BlankSlate is distributed under the terms of the GNU GPL
 */
 
-body {max-width: 40em; margin: 0 auto; padding: 1em; font-family: sans-serif; font-size: 1.2em; line-height: 1.2; }
+body {max-width: 40em; margin: 0 auto; padding: 1em; font-family: menlo, lucida console, monospace, sans-serif; font-size: 1.2em; line-height: 1.2; }
 
 
 
@@ -25,15 +25,27 @@ body {max-width: 40em; margin: 0 auto; padding: 1em; font-family: sans-serif; fo
 @media (min-width:1700px) {body { font-size: 1.4em;}}
 @media (min-width:2000px) {body { font-size: 1.5em;}}
 
-article {font-family: georgia, serif;line-height: 1.5;}
-@media (max-width:700px) {body, article { line-height: 1.2;}}
-h1, h2, h3, h4, caption, figcaption, .entry-meta {
-	font-family: sans-serif;
+article {
+	line-height: 1.5;
 }
 
-h1, h2 { letter-spacing: -0.025em;}
+@media (max-width:700px) {body, article { line-height: 1.2;}}
+
+h1, h2, h3, h4, h5 {
+	font-size: 1em;
+}
+h2 { letter-spacing: -0.025em; }
+
+h2::before { content: "_";}
+h3::before { content: "__";}
+h4::before { content: "___";}
 
 h2, h3, h4 {margin-top: 2em; margin-bottom: 0em;}
+
+ h1 {text-transform: uppercase; text-decoration: underline;}
+
+ h2 {text-transform: uppercase;}
+
 
 nav ul {
 	list-style-type: none;
@@ -47,8 +59,8 @@ nav ul li {
 	font-size: 1em;
 }
 
-.entry-meta, caption, figcaption {
-	font-size: 0.8em;
+.entry-meta, caption, figcaption, .entry-footer, .entry-footer a, .entry-footer a:visited, #footer, #footer a, #footer a:visited {
+	color: #999;
 }
 
 .meta-sep { color: #d7d7d7; margin: 0 1em;}
@@ -59,7 +71,7 @@ nav ul li {
 
 header#header {
 	padding: 5% 0;
-	font-size: 0.8em;
+	
 	opacity: 0.5;
 	transition: all 0.2s ease-in-out;
 }
@@ -68,8 +80,7 @@ header#header:hover {
 }
 #footer {
 	margin-top: 3em;
-	font-size: 0.8em;
-	opacity: 0.5;
+
 }
 .home h1.entry-title {display: none!important;}
 .home h1 a, nav .current-menu-item a {text-decoration-color: red;}
@@ -86,7 +97,7 @@ header#header:hover {
 }
 
 h1.entry-title {
-	font-size: 2em;
+
 	margin-top: 0;
 }
 
