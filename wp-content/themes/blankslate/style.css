@@ -17,13 +17,13 @@ BlankSlate WordPress Theme © 2011-2022 TidyThemes
 BlankSlate is distributed under the terms of the GNU GPL
 */
 
-body {max-width: 40em; margin: 0 auto; padding: 1em; font-family: menlo, lucida console, monospace, sans-serif; font-size: 1.2em; line-height: 1.2; }
+body {max-width: 50em; margin: 0 auto; padding: 1em; font-family: menlo, lucida console, monospace, sans-serif; font-size: 1em; line-height: 1.2; }
 
 
 
-@media (min-width:1300px) {body { font-size: 1.3em;}}
-@media (min-width:1700px) {body { font-size: 1.4em;}}
-@media (min-width:2000px) {body { font-size: 1.5em;}}
+@media (min-width:1700px) {body { font-size: 1.1em;}}
+@media (min-width:2000px) {body { font-size: 1.2em;}}
+ @media (min-width:2400px) {body { font-size: 1.3em;}}
 
 article {
 	line-height: 1.5;
@@ -36,9 +36,11 @@ h1, h2, h3, h4, h5 {
 }
 h2 { letter-spacing: -0.025em; }
 
-h2::before { content: "_";}
-h3::before { content: "__";}
-h4::before { content: "___";}
+h2::before { content: "__";}
+h3::before { content: "____";}
+h4::before { content: "________";}
+h5::before { content: "______________";}
+
 
 h2, h3, h4 {margin-top: 2em; margin-bottom: 0em;}
 
