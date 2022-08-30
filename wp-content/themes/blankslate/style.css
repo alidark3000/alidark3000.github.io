@@ -21,13 +21,34 @@ body {max-width: 45em; margin: 0 auto; padding: 0 1.2em; font-family: sans-serif
 
 
 
+/* Styles for users who prefer dark mode at the OS level */
+@media (prefers-color-scheme: dark) {
+  /* defaults to dark theme */
+  body { 
+    color: #fff;
+    background: #333;
+  }
+	.entry-footer a, .entry-footer a:visited, #footer a, #footer a:visited {
+		color: #d7d7d7!important;
+}
+	a, a:visited {color: #d7d7d7!important; }
+
+  /* Override dark mode with light mode styles if the user decides to swap */
+  body.light-theme {
+    color: #000;
+    background: #fff;
+  }
+}
+
+
+
+
 @media (min-width:1700px) {body { font-size: 1.5em;}}
 @media (min-width:2000px) {body { font-size: 1.6em;}}
  @media (min-width:2400px) {body { font-size: 1.7em;}}
 
 article {
 	line-height: 1.5;
-	background: #fff;
 }
 
 img {
@@ -133,7 +154,8 @@ h1.entry-title {
 
 article:first-child h2.entry-title { margin-top: 0;}
 
-
+ul.wp-block-latest-posts__list li::before { content: "▌";}
+ul.wp-block-latest-posts__list li time {margin-left: 1.2em;}
 
 
 
