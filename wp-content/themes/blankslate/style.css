@@ -17,7 +17,7 @@ BlankSlate WordPress Theme © 2011-2022 TidyThemes
 BlankSlate is distributed under the terms of the GNU GPL
 */
 
-body {max-width: 45em; margin: 0 auto; padding: 1.2em; font-family: sans-serif; font-size: 1.2em; line-height: 1.2; }
+body {max-width: 45em; margin: 0 auto; padding: 0 1.2em; font-family: sans-serif; font-size: 1.2em; line-height: 1.2; }
 
 
 
@@ -27,6 +27,12 @@ body {max-width: 45em; margin: 0 auto; padding: 1.2em; font-family: sans-serif; 
 
 article {
 	line-height: 1.5;
+	background: #fff;
+}
+
+img {
+	height: auto;
+	width: auto;
 }
 
 @media (max-width:700px) {body, article { line-height: 1.2;}}
@@ -40,9 +46,11 @@ h2::before { content: "▌";}
 h3::before { content: "▌";}
 
 
+.single-thumb {margin-bottom: 1.5em;}
+.single-thumb img {  max-width: 100%;}
 
 h2, h3, h4 {margin-top: 2em; margin-bottom: 0em;}
-
+header#header a {}
 
  h1.entry-title {
 	font-size: 4em; line-height:1;
@@ -59,11 +67,14 @@ nav ul {
 nav ul li {
 	display: inline;
 	padding-right: 1em;
-	font-size: 1em;
 }
 
 article ul {
 	list-style-type: square;
+}
+
+.entry-content *:first-child {
+	margin-top: 0;
 }
 
 
@@ -84,7 +95,7 @@ article ul {
 
 header#header {
 	padding: 5% 0;
-	
+	font-size: 0.8em!important;
 	opacity: 0.5;
 	transition: all 0.2s ease-in-out;
 }
@@ -98,12 +109,18 @@ header#header:hover {
 .home h1.entry-title {display: none!important;}
 .home h1 a, nav .current-menu-item a {text-decoration-color: red;}
 
+.entry-conetnt p:first-child {margin-top: 0;}
 
-
-#header h1 {font-size: 1em; margin-bottom: 0; text-transform:lowercase;}
- #header .site-title {
-	font-size: 1em; margin-right: 1em; letter-spacing: normal;
+header#header h1 { 
+	margin-bottom: 0; 
+	text-transform:lowercase;
+	font-size: 1em;
 }
+ #header .site-title {
+	 margin-right: 1em; letter-spacing: normal;
+}
+
+.site-title {font-weight: 600;}
 
 #header h1, #header nav, nav * {
 	display: inline;
@@ -117,7 +134,6 @@ h1.entry-title {
 article:first-child h2.entry-title { margin-top: 0;}
 
 
-.site-title {font-weight: bold;}
 
 
 
