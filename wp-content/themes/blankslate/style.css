@@ -25,13 +25,13 @@ body {max-width: 45em; margin: 0 auto; padding: 0 1.2em; font-family: sans-serif
 @media (prefers-color-scheme: dark) {
   /* defaults to dark theme */
   body { 
-    color: #fff;
-    background: #333;
+    color: #000;
+    background: #b7b7b7;
   }
 	.entry-footer a, .entry-footer a:visited, #footer a, #footer a:visited {
 		color: #d7d7d7!important;
 }
-	a, a:visited {color: #d7d7d7!important; }
+	a, a:visited {color: #fff!important; }
 
   /* Override dark mode with light mode styles if the user decides to swap */
   body.light-theme {
@@ -66,16 +66,25 @@ article h2 {font-size: 2em;}
 h2::before { content: "▌";}
 h3::before { content: "▌";}
 
+.single .excerpt p {
+	font-size: 2em; font-weight: 100; line-height: 1.2; margin: 0.2em 0 0.75em 0;
+}
+
+.blog .excerpt p { margin: 0; font-size: 1.2em; line-height: 1.3; font-weight: 200;}
 
 .single-thumb {margin-bottom: 1.5em;}
 .single-thumb img {  max-width: 100%;}
 
-h2, h3, h4 {margin-top: 2em; margin-bottom: 0em;}
-header#header a {}
+.single h2, .single h3 {margin-top: 2em; margin-bottom: 0em;}
+
 
  h1.entry-title {
 	font-size: 4em; line-height:1;
 	 letter-spacing: -0.025em;
+}
+
+.blog h2 {
+	margin-bottom: 0;
 }
 
 nav ul {
@@ -114,13 +123,13 @@ article ul {
 	display: none;
 }
 
-header#header {
+header#header, footer#footer {
 	padding: 5% 0;
 	font-size: 0.8em!important;
 	opacity: 0.5;
 	transition: all 0.2s ease-in-out;
 }
-header#header:hover {
+header#header:hover, footer#footer:hover {
 	opacity: 1;	transition: all 0.1s ease-in-out;
 }
 #footer {
@@ -159,7 +168,7 @@ ul.wp-block-latest-posts__list li time {margin-left: 1.2em;}
 
 
 
-a, a:visited {color: black; text-decoration: underline;text-decoration-color: #d7d7d7; text-decoration-thickness: 2px;}
+a, a:visited {color: black; text-decoration: underline;text-decoration-color: #999; text-decoration-thickness: 2px;}
 
 a:hover {text-decoration-color: red; }
 
