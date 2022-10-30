@@ -133,8 +133,6 @@ article ul {
 
 header#header, footer#footer {
 	padding: 5% 0;
-	font-size: 0.8em!important;
-	opacity: 0.5;
 	transition: all 0.2s ease-in-out;
 }
 header#header:hover, footer#footer:hover {
