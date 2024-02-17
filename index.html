@@ -38,11 +38,23 @@ window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/14
 <link rel="apple-touch-icon" href="//alidark.com/wp-content/uploads/2024/01/cropped-CLSme-180x180.jpg">
 <meta name="msapplication-TileImage" content="//alidark.com/wp-content/uploads/2024/01/cropped-CLSme-270x270.jpg">
 		<style type="text/css" id="wp-custom-css">body {
-	 padding: 0 5%;
+	 padding:  5%;
   margin: 0 auto;
-  max-width: 70em;
+  max-width: 40em;
   font-size: 1.3em;
 	 background: white;
+	 font-family: sans-serif;
+	 line-height: 1.5;
+}
+
+a, a:visited {
+	color: black;
+	text-decoration: underline;
+	text-decoration-color: #d7d7d7;
+	text-decoration-thickness: 3px;
+}
+a:hover {
+	color: red;
 }
 
 ul#menu-main  {
@@ -55,28 +67,55 @@ ul#menu-main li {
 
 .headerimg {
 	max-height: 300px;
+	float: right;
 }
-figure img {max-width:100%;}</style>
+figure img {max-width:100%;}
+
+.home h1 {
+	margin-bottom: 0;
+}
+
+h1, h2, h3, h4 {
+		line-height: 1;
+}
+.home p.description {
+	margin-top: 0;
+}
+
+section.footer {
+	color: #d7d7d7;
+}
+
+.single header.page-header, .page header.page-header {
+	display: flex;
+	justify-content: space-between;
+}
+.site-title {
+	font-weight: bold;
+}</style>
 		
 </head>
 
 
-<body data-rsssl="1">
+<body data-rsssl="1" class="home blog">
 
-          <h1>ali dark</h1>
-<img class="headerimg" src="//alidark.com/wp-content/uploads/2024/01/CLSme.jpg" alt="ali dark drawing">
+   <header class="page-header">       <div class="header-wrap">
+		<h1>ali dark</h1>
+		<p class="description">creative enabler + brand strategist</p>
+	</div>
 
-		<p>creative enabler + brand strategist</p>
+
 
  		 
 <div class="menu-main-container"><ul id="menu-main" class="menu">
-<li id="menu-item-65" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-65"><a href="https://monsta.studio/">MoNstA brandstrat</a></li>
-<li id="menu-item-161" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-161"><a href="//alidark.com/brisbane-in-mono/">Brisbane in Mono</a></li>
+<li id="menu-item-65" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-65"><a href="https://monsta.studio/">Templates</a></li>
+<li id="menu-item-161" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-161"><a href="//alidark.com/brisbane-in-mono/">Bris in Mono</a></li>
 <li id="menu-item-59" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-59"><a target="_blank" rel="noopener" href="https://www.behance.net/alidark3000">Bē</a></li>
 <li id="menu-item-24" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-24"><a href="//alidark.com/about/">about</a></li>
 <li id="menu-item-62" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-62"><a target="_blank" rel="noopener" href="https://www.instagram.com/alidark3000/">📷</a></li>
 <li id="menu-item-91" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-91"><a href="https://www.linkedin.com/in/alistair-dark-3076422b1/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_resources_details%3BZ1ig46hrTTyqmL6336j4Nw%3D%3D">in</a></li>
 </ul></div>
+</header>
 
             <p>latest posts...</p>
 <ul>
@@ -128,14 +167,6 @@ figure img {max-width:100%;}</style>
 
 
 
-
-  <li><a href="//alidark.com/hello-world/">Hello world!</a></li>
-  <!--<p><p>Welcome to WordPress. This is your first post. Edit or delete it, then start writing!</p>
-</p>-->
-
-
-
-
 </ul>    
 
 
@@ -143,7 +174,9 @@ figure img {max-width:100%;}</style>
 	
 	
 <section class="footer">
-	<p>(c) Me forever</p>
+	<p>(c) Me forever<br>
+Handcrafted and deliberately simple WordPress theme. </p>
+
 </section>
 	
 </body>
