@@ -8,14 +8,14 @@
 <channel>
 	<title>
 	Comments on: Next Level Positioning	</title>
-	<atom:link href="//alidark.com/next-level-positioning/feed/" rel="self" type="application/rss+xml" />
-	<link>//alidark.com/next-level-positioning/</link>
+	<atom:link href="https://alidark.com/next-level-positioning/feed/" rel="self" type="application/rss+xml" />
+	<link>https://alidark.com/next-level-positioning/</link>
 	<description>creative enabler + brand strategist</description>
 	<lastBuildDate>Sat, 17 Feb 2024 04:42:13 +0000</lastBuildDate>
 	<sy:updatePeriod>
 	hourly	</sy:updatePeriod>
 	<sy:updateFrequency>
 	1	</sy:updateFrequency>
-	<generator>https://wordpress.org/?v=6.5.2</generator>
+	<generator>https://wordpress.org/?v=6.6.1</generator>
 </channel>
 </rss>

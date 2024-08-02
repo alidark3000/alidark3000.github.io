@@ -8,14 +8,14 @@
 <channel>
 	<title>
 	Comments on: Theory of Dirty	</title>
-	<atom:link href="//alidark.com/theory-of-dirty/feed/" rel="self" type="application/rss+xml" />
-	<link>//alidark.com/theory-of-dirty/</link>
+	<atom:link href="https://alidark.com/theory-of-dirty/feed/" rel="self" type="application/rss+xml" />
+	<link>https://alidark.com/theory-of-dirty/</link>
 	<description>creative enabler + brand strategist</description>
 	<lastBuildDate>Fri, 16 Feb 2024 01:35:39 +0000</lastBuildDate>
 	<sy:updatePeriod>
 	hourly	</sy:updatePeriod>
 	<sy:updateFrequency>
 	1	</sy:updateFrequency>
-	<generator>https://wordpress.org/?v=6.5.2</generator>
+	<generator>https://wordpress.org/?v=6.6.1</generator>
 </channel>
 </rss>
