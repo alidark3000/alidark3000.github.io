@@ -115,12 +115,37 @@ a:hover {
 	padding: 5% ;
 	display: flex;
 }
+@media (max-width: 800px) {
+	.page-header {
+		flex-direction: column;
+	}
+	ul#menu-main  {
+	float: left!important;
+	padding: 0!important;
+	}
+	ul#menu-main li {
+	display: inline;
+	padding: 0;
+		margin-left: 0!important;
+	margin-right: 1em;
+}
+}
 
 .headerimg {
 	max-height: 300px;
 	float: right;
 }
 figure img {max-width:100%;}
+
+figure .wp-block-image {
+	margin:0 !important0;padding: 0!important;
+	gap: 0px!important;
+	width: 100%;
+}
+.wp-block-gallery {
+	gap: 0px!important;
+
+}
 
 .home h1 {
 	margin-bottom: 0;
@@ -159,7 +184,6 @@ section.footer {
 ul#menu-main  {
 	padding-left: 0;
 	float: right;
-	text-align: right;
 }
 .menu-main-container {width: 100%;}
 .site-title {
@@ -168,7 +192,6 @@ ul#menu-main li {
 	display: inline;
 	padding: 0;
 	margin-left: 1em;
-	text-align: right;
 }
 #menu-main a {
 background: black;
@@ -203,6 +226,25 @@ p.subHeading {
 }
 .main h1 {
 	margin-top: 0!important;;
+}
+
+.fivepercent {
+	margin: 5% 0!important;
+}
+.notopmargin {
+	margin-top: 0!important;
+}
+.nobottommargin {
+	margin-bottom: 0!important;
+}
+
+.has-text-align-center {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.home .main h1 {
+	display: none;
 }</style>
 		
 </head>
@@ -215,6 +257,7 @@ p.subHeading {
 <div class="menu-main-container"><ul id="menu-main" class="menu">
 <li id="menu-item-24" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-24"><a href="https://alidark.com/about/">about</a></li>
 <li id="menu-item-405" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-405"><a href="https://alidark.com/printed-photo-black-white-tshirts/">T-Shirts</a></li>
+<li id="menu-item-514" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-514"><a href="https://alidark.com/printed-photo-black-white-tshirts/japan-t-shirts/">Japan T-shirts</a></li>
 <li id="menu-item-406" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-406"><a href="https://alidark.com/journal/">Journal</a></li>
 <li id="menu-item-407" class="menu-item menu-item-type-post_type menu-item-object-page current-menu-item page_item page-item-402 current_page_item menu-item-407"><a href="https://alidark.com/prints/" aria-current="page">Prints</a></li>
 </ul></div>
