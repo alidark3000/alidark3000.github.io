@@ -78,7 +78,7 @@ body {
 	padding-bottom: 300px;
 	max-width: 2000px;
 	margin: 0 auto;
-	overflow: scroll;
+	overflow: scroll!important;
 }
 
 a, a:visited {
@@ -92,7 +92,7 @@ a:hover {
 }
 
 .main h1, .main p, .main ul, .main li, .main h2, .main h3 {
-	padding: 0 5%;
+	padding: 0 5vw;
 	display: block;
 	max-width: 40em;
 	
@@ -119,6 +119,8 @@ a:hover {
 @media (max-width: 800px) {
 	.page-header {
 		flex-direction: column;
+		max-width: 100%;
+		overflow: hidden;
 	}
 	ul#menu-main  {
 	float: left!important;
