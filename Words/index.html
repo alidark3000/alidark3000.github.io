@@ -15,7 +15,23 @@
       })()
     </script>
 
+  <script>
+        async function fetchFiles() {
+            const response = await fetch(`https://api.github.com/repos/alidark3000/alidark3000.github.io/contents/Words`);
+            const files = await response.json();
+            const fileList = document.getElementById('file-list');
 
+            files.forEach(file => {
+                if (file.type === 'file') {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a href="${file.download_url}">${file.name}</a>`;
+                    fileList.appendChild(li);
+                }
+            });
+        }
+
+        fetchFiles();
+    </script>
  
     </body>
     </html>
