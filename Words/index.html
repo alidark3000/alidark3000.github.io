@@ -22,7 +22,7 @@
         const path = 'Words';
 
         async function fetchFiles() {
-            const response = await fetch('https://api.github.com/repos/${username}/${repo}/contents/${path}?recursive=1');
+            const response = await fetch('https://api.github.com/repos/${username}/${repo}/contents/${path}?ref=0.1');
             const files = await response.json();
             const fileList = document.getElementById('file-list');
 
