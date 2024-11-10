@@ -14,5 +14,32 @@
         document.getElementsByTagName('body')[0].innerHTML = htmlString;
       })()
     </script>
+
+
+ <script>
+        const username = 'alidark3000';
+        const repo = 'alidark3000.github.io';
+        const path = 'Words';
+
+        async function fetchFiles() {
+            const response = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${path}`);
+            const files = await response.json();
+            const fileList = document.getElementById('file-list');
+
+            files.forEach(file => {
+                if (file.type === 'file') {
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = file.download_url;
+                    a.textContent = file.name;
+                    li.appendChild(a);
+                    fileList.appendChild(li);
+                }
+            });
+        }
+
+        fetchFiles();
+    </script>
+
     </body>
     </html>
