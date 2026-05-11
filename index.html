@@ -22,18 +22,15 @@
 
     * {
         box-sizing: border-box;
-        margin: 0;
-        padding: 0;
     }
 
     body {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        background-color: var(--color-bg);
-        color: #fff;
-        line-height: 1.6;
+        margin: 0;
         min-height: 100vh;
         overflow-x: hidden;
         position: relative;
+        color: #fff;
+        background-color: #333;
     }
 
     /* Animated Abstract Background */
@@ -45,175 +42,56 @@
         height: 100vh;
         z-index: -1;
         overflow: hidden;
-        background: linear-gradient(135deg, #3d3d3d, #2b2b2b);
+        background: #333;
     }
 
     .orb {
         position: absolute;
         top: 0;
         left: 0;
-        opacity: 0.9;
+        opacity: 0.85;
         mix-blend-mode: color-dodge;
         transition: border-radius 1.2s cubic-bezier(0.25, 1, 0.5, 1);
         will-change: transform, border-radius;
     }
 
     .orb-1 {
-        width: 45vw;
-        height: 45vw;
-        background: hsl(180, 100%, 55%);
-        box-shadow: inset 0 0 0 6vw hsl(235, 100%, 55%), inset 0 0 0 12vw hsl(215, 100%, 55%), inset 0 0 0 18vw hsl(195, 100%, 55%);
-    }
-
-    .orb-2 {
-        width: 25vw;
-        height: 25vw;
-        background: hsl(290, 100%, 55%);
-        box-shadow: inset 0 0 0 3vw hsl(305, 100%, 55%), inset 0 0 0 7vw hsl(300, 100%, 55%), inset 0 0 0 10vw hsl(295, 100%, 55%);
+        width: min(65vw, 550px);
+        height: min(65vw, 550px);
+        background: radial-gradient(circle at 30% 30%, hsl(205, 100%, 55%), hsl(215, 100%, 55%), hsl(225, 100%, 55%), hsl(235, 100%, 55%));
     }
 
     .orb-3 {
-        width: 35vw;
-        height: 35vw;
-        background: hsl(10, 100%, 55%);
-        box-shadow: inset 0 0 0 4.5vw hsl(25, 100%, 55%), inset 0 0 0 9.5vw hsl(20, 100%, 55%), inset 0 0 0 14vw hsl(15, 100%, 55%);
+        width: min(55vw, 450px);
+        height: min(55vw, 450px);
+        background: radial-gradient(circle at 30% 30%, hsl(10, 100%, 55%), hsl(15, 100%, 55%), hsl(20, 100%, 55%), hsl(25, 100%, 55%));
     }
     
     .orb-4 {
-        width: 50vw;
-        height: 50vw;
-        background: hsl(110, 100%, 55%);
-        box-shadow: inset 0 0 0 6vw hsl(125, 100%, 55%), inset 0 0 0 14vw hsl(120, 100%, 55%), inset 0 0 0 20vw hsl(115, 100%, 55%);
+        width: min(70vw, 600px);
+        height: min(70vw, 600px);
+        background: radial-gradient(circle at 20% 80%, hsl(110, 100%, 55%), hsl(115, 100%, 55%), hsl(120, 100%, 55%), hsl(125, 100%, 55%));
     }
 
     /* Container */
     .container {
-        width: 90%;
-        max-width: 900px;
-        margin: 5rem auto;
-        padding: 4rem;
-        background: rgba(15, 15, 15, 0.3);
-        backdrop-filter: blur(20px) brightness(0.8);
-        -webkit-backdrop-filter: blur(20px) brightness(0.8);
-        border: 1px solid rgba(255, 255, 255, 0.03);
-        border-radius: 5px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        margin: 1em;
         position: relative;
         z-index: 1;
     }
 
-    /* Typography */
-    h1 {
-        font-size: 4rem;
-        font-weight: 900;
-        margin: 0 0 0.5rem;
-        color: #000;
-        letter-spacing: -2px;
-    }
-
-    h2 {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #000;
-        margin: 3rem 0 1.5rem;
-        position: relative;
-        display: inline-block;
-    }
-
-    h2::after {
-        content: '';
-        position: absolute;
-        width: 50%;
-        height: 5px;
-        bottom: -6px;
-        left: 0;
-        background: linear-gradient(to right, var(--color-cyan), transparent);
-        border-radius: 3px;
-    }
-
-    h3 {
-        font-size: 1.4rem;
-        font-weight: 700;
-        margin: 1.5rem 0 0.5rem;
-        color: #000;
-    }
-
-    p, ul {
-        color: #fff;
-        margin-bottom: 1.5rem;
-        font-size: 1.4em;
-    }
-
-    ul {
-        padding-left: 1.5rem;
-    }
-
-    ul li {
-        margin-bottom: 0.8rem;
-    }
-
-    /* Links */
-    a {
-        color: var(--color-cyan);
-        text-decoration: none;
-        font-weight: 700;
-        position: relative;
-        transition: color 0.3s ease;
-    }
-
-    a::before {
-        content: '';
-        position: absolute;
-        width: 100%;
-        height: 3px;
-        bottom: -2px;
-        left: 0;
-        background: linear-gradient(to right, var(--color-cyan), var(--color-magenta));
-        transform: scaleX(0);
-        transform-origin: right;
-        transition: transform 0.3s ease;
+    a, a:visited {
+        color: var(--color-orange);
     }
 
     a:hover {
-        color: var(--color-magenta);
-    }
-
-    a:hover::before {
-        transform: scaleX(1);
-        transform-origin: left;
-    }
-
-    /* Layout Spacing */
-    hr {
-        border: none;
-        height: 1px;
-        background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.15), transparent);
-        margin: 3rem 0;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .container {
-            width: 100%;
-            margin: 0;
-            padding: 2.5rem 1.5rem;
-            border-radius: 0;
-            border-left: none;
-            border-right: none;
-        }
-        h1 {
-            font-size: 3rem;
-        }
-        p, ul {
-            font-size: 1.2em;
-        }
+        color: var(--color-yellow);
     }
  </style>
 </head>
 <body>
     <div class="bg-animation">
         <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
         <div class="orb orb-4"></div>
     </div>
@@ -306,12 +184,11 @@
                 }, 150);
             });
 
-            function randomShape(intensity = 0) {
-                // intensity: 0 to 1. Normal: nearly round (45-55%), Extreme: flat squish (10-100%)
-                const min = 45 - (35 * intensity);
-                const range = 10 + (80 * intensity);
-                const r = () => Math.floor(Math.random() * range) + min + '%';
-                return `${r()} ${r()} ${r()} ${r()} / ${r()} ${r()} ${r()} ${r()}`;
+            function randomShape() {
+                const min = 30;
+                const max = 75;
+                const r = () => Math.floor(Math.random() * (max - min + 1) + min);
+                return `${r()}% ${r()}% ${r()}% ${r()}% / ${r()}% ${r()}% ${r()}% ${r()}%`;
             }
 
             const particles = Array.from(orbs).map(orb => {
@@ -417,19 +294,26 @@
                     }
 
                     if (hitWall) {
-                        p.impactJiggle = Math.floor(preImpactSpeed * 4); 
+                        p.impactJiggle = Math.floor(preImpactSpeed * 1.5); 
                         if (p.impactJiggle < 4) p.impactJiggle = 4;
+                        p.maxJiggle = p.impactJiggle;
                         p.jiggleIntensity = Math.min(preImpactSpeed / 10, 1.0);
                     }
 
                     if (p.impactJiggle > 0) {
                         p.impactJiggle--;
+                        
+                        const decayRatio = Math.max(p.impactJiggle / (p.maxJiggle || 1), 0);
+                        const currentIntensity = p.jiggleIntensity * Math.pow(decayRatio, 3.0);
+
                         if (p.impactJiggle % 5 === 0) {
-                            p.el.style.transitionDuration = "0.08s";
-                            p.el.style.borderRadius = randomShape(p.jiggleIntensity);
+                            const transTime = 0.08 + (0.25 * (1 - decayRatio));
+                            p.el.style.transitionDuration = `${transTime.toFixed(2)}s`;
+                            p.el.style.borderRadius = randomShape(currentIntensity);
                         }
+                        
                         if (p.impactJiggle === 0) {
-                            p.el.style.transitionDuration = "1.2s";
+                            p.el.style.transitionDuration = "1.5s";
                             p.el.style.borderRadius = randomShape(0);
                         }
                     }
