@@ -32,6 +32,7 @@
             color: #fff;
             background: url('darknoise.jpg') repeat;
             background-size: 200px;
+            font-size: 1.4rem;
         }
 
         /* Animated Abstract Background */
@@ -45,7 +46,6 @@
             overflow: hidden;
             background: url('darknoise.jpg') repeat;
             background-size: 500px;
-            filter: saturate(2000%);
         }
 
         .bg-animation::after {
@@ -100,6 +100,12 @@
 
         a:hover {
             color: var(--color-yellow);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
