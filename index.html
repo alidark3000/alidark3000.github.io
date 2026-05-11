@@ -1,34 +1,412 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
+ <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width,initial-scale=1">
- <title>Ali Dark: Creative technologist in Brisbane Australia </title>
+ <meta name="description" content="Ali Dark: Creative technologist in Brisbane Australia">
+ <title>Ali Dark | Creative Technologist</title>
+ <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap');
+
+    :root {
+        --color-cyan: #00E5FF;
+        --color-magenta: #FF00FF;
+        --color-green: #00FF00;
+        --color-yellow: #FFFF00;
+        --color-indigo: #1A237E;
+        --color-red: #FF1100;
+        --color-orange: #FF8800;
+        --color-bg: #333333;
+        --text-dark: #FFFFFF;
+        --text-muted: #BBBBBB;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: 'Outfit', sans-serif;
+        background-color: var(--color-bg);
+        color: #fff;
+        line-height: 1.6;
+        min-height: 100vh;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    /* Animated Abstract Background */
+    .bg-animation {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+        overflow: hidden;
+        background: linear-gradient(135deg, #3d3d3d, #2b2b2b);
+    }
+
+    .orb {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0.9;
+        mix-blend-mode: color-dodge;
+        transition: border-radius 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+        will-change: transform, border-radius;
+    }
+
+    .orb-1 {
+        width: 45vw;
+        height: 45vw;
+        background: #E0FFFF;
+        box-shadow: inset 0 0 0 6vw #0099CC, inset 0 0 0 12vw #00BFFF, inset 0 0 0 18vw #00E5FF;
+    }
+
+    .orb-2 {
+        width: 25vw;
+        height: 25vw;
+        background: #FFB3FF;
+        box-shadow: inset 0 0 0 3vw #CC00CC, inset 0 0 0 7vw #FF00FF, inset 0 0 0 10vw #FF4DFF;
+    }
+
+    .orb-3 {
+        width: 35vw;
+        height: 35vw;
+        background: #FFD1A3;
+        box-shadow: inset 0 0 0 4.5vw #CC5500, inset 0 0 0 9.5vw #FF7700, inset 0 0 0 14vw #FF9933;
+    }
+    
+    .orb-4 {
+        width: 50vw;
+        height: 50vw;
+        background: #B3FFB3;
+        box-shadow: inset 0 0 0 6vw #009900, inset 0 0 0 14vw #00CC00, inset 0 0 0 20vw #33FF33;
+    }
+
+    /* Container */
+    .container {
+        max-width: 900px;
+        margin: 5rem auto;
+        padding: 4rem;
+        background: rgba(15, 15, 15, 0.3);
+        backdrop-filter: blur(20px) brightness(0.8);
+        -webkit-backdrop-filter: blur(20px) brightness(0.8);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        border-radius: 32px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Typography */
+    h1 {
+        font-size: 4rem;
+        font-weight: 900;
+        margin: 0 0 0.5rem;
+        color: #000;
+        letter-spacing: -2px;
+    }
+
+    h2 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #000;
+        margin: 3rem 0 1.5rem;
+        position: relative;
+        display: inline-block;
+    }
+
+    h2::after {
+        content: '';
+        position: absolute;
+        width: 50%;
+        height: 5px;
+        bottom: -6px;
+        left: 0;
+        background: linear-gradient(to right, var(--color-cyan), transparent);
+        border-radius: 3px;
+    }
+
+    h3 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 1.5rem 0 0.5rem;
+        color: #000;
+    }
+
+    p, ul {
+        color: #fff;
+        margin-bottom: 1.5rem;
+    }
+
+    ul {
+        padding-left: 1.5rem;
+    }
+
+    ul li {
+        margin-bottom: 0.8rem;
+    }
+
+    /* Links */
+    a {
+        color: var(--color-cyan);
+        text-decoration: none;
+        font-weight: 700;
+        position: relative;
+        transition: color 0.3s ease;
+    }
+
+    a::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 3px;
+        bottom: -2px;
+        left: 0;
+        background: linear-gradient(to right, var(--color-cyan), var(--color-magenta));
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 0.3s ease;
+    }
+
+    a:hover {
+        color: var(--color-magenta);
+    }
+
+    a:hover::before {
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+
+    /* Layout Spacing */
+    hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.15), transparent);
+        margin: 3rem 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .container {
+            margin: 2rem 1.5rem;
+            padding: 2.5rem;
+            border-radius: 24px;
+        }
+        h1 {
+            font-size: 3rem;
+        }
+    }
+ </style>
 </head>
- <body>
-  <h1>Ali Dark</h1>
-  <p>Creative technologist based in Brisbane Australia. <a href="https://cls.alidark.com/about">More about me</a>.</p>
-    <hr>
-<h3>Main webhomes</h3>
-<p>Notes: <a href="https://cls.alidark.com">Curious Lynx Studio</a></p>
-    <p><a href="https://www.instagram.com/alidark3000/">Insta</a></p>
-<hr>
-  <h2>Games</h2>
-  <h3>Dots & Cubes & Boxes</h3>
-  <p>A 3d version of the classic pen and paper game "Dots & Boxes," <a href="/Dots/">Dots & Cubes & Boxes</a> was built with Gemini 2.5 pro in 2025. It's a 2 player browser game.</p>
-  <h3>Glitch Arena</h3>
-  <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">Glitch</a> is an independently published PvP 3d Arena first person shooter (In other words, an old school, minimalistic strategic 1v1 action FPS). This pasion project started in 2019 and is ongoing here and there. </p>
-<hr>
-  <h2>Tools</h2>
-  <h3>Gems</h3>
-  <p>AI prompts to help with specific tasks. Switch mode from Fast to Thinking if you can (in the chat boxx dropdown).</p>
-  <ul>
-   <li><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to Structure</a> - brain dump here and get some clarity.</li>
-   <li><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction Finder</a> - answer some questions to get ideas for the future.</li>
-  </ul>
-<hr>
-  <h3>Music</h3>
-  <p>I have made a few tracks I'm proud of. Check out <a href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">Caravan</a> and <a href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">How We Do It</a> on soundcloud.</p>
-  
- </body>
+<body>
+    <div class="bg-animation">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb orb-4"></div>
+    </div>
+
+    <main class="container">
+        <header>
+            <h1>Ali Dark</h1>
+            <p>Creative technologist based in Brisbane Australia. <a href="https://cls.alidark.com/about">More about me</a>.</p>
+        </header>
+
+        <hr>
+
+        <section>
+            <h2>Main webhomes</h2>
+            <p>Notes: <a href="https://cls.alidark.com">Curious Lynx Studio</a></p>
+            <p><a href="https://www.instagram.com/alidark3000/">Insta</a></p>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Games</h2>
+            <article>
+                <h3>Dots & Cubes & Boxes</h3>
+                <p>A 3d version of the classic pen and paper game "Dots & Boxes," <a href="/Dots/">Dots & Cubes & Boxes</a> was built with Gemini 2.5 pro in 2025. It's a 2 player browser game.</p>
+            </article>
+            <article>
+                <h3>Glitch Arena</h3>
+                <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">Glitch</a> is an independently published PvP 3d Arena first person shooter (In other words, an old school, minimalistic strategic 1v1 action FPS). This passion project started in 2019 and is ongoing here and there. </p>
+            </article>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Tools</h2>
+            <article>
+                <h3>Gems</h3>
+                <p>AI prompts to help with specific tasks. Switch mode from Fast to Thinking if you can (in the chat box dropdown).</p>
+                <ul>
+                    <li><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to Structure</a> - brain dump here and get some clarity.</li>
+                    <li><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction Finder</a> - answer some questions to get ideas for the future.</li>
+                </ul>
+            </article>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Music</h2>
+            <p>I have made a few tracks I'm proud of. Check out <a href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">Caravan</a> and <a href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">How We Do It</a> on soundcloud.</p>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const orbs = document.querySelectorAll('.orb');
+            let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false };
+
+            window.addEventListener('mousemove', (e) => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+                mouse.active = true;
+            });
+
+            window.addEventListener('mouseout', () => {
+                mouse.active = false;
+            });
+
+            function randomShape(intensity = 0) {
+                // intensity: 0 to 1. Normal: nearly round (45-55%), Extreme: flat squish (10-100%)
+                const min = 45 - (35 * intensity);
+                const range = 10 + (80 * intensity);
+                const r = () => Math.floor(Math.random() * range) + min + '%';
+                return `${r()} ${r()} ${r()} ${r()} / ${r()} ${r()} ${r()} ${r()}`;
+            }
+
+            const particles = Array.from(orbs).map(orb => {
+                const rect = orb.getBoundingClientRect();
+                const initShape = randomShape();
+                orb.style.borderRadius = initShape;
+                return {
+                    el: orb,
+                    radius: rect.width / 2,
+                    x: Math.random() * (window.innerWidth - rect.width) + rect.width/2,
+                    y: Math.random() * (window.innerHeight - rect.height) + rect.height/2,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    mass: rect.width / 2,
+                    isDodging: false,
+                    impactJiggle: 0
+                };
+            });
+
+            window.addEventListener('resize', () => {
+                particles.forEach(p => {
+                    const width = parseFloat(getComputedStyle(p.el).width);
+                    p.radius = width / 2;
+                    p.mass = p.radius;
+                });
+            });
+
+            function animate() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+
+                particles.forEach((p, i) => {
+                    // Random gradual morphing while drifting
+                    if (Math.random() < 0.005) {
+                        p.el.style.borderRadius = randomShape();
+                    }
+
+                    if (mouse.active) {
+                        const dx = p.x - mouse.x;
+                        const dy = p.y - mouse.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < p.radius) {
+                            // Quadratic falloff so it's strong in center, almost zero at edges
+                            const intensity = Math.pow((p.radius - dist) / p.radius, 2);
+                            p.vx += (dx / dist) * intensity * 3.0;
+                            p.vy += (dy / dist) * intensity * 3.0;
+                            
+                            // Morph on mouse repel
+                            if (!p.isDodging) {
+                                p.isDodging = true;
+                                p.el.style.borderRadius = randomShape(0.5);
+                            }
+                        } else {
+                            p.isDodging = false;
+                        }
+                    } else {
+                        p.isDodging = false;
+                    }
+
+                    p.vx *= 0.98;
+                    p.vy *= 0.98;
+
+                    const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+                    if (speed < 0.05) {
+                        p.vx = 0;
+                        p.vy = 0;
+                    }
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    let hitWall = false;
+                    const bounceCap = 10;
+                    const bounceBoost = 3;
+                    
+                    const preImpactSpeed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+                    
+                    if (p.x - p.radius < 0) { 
+                        p.x = p.radius; 
+                        p.vx = Math.min(Math.abs(p.vx) + bounceBoost, bounceCap); 
+                        hitWall = true; 
+                    }
+                    if (p.x + p.radius > width) { 
+                        p.x = width - p.radius; 
+                        p.vx = -Math.min(Math.abs(p.vx) + bounceBoost, bounceCap); 
+                        hitWall = true; 
+                    }
+                    if (p.y - p.radius < 0) { 
+                        p.y = p.radius; 
+                        p.vy = Math.min(Math.abs(p.vy) + bounceBoost, bounceCap); 
+                        hitWall = true; 
+                    }
+                    if (p.y + p.radius > height) { 
+                        p.y = height - p.radius; 
+                        p.vy = -Math.min(Math.abs(p.vy) + bounceBoost, bounceCap); 
+                        hitWall = true; 
+                    }
+
+                    if (hitWall) {
+                        p.impactJiggle = Math.floor(preImpactSpeed * 4); 
+                        if (p.impactJiggle < 4) p.impactJiggle = 4;
+                        p.jiggleIntensity = Math.min(preImpactSpeed / 10, 1.0);
+                    }
+
+                    if (p.impactJiggle > 0) {
+                        p.impactJiggle--;
+                        if (p.impactJiggle % 5 === 0) {
+                            p.el.style.transitionDuration = "0.08s";
+                            p.el.style.borderRadius = randomShape(p.jiggleIntensity);
+                        }
+                        if (p.impactJiggle === 0) {
+                            p.el.style.transitionDuration = "1.2s";
+                            p.el.style.borderRadius = randomShape(0);
+                        }
+                    }
+
+                    p.el.style.transform = `translate(${p.x - p.radius}px, ${p.y - p.radius}px)`;
+                });
+
+                requestAnimationFrame(animate);
+            }
+
+            // Start animation
+            setTimeout(animate, 50);
+        });
+    </script>
+</body>
 </html>
