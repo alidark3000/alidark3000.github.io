@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Dots & Cubes + Boxes</title>
+    <style>
+        /* Global reset and box-sizing */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            /* Disable text selection */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            /* Disable callout menu on iOS */
+            -webkit-touch-callout: none;
+            /* Improve touch interaction responsiveness */
+            touch-action: manipulation;
+        }
+        html, body {
+            height: 100%;
+            overscroll-behavior: none; /* Prevent pull-to-refresh */
+        }
+        body {
+            overflow: hidden;
+            background-color: #000; /* Ensure body background matches scene */
+            color: white;
+            font-family: sans-serif;
+            width: 100%;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            /* Back to default cursor for hold interaction */
+            cursor: default;
+        }
+        /* Removed device-specific cursor rules */
+
+        #start-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 30px 40px;
+            background-color: rgba(30, 30, 30, 0.9);
+            border-radius: 10px;
+            text-align: center;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid #444;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+        }
+        #start-menu.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #start-menu h1 { margin: 0 0 10px 0; font-size: 1.8em; color: #eee; }
+        #start-menu label { font-size: 1.1em; color: #ccc; }
+        #start-menu .slider-container { display: flex; align-items: center; justify-content: center; width: 100%; gap: 10px;}
+        #start-menu input[type="range"] { width: 60%; /* Adjusted width */ cursor: pointer; }
+        #start-menu span { font-weight: bold; color: #fff; min-width: 50px; /* Wider span for time values */ display: inline-block; text-align: left;}
+        #start-menu .checkbox-container { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;}
+        #start-button { margin-top: 10px; padding: 10px 20px; font-size: 1.1em; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 5px; transition: background-color 0.2s; }
+        #start-button:hover { background-color: #45a049; }
+
+        /* Styles for individual top UI elements */
+        .game-ui-element {
+            position: absolute;
+            top: 15px;
+            padding: 10px 15px;
+            background-color: rgba(100, 100, 100, 0.3);
+            border-radius: 8px;
+            font-size: 1.5em; /* Base size for mobile */
+            line-height: 1.3;
+            display: none; /* Hidden initially */
+            z-index: 5;
+            color: #eee;
+            text-align: center; /* Center text inside */
+            min-width: 60px; /* Give score boxes some minimum width */
+        }
+
+        #red-score-display {
+            left: 15px;
+            color: #ff8888; /* Default Red color */
+        }
+        #blue-score-display {
+            right: 15px;
+            color: #8888ff; /* Default Blue color */
+        }
+         #timer-display {
+             left: 50%;
+             transform: translateX(-50%);
+             font-weight: bold;
+             /* Color set dynamically by JS */
+             transition: color 0.3s ease-in-out; /* Smooth color transition */
+         }
+
+        /* Container for bottom buttons */
+        #button-container {
+             position: absolute;
+             bottom: 20px;
+             left: 50%;
+             transform: translateX(-50%);
+             display: flex; /* Arrange buttons side-by-side */
+             gap: 15px; /* Space between buttons */
+             z-index: 5;
+             pointer-events: none; /* Allow clicks only on buttons inside */
+        }
+
+        /* Styles for buttons within the container */
+        #button-container button,
+        #button-container a {
+             padding: 10px 15px;
+             font-size: 1em;
+             cursor: pointer;
+             border: none;
+             border-radius: 5px;
+             transition: background-color 0.2s;
+             pointer-events: auto; /* Enable clicks on buttons */
+             text-decoration: none; /* Remove underline from link */
+             display: inline-block; /* Correct display for link */
+        }
+
+        /* Undo Button Specific Styles */
+        #undo-button {
+             /* No absolute positioning needed now */
+             background-color: #ffc107;
+             color: black;
+             display: none; /* Hidden initially */
+        }
+        #undo-button:hover:not(:disabled) {
+             background-color: #ffb300;
+        }
+        #undo-button:disabled {
+            background-color: #666;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+
+        /* Rules Button Specific Styles */
+        #rules-button {
+             background-color: #4CAF50; /* Green like start button */
+             color: white;
+             display: none; /* Hidden initially, show with game start */
+        }
+        #rules-button:hover {
+             background-color: #45a049;
+        }
+
+        /* Game Over Message Styles */
+        #game-over-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 25px 40px;
+            background-color: rgba(30, 30, 30, 0.95);
+            border: 1px solid #555;
+            color: #eee;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 10px;
+            z-index: 15; /* Above game, below menu */
+            display: none; /* Hidden initially */
+        }
+        #game-over-text { /* NEW: Container for text */
+            margin-bottom: 15px; /* Add space below text */
+        }
+        /* Replay Button Styles */
+        #replay-button {
+            /* margin-top: 20px; Removed, using margin on text div */
+            padding: 10px 20px;
+            font-size: 0.7em; /* Relative to parent */
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+         #replay-button:hover {
+             background-color: #45a049;
+         }
+
+
+        /* Lighter player colors for better contrast on dark bg */
+        .player-red { color: #ff8888; } /* Keep for potential future use (e.g., winner text) */
+        .player-blue { color: #8888ff; } /* Keep for potential future use */
+
+        /* Responsive adjustments */
+        @media (min-width: 601px) { /* Apply larger font size on larger screens */
+             .game-ui-element {
+                 font-size: 4em; /* Increased font size */
+                 padding: 15px 25px;
+             }
+             #game-over-message {
+                 font-size: 3.5em;
+             }
+             #replay-button {
+                 font-size: 0.6em; /* Adjust relative size */
+             }
+        }
+        @media (max-width: 600px) {
+             /* Adjust button container gap and button sizes */
+             #button-container {
+                 gap: 10px;
+                 bottom: 15px;
+             }
+             #button-container button,
+             #button-container a {
+                 font-size: 0.9em;
+                 padding: 8px 12px;
+             }
+              #game-over-message {
+                 font-size: 1.8em;
+                 padding: 20px 30px;
+             }
+             #replay-button {
+                 font-size: 0.7em; /* Adjust relative size */
+                 padding: 8px 15px;
+             }
+        }
+
+    </style>
+</head>
+<body>
+    <div id="start-menu">
+        <h1>3D Dots & Cubes + Boxes</h1> <div class="slider-container">
+             <label for="grid-size-slider">Grid Size:</label>
+             <input type="range" id="grid-size-slider" min="3" max="5" value="3">
+             <span id="grid-size-value">3</span>
+        </div>
+         <div class="slider-container">
+             <label for="time-limit-slider">Turn Time:</label>
+             <input type="range" id="time-limit-slider" min="0" max="3" value="2">
+             <span id="time-limit-value">30s</span>
+         </div>
+         <div class="checkbox-container">
+             <input type="checkbox" id="half-filled-checkbox">
+             <label for="half-filled-checkbox">Start Half-Filled</label>
+         </div>
+        <button id="start-button">Start Game</button>
+    </div>
+
+    <div id="red-score-display" class="game-ui-element">0</div>
+    <div id="timer-display" class="game-ui-element">30s</div>
+    <div id="blue-score-display" class="game-ui-element">0</div>
+
+    <div id="game-over-message">
+        <div id="game-over-text"></div> <button id="replay-button">Replay</button> </div>
+
+
+    <div id="button-container">
+        <button id="undo-button" disabled>Undo</button>
+        <a id="rules-button" href="https://docs.google.com/document/d/1ep-ooSkr-U7pbnlrjfRdqipnImEoK7wFMK6Kxza4mmI/edit?usp=sharing" target="_blank">Rules</a>
+    </div>
+
+
+    <script type="importmap"> { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/" } } </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Core Components ---
+        let scene, camera, renderer, controls;
+        let ambientLight;
+        let particleTexture = null;
+        let gridHelperFloor = null;
+        let gridHelperCeiling = null;
+
+        // --- Game State / Grid Elements ---
+        let dots = [];
+        let edges = {};
+        let boxes = {};
+        let cubes = []; // Now stores { ..., adjacentCubes: [] }
+        let edgeHitboxes = [];
+        let edgeIdToHitboxMap = {};
+        let gasParticleSystems = []; // Stores the THREE.Points objects
+        let previewEdgeMesh = null;
+        let previewEdgeMaterial = null;
+        let currentPreviewEdgeId = null;
+        let currentGridSize = 3;
+        let CUBE_GRID_SIZE = 2;
+        let BOX_GRID_SIZE = 2;
+        let TOTAL_CUBES = 8;
+        let TOTAL_BOXES = 0;
+        let currentPlayer = 'Red';
+        let scores = { Red: 0, Blue: 0 };
+        let gameOver = false;
+        let turnMade = false;
+        // Undo History now stores array of completed cubes
+        let moveHistory = []; // { ..., boxesCompleted: [], cubesCompleted: [{id, ownerBefore, overriddenBoxes:[], flippedCubes:[]}] }
+        let animatingObjects = [];
+
+        // --- Timer State ---
+        let timeLimitEnabled = false;
+        let timerValue = 30;
+        let timerIntervalId = null;
+        let currentGameTimerDuration = 30;
+        const timeLimitOptions = [5, 10, 30, Infinity];
+        const timeLimitLabels = ["5s", "10s", "30s", "Infinite"];
+
+        // --- Start Options ---
+        let startHalfFilled = false;
+
+        // --- Fog State ---
+        let initialCameraDist = 0;
+        const gridCenter = new THREE.Vector3();
+        let BASE_FOG_NEAR = 1.0;
+        let BASE_FOG_FAR = 7.0;
+
+        // --- Device Detection ---
+        const isTouchDevice = navigator.maxTouchPoints > 0;
+
+        // --- Interaction State (Universal Hold) ---
+        const holdStartPosition = { x: null, y: null };
+        let holdStartTime = 0;
+        let holdEdgeId = null;
+        let holdTimerId = null;
+        let isHolding = false;
+        const HOLD_DURATION = 250; // ms required to hold for selection (Reduced)
+        const MAX_HOLD_MOVE_DISTANCE_SQ = 20 * 20;
+
+
+        // --- Constants ---
+        const SPACING = 2;
+        const DOT_RADIUS = 0.1;
+        const EDGE_RADIUS = 0.04;
+        const HITBOX_RADIUS = DOT_RADIUS * 1.5;
+        const HITBOX_LENGTH_FACTOR = 0.7;
+        const HITBOX_OPACITY = 0.15;
+        const HITBOX_COLOR = 0x555555;
+        const FOG_COLOR = 0x000000;
+        const BACKGROUND_COLOR = 0x000000;
+        const GRID_HELPER_SIZE = 100;
+        const GRID_HELPER_DIVISIONS = 100; // Base divisions
+        const GRID_DENSITY_FACTOR = 5; // Make grid less dense
+        const GRID_HELPER_COLOR = 0x333333;
+        const CEILING_GRID_Y_POS = SPACING * 7;
+        const PLAYER_COLORS = { Red: 0xff0000, Blue: 0x0000ff };
+        const BOX_OPACITY = 0.25;
+        const BOX_POINTS = 1;
+        const CUBE_POINTS = 4; // Cube worth 4 points total
+        const CUBE_SHADE_DELAY = 50; // Shortened delay for faster feedback
+        const PARTICLES_PER_CUBE = 187; // *** HALVED YET AGAIN for performance ***
+        const PARTICLE_SIZE = 1.6; // *** Size remains doubled ***
+        const FINAL_PARTICLE_OPACITY = 0.05; // Opacity remains doubled
+        const PARTICLE_INITIAL_SPEED = 0.01; // Speed for bouncing particles
+        const MOUSE_PREVIEW_OPACITY = 0.6;
+        const EDGE_FADE_DURATION = 300;
+        const GAS_FADE_DURATION = 500;
+        const BOX_FADE_DURATION = 200;
+
+
+        // --- Materials (Reusable) ---
+        const playerMaterials = { Red: new THREE.MeshBasicMaterial({ color: PLAYER_COLORS.Red, transparent: true }), Blue: new THREE.MeshBasicMaterial({ color: PLAYER_COLORS.Blue, transparent: true }) };
+        const boxMaterials = { Red: new THREE.MeshBasicMaterial({ color: PLAYER_COLORS.Red, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }), Blue: new THREE.MeshBasicMaterial({ color: PLAYER_COLORS.Blue, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }) };
+        const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const hitboxGuideMaterialConfig = { color: HITBOX_COLOR, transparent: true, opacity: isTouchDevice ? HITBOX_OPACITY : 0.0, depthWrite: false };
+
+
+        // --- Interaction ---
+        const raycaster = new THREE.Raycaster();
+        const interactionCoords = new THREE.Vector2();
+
+        // --- UI Elements ---
+        const startMenu = document.getElementById('start-menu');
+        const gridSizeSlider = document.getElementById('grid-size-slider');
+        const gridSizeValueSpan = document.getElementById('grid-size-value');
+        const timeLimitSlider = document.getElementById('time-limit-slider');
+        const timeLimitValueSpan = document.getElementById('time-limit-value');
+        const halfFilledCheckbox = document.getElementById('half-filled-checkbox');
+        const startButton = document.getElementById('start-button');
+        // Updated UI Element References
+        const redScoreDisplay = document.getElementById('red-score-display');
+        const blueScoreDisplay = document.getElementById('blue-score-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const gameOverText = document.getElementById('game-over-text'); // New text element
+        const replayButton = document.getElementById('replay-button');
+        const undoButton = document.getElementById('undo-button');
+        const rulesButton = document.getElementById('rules-button');
+
+
+        // --- One-Time Scene Setup ---
+        function setupScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(BACKGROUND_COLOR);
+            console.log("Set background color to:", BACKGROUND_COLOR.toString(16));
+            const gridDivisions = GRID_HELPER_DIVISIONS / GRID_DENSITY_FACTOR;
+            gridHelperFloor = new THREE.GridHelper(GRID_HELPER_SIZE, gridDivisions, GRID_HELPER_COLOR, GRID_HELPER_COLOR);
+            gridHelperFloor.position.y = -SPACING * 2;
+            gridHelperFloor.material.fog = false;
+            scene.add(gridHelperFloor);
+            console.log(`Added floor GridHelper (Divs: ${gridDivisions}) at y =`, gridHelperFloor.position.y);
+            gridHelperCeiling = new THREE.GridHelper(GRID_HELPER_SIZE, gridDivisions, GRID_HELPER_COLOR, GRID_HELPER_COLOR);
+            gridHelperCeiling.position.y = CEILING_GRID_Y_POS;
+            gridHelperCeiling.material.fog = false;
+            scene.add(gridHelperCeiling);
+            console.log(`Added ceiling GridHelper (Divs: ${gridDivisions}) at y =`, gridHelperCeiling.position.y);
+            scene.fog = new THREE.Fog(FOG_COLOR, BASE_FOG_NEAR, BASE_FOG_FAR);
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false;
+            ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+            scene.add(ambientLight);
+            particleTexture = createSoftParticleTexture();
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+            window.addEventListener('touchstart', onTouchStart, { passive: false });
+            window.addEventListener('touchmove', onTouchMove, { passive: false });
+            window.addEventListener('touchend', onTouchEnd, { passive: false });
+            undoButton.addEventListener('click', undoLastMove);
+            // Add Replay Button Listener (moved here from checkGameOver)
+            if (replayButton) {
+                replayButton.addEventListener('click', () => {
+                    console.log("Replay button clicked. Reloading...");
+                    window.location.reload();
+                });
+            } else {
+                 console.error("Replay button not found during setup!");
+            }
+            console.log("One-time scene setup complete.");
+        }
+
+        // --- Cleanup Grid Elements --- (Hide new UI elements)
+        function cleanupGridElements() {
+            console.log("Cleaning up grid elements...");
+            if (timerIntervalId) { clearInterval(timerIntervalId); timerIntervalId = null; }
+            timeLimitEnabled = false; startHalfFilled = false; animatingObjects = []; cancelHold();
+            dots.forEach(d => { if(d.geometry) d.geometry.dispose(); scene.remove(d); }); dots = [];
+            Object.values(edges).forEach(e => { if (e.mesh) { if(e.mesh.geometry) e.mesh.geometry.dispose(); if(e.mesh.material) e.mesh.material.dispose(); scene.remove(e.mesh); } }); edges = {};
+            Object.values(boxes).forEach(b => { if (b.mesh) { removeBoxPlaneVisual(b); } }); boxes = {}; // Use helper
+            gasParticleSystems.forEach(p => { removeShadeCube({mesh: p}); }); gasParticleSystems = []; // Use helper
+            cubes = [];
+            Object.values(edgeIdToHitboxMap).forEach(h => { if(h.geometry) h.geometry.dispose(); if(h.material) h.material.dispose(); scene.remove(h); }); edgeHitboxes = []; edgeIdToHitboxMap = {};
+            hidePreviewLine();
+            scores = { Red: 0, Blue: 0 }; gameOver = false; turnMade = false; currentPreviewEdgeId = null; moveHistory = [];
+            // Hide UI elements
+            undoButton.disabled = true;
+            undoButton.style.display = 'none';
+            rulesButton.style.display = 'none';
+            redScoreDisplay.style.display = 'none';
+            blueScoreDisplay.style.display = 'none';
+            timerDisplay.style.display = 'none';
+            if (gameOverMessage) gameOverMessage.style.display = 'none'; // Hide game over message
+            console.log("Cleanup complete.");
+        }
+
+        // --- Update Grid --- (Unchanged)
+        function updateGrid(gridSize) { cleanupGridElements(); currentGridSize = gridSize; CUBE_GRID_SIZE = gridSize - 1; BOX_GRID_SIZE = gridSize - 1; TOTAL_CUBES = Math.pow(CUBE_GRID_SIZE, 3); TOTAL_BOXES = 3 * Math.pow(BOX_GRID_SIZE, 2) * gridSize; console.log(`Updating grid to size: ${gridSize} (${TOTAL_CUBES} cubes, ${TOTAL_BOXES} boxes)`); gridCenter.set(SPACING*(gridSize-1)/2, SPACING*(gridSize-1)/2, SPACING*(gridSize-1)/2); const cameraZoffset = SPACING * gridSize * 0.8 + 2; camera.position.set(gridCenter.x, gridCenter.y + SPACING * (gridSize / 3), gridCenter.z + cameraZoffset); camera.lookAt(gridCenter); controls.target.copy(gridCenter); controls.update(); let minDist = Infinity; let maxDist = 0; const tempDotPositions = []; for (let z=0; z<gridSize; z++){for (let y=0; y<gridSize; y++){for (let x=0; x<gridSize; x++){ tempDotPositions.push(new THREE.Vector3(x*SPACING, y*SPACING, z*SPACING)); }}} tempDotPositions.forEach(pos => { const dist = camera.position.distanceTo(pos); minDist = Math.min(minDist, dist); maxDist = Math.max(maxDist, dist); }); BASE_FOG_NEAR = Math.max(0.1, minDist - SPACING * 0.5); BASE_FOG_FAR = BASE_FOG_NEAR + (maxDist - BASE_FOG_NEAR) / 0.8; initialCameraDist = camera.position.distanceTo(gridCenter); console.log(`Updated Fog: BaseNear=${BASE_FOG_NEAR.toFixed(2)}, BaseFar=${BASE_FOG_FAR.toFixed(2)}`); if(scene.fog){ scene.fog.near = BASE_FOG_NEAR; scene.fog.far = BASE_FOG_FAR; } else { scene.fog = new THREE.Fog(FOG_COLOR, BASE_FOG_NEAR, BASE_FOG_FAR); } createGrid(gridSize); createEdgesBoxesAndCubes(gridSize); createEdgeHitboxes(); createPreviewLine(); updateUI(); }
+
+        // --- Helper: Create Soft Particle Texture --- (Unchanged)
+        function createSoftParticleTexture() { const c=document.createElement('canvas'); const s=64; c.width=s; c.height=s; const x=c.getContext('2d'); const cx=s/2; const cy=s/2; const r=s/2; const g=x.createRadialGradient(cx,cy,0,cx,cy,r); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.5,'rgba(255,255,255,0.5)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,s,s); const t=new THREE.CanvasTexture(c); t.needsUpdate=true; return t; }
+
+        // --- Helper: Shuffle Array --- (Unchanged)
+        function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
+
+        // --- Helper Functions (getDotIndex, getDotCoords, getEdgeId, getBoxId) --- (Unchanged)
+        function getDotIndex(x, y, z) { if (x < 0 || x >= currentGridSize || y < 0 || y >= currentGridSize || z < 0 || z >= currentGridSize) return -1; return x + y * currentGridSize + z * currentGridSize * currentGridSize; }
+        function getDotCoords(index) { const z = Math.floor(index / (currentGridSize * currentGridSize)); const y = Math.floor((index % (currentGridSize * currentGridSize)) / currentGridSize); const x = index % currentGridSize; return { x, y, z }; }
+        function getEdgeId(idx1, idx2) { const [d1, d2] = [idx1, idx2].sort((a, b) => a - b); return `edge_${d1}_${d2}`; }
+        function getBoxId(idx1, idx2, idx3, idx4) { const indices = [idx1, idx2, idx3, idx4].sort((a, b) => a - b); return `box_${indices[0]}_${indices[1]}_${indices[2]}_${indices[3]}`; }
+
+        // --- Grid Creation --- (Unchanged)
+        function createGrid(gridSize) { const g=new THREE.SphereGeometry(DOT_RADIUS,16,16); for(let z=0;z<gridSize;z++){for(let y=0;y<gridSize;y++){for(let x=0;x<gridSize;x++){ const d=new THREE.Mesh(g,dotMaterial); d.position.set(x*SPACING,y*SPACING,z*SPACING); const i=getDotIndex(x,y,z); d.userData={gridIndex:{x,y,z},index:i}; scene.add(d); dots[i]=d;}}} console.log(`Created ${dots.length} dots.`); }
+
+        // --- Create Logical Edges, Boxes, and Cubes --- (Added adjacentCubes)
+        function createEdgesBoxesAndCubes(gridSize) {
+            const cubeGridSize = gridSize - 1;
+            let cubeIdCounter = 0;
+            boxes = {}; edges = {}; cubes = []; // Reset
+
+            // Create Edges (same as before)
+            for (let z=0; z<gridSize; z++){for(let y=0; y<gridSize; y++){for(let x=0; x<gridSize; x++){ const cIdx=getDotIndex(x,y,z); if(x<gridSize-1){const nIdx=getDotIndex(x+1,y,z); const eId=getEdgeId(cIdx,nIdx); if(!edges[eId]) edges[eId]={dot1Idx:cIdx,dot2Idx:nIdx,owner:null,mesh:null,boxes:[],cubes:[]};} if(y<gridSize-1){const nIdx=getDotIndex(x,y+1,z); const eId=getEdgeId(cIdx,nIdx); if(!edges[eId]) edges[eId]={dot1Idx:cIdx,dot2Idx:nIdx,owner:null,mesh:null,boxes:[],cubes:[]};} if(z<gridSize-1){const nIdx=getDotIndex(x,y,z+1); const eId=getEdgeId(cIdx,nIdx); if(!edges[eId]) edges[eId]={dot1Idx:cIdx,dot2Idx:nIdx,owner:null,mesh:null,boxes:[],cubes:[]};} }}}
+
+            // Create Cubes and Boxes, linking edges/boxes/cubes
+            for (let z=0; z<cubeGridSize; z++){for(let y=0; y<cubeGridSize; y++){for(let x=0; x<cubeGridSize; x++){
+                const cube = { id: cubeIdCounter++, gridCoords:{x,y,z}, owner:null, mesh:null, edges:[], boxes:[], adjacentCubes: [] }; // Added adjacentCubes
+                const d=[getDotIndex(x,y,z), getDotIndex(x+1,y,z), getDotIndex(x,y+1,z), getDotIndex(x+1,y+1,z), getDotIndex(x,y,z+1), getDotIndex(x+1,y,z+1), getDotIndex(x,y+1,z+1), getDotIndex(x+1,y+1,z+1)];
+                const cubeEdgePairs=[[d[0],d[1]], [d[2],d[3]], [d[4],d[5]], [d[6],d[7]], [d[0],d[2]], [d[1],d[3]], [d[4],d[6]], [d[5],d[7]], [d[0],d[4]], [d[1],d[5]], [d[2],d[6]], [d[3],d[7]]];
+                cubeEdgePairs.forEach(p=>{const eId=getEdgeId(p[0],p[1]); if(edges[eId]){ cube.edges.push(eId); if(!edges[eId].cubes.includes(cube.id)) edges[eId].cubes.push(cube.id);} else console.error(`Edge ${eId} not found for cube ${cube.id}`);});
+                const cubeBoxCorners=[[d[0],d[1],d[3],d[2]], [d[4],d[5],d[7],d[6]], [d[0],d[1],d[5],d[4]], [d[2],d[3],d[7],d[6]], [d[0],d[2],d[6],d[4]], [d[1],d[3],d[7],d[5]]];
+                cubeBoxCorners.forEach(corners=>{ const boxId=getBoxId(corners[0],corners[1],corners[2],corners[3]); cube.boxes.push(boxId); const boxEdgePairs=[[corners[0],corners[1]], [corners[1],corners[2]], [corners[2],corners[3]], [corners[3],corners[0]]]; const boxEdgeIds=boxEdgePairs.map(p=>getEdgeId(p[0],p[1])); if(!boxes[boxId]){ boxes[boxId]={id:boxId, dotIndices:corners, owner:null, mesh:null, edges:boxEdgeIds, cubes:[cube.id]}; boxEdgeIds.forEach(eId=>{if(edges[eId] && !edges[eId].boxes.includes(boxId)) edges[eId].boxes.push(boxId);}); } else { if(!boxes[boxId].cubes.includes(cube.id)) boxes[boxId].cubes.push(cube.id);} });
+                cubes.push(cube);
+            }}}
+
+            // NEW: Link adjacent cubes
+            cubes.forEach(cube => {
+                const { x, y, z } = cube.gridCoords;
+                const neighborsCoords = [
+                    { x: x+1, y: y, z: z }, { x: x-1, y: y, z: z },
+                    { x: x, y: y+1, z: z }, { x: x, y: y-1, z: z },
+                    { x: x, y: y, z: z+1 }, { x: x, y: y, z: z-1 },
+                ];
+                neighborsCoords.forEach(coords => {
+                    // Find cube at neighbor coords
+                    const neighbor = cubes.find(c => c.gridCoords.x === coords.x && c.gridCoords.y === coords.y && c.gridCoords.z === coords.z);
+                    if (neighbor && !cube.adjacentCubes.includes(neighbor.id)) {
+                        cube.adjacentCubes.push(neighbor.id);
+                        // Also add back-reference if not already there
+                        if (!neighbor.adjacentCubes.includes(cube.id)) {
+                            neighbor.adjacentCubes.push(cube.id);
+                        }
+                    }
+                });
+            });
+
+            console.log(`Created ${Object.keys(edges).length} edges, ${Object.keys(boxes).length} boxes, and ${cubes.length} cubes.`);
+            // Verify adjacency linking (optional debug)
+            // cubes.forEach(c => console.log(`Cube ${c.id} adj: ${c.adjacentCubes}`));
+        }
+
+
+        // --- Create Edge Hitboxes --- (Unchanged)
+        function createEdgeHitboxes() { edgeIdToHitboxMap = {}; edgeHitboxes = []; Object.keys(edges).forEach(eId => { const e = edges[eId]; if (!dots[e.dot1Idx] || !dots[e.dot2Idx]) { return; } const d1 = dots[e.dot1Idx]; const d2 = dots[e.dot2Idx]; const mid = new THREE.Vector3().addVectors(d1.position, d2.position).multiplyScalar(0.5); const dir = new THREE.Vector3().subVectors(d2.position, d1.position); const l = dir.length() * HITBOX_LENGTH_FACTOR; dir.normalize(); const g = new THREE.CylinderGeometry(HITBOX_RADIUS, HITBOX_RADIUS, l, 8); const material = new THREE.MeshBasicMaterial(hitboxGuideMaterialConfig); const mesh = new THREE.Mesh(g, material); mesh.position.copy(mid); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir); mesh.userData = { edgeId: eId }; scene.add(mesh); edgeHitboxes.push(mesh); edgeIdToHitboxMap[eId] = mesh; }); console.log(`Created ${edgeHitboxes.length} edge hitboxes (guides visible: ${isTouchDevice}).`); }
+
+        // --- Create Reusable Preview Line Object --- (Unchanged)
+        function createPreviewLine() { if (!previewEdgeMesh) { const g = new THREE.CylinderGeometry(EDGE_RADIUS, EDGE_RADIUS, SPACING, 8); previewEdgeMaterial = new THREE.MeshBasicMaterial({ color: PLAYER_COLORS[currentPlayer], transparent: true, opacity: MOUSE_PREVIEW_OPACITY }); previewEdgeMesh = new THREE.Mesh(g, previewEdgeMaterial); scene.add(previewEdgeMesh); console.log("Preview line object created."); } previewEdgeMesh.visible = false; }
+        function updatePreviewLine(edgeId) { const e = edges[edgeId]; if (!e) { hidePreviewLine(); return; } previewEdgeMaterial.color.setHex(PLAYER_COLORS[currentPlayer]); const d1 = dots[e.dot1Idx]; const d2 = dots[e.dot2Idx]; if (!d1 || !d2) { hidePreviewLine(); return; } const mid = new THREE.Vector3().addVectors(d1.position, d2.position).multiplyScalar(0.5); const dir = new THREE.Vector3().subVectors(d2.position, d1.position); const l = dir.length(); dir.normalize(); previewEdgeMesh.scale.y = l / SPACING; previewEdgeMesh.position.copy(mid); previewEdgeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir); }
+        function hidePreviewLine() { if (previewEdgeMesh) { previewEdgeMesh.visible = false; previewEdgeMaterial.opacity = MOUSE_PREVIEW_OPACITY; } currentPreviewEdgeId = null; }
+
+        // --- Create Visual Edge Line --- (Unchanged)
+        function createEdgeLine(edge, makeInstant = false) { const d1 = dots[edge.dot1Idx]; const d2 = dots[edge.dot2Idx]; const material = playerMaterials[edge.owner].clone(); material.opacity = makeInstant ? 1.0 : 0; const dir = new THREE.Vector3().subVectors(d2.position, d1.position); const l = dir.length(); dir.normalize(); const mid = new THREE.Vector3().addVectors(d1.position, d2.position).multiplyScalar(0.5); const g = new THREE.CylinderGeometry(EDGE_RADIUS, EDGE_RADIUS, l, 8); const mesh = new THREE.Mesh(g, material); mesh.position.copy(mid); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir); if (!makeInstant) { mesh.userData.animation = { targetOpacity: 1.0, startTime: Date.now(), duration: EDGE_FADE_DURATION }; animatingObjects.push(mesh); } else { delete mesh.userData.animation; } scene.add(mesh); edge.mesh = mesh; }
+
+        // --- Create Visual Box Plane --- (Unchanged)
+        function createBoxPlane(box, makeInstant = false) { if (!box || !box.owner || box.mesh) return; const material = boxMaterials[box.owner].clone(); material.opacity = makeInstant ? BOX_OPACITY : 0; const corners = box.dotIndices.map(idx => dots[idx].position); if (corners.some(p => !p)) { console.error("Cannot create box plane, missing dot position."); return; } const center = new THREE.Vector3(); corners.forEach(c => center.add(c)); center.multiplyScalar(0.25); const v1 = new THREE.Vector3().subVectors(corners[1], corners[0]); const v2 = new THREE.Vector3().subVectors(corners[3], corners[0]); const normal = new THREE.Vector3().crossVectors(v1, v2).normalize(); const geometry = new THREE.PlaneGeometry(SPACING, SPACING); const mesh = new THREE.Mesh(geometry, material); mesh.position.copy(center); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal); if (!makeInstant) { mesh.userData.animation = { targetOpacity: BOX_OPACITY, startTime: Date.now(), duration: BOX_FADE_DURATION }; animatingObjects.push(mesh); } else { delete mesh.userData.animation; } scene.add(mesh); box.mesh = mesh; }
+
+        // --- Check for Box/Cube Completion --- (Unchanged)
+        function checkPotentialBoxCompletion(claimedEdgeId) { const edge = edges[claimedEdgeId]; const newlyCompletedBoxes = []; if (!edge || !edge.boxes) return newlyCompletedBoxes; edge.boxes.forEach(boxId => { const box = boxes[boxId]; if (box && !box.owner) { let allEdgesOwned = true; for (const bEdgeId of box.edges) { if (!edges[bEdgeId] || !edges[bEdgeId].owner) { allEdgesOwned = false; break; } } if (allEdgesOwned) { newlyCompletedBoxes.push(boxId); } } }); return newlyCompletedBoxes; }
+        function checkPotentialCubeCompletion(claimedEdgeId) { const edge = edges[claimedEdgeId]; const newlyCompletedCubes = []; if (!edge || !edge.cubes) return newlyCompletedCubes; edge.cubes.forEach(cubeId => { const cube = cubes[cubeId]; if (cube && !cube.owner) { let allEdgesOwned = true; for (const cEdgeId of cube.edges) { if (!edges[cEdgeId] || !edges[cEdgeId].owner) { allEdgesOwned = false; break; } } if (allEdgesOwned) { newlyCompletedCubes.push(cubeId); } } }); return newlyCompletedCubes; }
+
+        // --- Shade/Remove Cube Visuals ---
+        // Helper to remove particle system for a cube
+        function removeShadeCube(cube) {
+            if (!cube || !cube.mesh) return;
+            console.log(`--- Removing shade for Cube ${cube.id} (owner: ${cube.owner})`);
+            animatingObjects = animatingObjects.filter(obj => obj !== cube.mesh);
+            const particleSystemIndex = gasParticleSystems.findIndex(p => p === cube.mesh);
+            if (particleSystemIndex > -1) {
+                gasParticleSystems.splice(particleSystemIndex, 1);
+            }
+            scene.remove(cube.mesh);
+            if (cube.mesh.geometry) cube.mesh.geometry.dispose();
+            if (cube.mesh.material) cube.mesh.material.dispose();
+            // Important: Also delete stored velocity data
+            if (cube.mesh.userData.velocities) {
+                delete cube.mesh.userData.velocities;
+            }
+            cube.mesh = null;
+        }
+
+        // Creates particle system with initial velocities
+        function shadeCube(cube, makeInstant = false) {
+            console.log(`+++ shadeCube called for Cube ${cube?.id}. Owner: ${cube?.owner}, Has Mesh: ${!!cube?.mesh}, Instant: ${makeInstant}`);
+            if (!cube || !cube.owner || cube.mesh) {
+                console.log(`+++ shadeCube returning early for Cube ${cube?.id}. Owner: ${cube?.owner}, Has Mesh: ${!!cube?.mesh}`);
+                return;
+            }
+            console.log(`+++ shadeCube entered for Cube ${cube.id}. Owner: ${cube.owner}, Instant: ${makeInstant}`);
+
+            const positions = [];
+            const velocities = []; // NEW: Store velocities
+            const basePos = new THREE.Vector3( cube.gridCoords.x * SPACING, cube.gridCoords.y * SPACING, cube.gridCoords.z * SPACING );
+
+            for (let i = 0; i < PARTICLES_PER_CUBE; i++) { // Uses updated constant
+                // Initial position
+                positions.push( basePos.x + Math.random() * SPACING, basePos.y + Math.random() * SPACING, basePos.z + Math.random() * SPACING );
+                // Initial velocity
+                velocities.push( (Math.random() - 0.5) * PARTICLE_INITIAL_SPEED, (Math.random() - 0.5) * PARTICLE_INITIAL_SPEED, (Math.random() - 0.5) * PARTICLE_INITIAL_SPEED );
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            // Store velocities in userData (simpler than interleaved buffer)
+            const velocityArray = new Float32Array(velocities);
+
+            const material = new THREE.PointsMaterial({ color: PLAYER_COLORS[cube.owner], map: particleTexture, size: PARTICLE_SIZE, sizeAttenuation: true, transparent: true, opacity: makeInstant ? FINAL_PARTICLE_OPACITY : 0, blending: THREE.NormalBlending, depthWrite: false });
+            const points = new THREE.Points(geometry, material);
+            points.userData.basePos = basePos.clone();
+            points.userData.cubeId = cube.id;
+            points.userData.velocities = velocityArray; // Store velocities
+
+            if (!makeInstant) {
+                points.userData.animation = { targetOpacity: FINAL_PARTICLE_OPACITY, startTime: Date.now(), duration: GAS_FADE_DURATION };
+                animatingObjects.push(points);
+            }
+            scene.add(points);
+            cube.mesh = points; // Link cube logical data to visual mesh
+            gasParticleSystems.push(points); // Add to list for animation processing
+            console.log(`+++ Shading Cube ${cube.id} for ${cube.owner} (Instant: ${makeInstant})`);
+        }
+
+
+        // --- Check for Game Over --- (Show message)
+        function checkGameOver() {
+             if (gameOver) return true;
+             const allEdgesFilled = Object.values(edges).every(edge => edge.owner);
+             if (allEdgesFilled && Object.keys(edges).length > 0) {
+                 gameOver = true;
+                 console.log("Game Over - All edges captured.");
+                 hidePreviewLine();
+                 if (timerIntervalId) {
+                     clearInterval(timerIntervalId);
+                     timerIntervalId = null;
+                     console.log("Timer stopped due to game over.");
+                 }
+                 // Show game over message
+                 if (gameOverMessage && gameOverText) { // Check if text element exists
+                     const winner = getWinner(); // Returns HTML with color span
+                     gameOverText.innerHTML = `Game Over!<br>${winner} wins!`; // Set text content
+                     gameOverMessage.style.display = 'block'; // Show the container
+                     // Listener for replay button is now added in setupScene
+                 }
+                 updateUI(); // Update final score display
+             }
+             return gameOver;
+         }
+
+        // --- UI Update --- (Simplified)
+        function updateUI() {
+            // Update scores
+            if (redScoreDisplay && blueScoreDisplay) {
+                 redScoreDisplay.textContent = scores.Red; // Just the number
+                 blueScoreDisplay.textContent = scores.Blue; // Just the number
+            }
+
+            // Update timer display and color
+            if (timerDisplay) {
+                if (timeLimitEnabled && !gameOver) {
+                    timerDisplay.textContent = `${timerValue}s`; // Just the time value + s
+                    timerDisplay.style.color = `#${PLAYER_COLORS[currentPlayer].toString(16).padStart(6, '0')}`;
+                    timerDisplay.style.display = 'block';
+                } else {
+                    timerDisplay.style.display = 'none';
+                }
+            }
+            // Winner text is now handled in checkGameOver
+        }
+
+
+        // --- Timer Logic --- (Unchanged)
+        function updateTimer() { if (gameOver) { if (timerIntervalId) clearInterval(timerIntervalId); timerIntervalId = null; return; } timerValue--; updateUI(); if (timerValue <= 0) { console.log(`${currentPlayer} ran out of time!`); if (timerIntervalId) clearInterval(timerIntervalId); timerIntervalId = null; switchPlayer(); updateUI(); } }
+        function resetTimer() { if (!timeLimitEnabled || gameOver) return; console.log(`Resetting timer for ${currentPlayer} to ${currentGameTimerDuration}s`); if (timerIntervalId) { clearInterval(timerIntervalId); } timerValue = currentGameTimerDuration; updateUI(); timerIntervalId = setInterval(updateTimer, 1000); }
+
+        // --- Undo Last Move --- (Improved Visual Restore + Debug)
+        function undoLastMove() {
+            console.log("Undo button clicked.");
+            if (!gameStarted || moveHistory.length === 0) {
+                console.log("Undo ignored."); return;
+            }
+            const lastMove = moveHistory.pop();
+            console.log("Undoing move:", lastMove);
+            let wasGameOver = gameOver;
+            gameOver = false;
+            if (gameOverMessage) gameOverMessage.style.display = 'none'; // Hide game over message on undo
+
+            // 1. Revert Edge
+            const edge = edges[lastMove.edgeId];
+            if (edge) {
+                if (edge.mesh) { animatingObjects = animatingObjects.filter(obj => obj !== edge.mesh); scene.remove(edge.mesh); if(edge.mesh.geometry) edge.mesh.geometry.dispose(); if(edge.mesh.material) edge.mesh.material.dispose(); edge.mesh = null; }
+                edge.owner = null;
+                const hitbox = edgeIdToHitboxMap[lastMove.edgeId];
+                if (hitbox) { hitbox.visible = true; } else { console.warn("No hitbox for edge:", lastMove.edgeId); }
+            } else { console.warn("No edge data to undo:", lastMove.edgeId); }
+
+            // 2. Revert Boxes Completed (Only if no cube was completed initially)
+            lastMove.boxesCompleted.forEach(boxInfo => {
+                const box = boxes[boxInfo.id];
+                if (box) {
+                    if (box.mesh) { removeBoxPlaneVisual(box); } // Use helper
+                    box.owner = boxInfo.ownerBefore; // Should be null
+                } else { console.warn("No box to undo:", boxInfo.id); }
+            });
+
+            // 3. Revert Initial Cube Captures and Adjacent Flips
+            if (lastMove.cubesCompleted && lastMove.cubesCompleted.length > 0) {
+                lastMove.cubesCompleted.forEach(cubeInfo => {
+                    // Revert initial cube
+                    const initialCube = cubes[cubeInfo.id];
+                    if (initialCube) {
+                        removeShadeCube(initialCube); // Remove current player's shade
+                        initialCube.owner = cubeInfo.ownerBefore; // Should be null
+                        // Restore face ownership & visuals (if previously owned)
+                        cubeInfo.overriddenBoxes.forEach(boxInfo => {
+                            const faceBox = boxes[boxInfo.id];
+                            if (faceBox) {
+                                faceBox.owner = boxInfo.ownerBefore;
+                                if (boxInfo.ownerBefore) { // Only restore visual if it was owned before
+                                    console.log(`--- Undo: Restoring visual for face ${faceBox.id} (owner: ${boxInfo.ownerBefore})`);
+                                    createBoxPlane(faceBox, true); // Restore instantly
+                                }
+                            }
+                        });
+                    } else { console.warn("No initial cube to undo:", cubeInfo.id); }
+
+                    // Revert adjacent flipped cubes (owner and visuals)
+                    if (cubeInfo.flippedCubes && cubeInfo.flippedCubes.length > 0) {
+                        console.log(`Undo: Reverting ${cubeInfo.flippedCubes.length} adjacent-flipped cubes.`);
+                        cubeInfo.flippedCubes.forEach(flipInfo => {
+                            const flippedCube = cubes[flipInfo.id];
+                            if (flippedCube) {
+                                removeShadeCube(flippedCube); // Remove shade added by flip
+                                flippedCube.owner = flipInfo.ownerBefore; // Restore owner
+                                // Restore visuals if it was previously owned
+                                if (flipInfo.ownerBefore) {
+                                    console.log(`--- Undo: Attempting shadeCube for ${flippedCube.id}. Has mesh? ${!!flippedCube.mesh}. Has owner? ${flippedCube.owner}`); // DEBUG
+                                    shadeCube(flippedCube, false); // Restore with fade-in
+                                    // Restore face ownership & visuals for the flipped cube
+                                    flippedCube.boxes.forEach(faceBoxId => {
+                                        const faceBox = boxes[faceBoxId];
+                                        if(faceBox) {
+                                            faceBox.owner = flipInfo.ownerBefore;
+                                            createBoxPlane(faceBox, true);
+                                        }
+                                    });
+                                }
+                                // Score reversal is handled globally by deltas below
+                            } else { console.warn(`Undo: Could not find flipped cube ${flipInfo.id}`); }
+                        });
+                    }
+                });
+            }
+
+            // 4. Revert Overall Score Deltas using stored net change
+            console.log(`--- Undo: Reversing deltas R: ${lastMove.scoreDeltaRed}, B: ${lastMove.scoreDeltaBlue}. Current Scores R:${scores.Red} B:${scores.Blue}`);
+            scores.Red -= lastMove.scoreDeltaRed;
+            scores.Blue -= lastMove.scoreDeltaBlue;
+            // Ensure scores don't somehow go negative during undo (safety check)
+            scores.Red = Math.max(0, scores.Red);
+            scores.Blue = Math.max(0, scores.Blue);
+            console.log(`--- Undo: Scores after reversal R:${scores.Red} B:${scores.Blue}`);
+
+
+            // 5. Revert Player and Timer
+            currentPlayer = lastMove.playerWhoMoved;
+            if (timeLimitEnabled) {
+                console.log(`Restoring timer to ${lastMove.timerValueBeforeMove} for ${currentPlayer}`);
+                if (timerIntervalId) clearInterval(timerIntervalId);
+                timerValue = lastMove.timerValueBeforeMove;
+                if (!wasGameOver && !checkGameOver()) { timerIntervalId = setInterval(updateTimer, 1000); } else { timerIntervalId = null; }
+            } else { checkGameOver(); }
+
+            // 6. Final Updates
+            updateUI();
+            undoButton.disabled = true;
+            console.log("Undo complete. Final scores R:", scores.Red, "B:", scores.Blue);
+            turnMade = false;
+            hidePreviewLine();
+        }
+
+
+        // --- Main Game Logic: Claiming an Edge --- (Adjacent Flip Only)
+        let gameStarted = false;
+        function claimEdge(edgeId) {
+            if (!gameStarted || gameOver || turnMade) return;
+            const edge = edges[edgeId];
+            if (!edge || edge.owner) return;
+
+            turnMade = true;
+            const playerBeforeMove = currentPlayer;
+            const timerValueBeforeMove = timerValue;
+            let scoreDeltaRed = 0;
+            let scoreDeltaBlue = 0;
+            let switchTurn = true; // Assume turn switches unless a cube is captured
+            const undoBoxesCompleted = [];
+            const undoCubesCompleted = []; // Array to store info for potentially multiple completed cubes
+
+            console.log(`>>> ${playerBeforeMove} claims edge ${edgeId}`);
+            edge.owner = playerBeforeMove;
+            hidePreviewLine();
+            createEdgeLine(edge);
+            const hitbox = edgeIdToHitboxMap[edgeId];
+            if (hitbox) { hitbox.visible = false; }
+
+            // --- Check for CUBE completion FIRST ---
+            const completedCubeIds = checkPotentialCubeCompletion(edgeId);
+            let cubeWasCompleted = completedCubeIds.length > 0;
+            // Removed visitedInChain
+
+            if (cubeWasCompleted) {
+                console.log(`>>> Edge ${edgeId} completed ${completedCubeIds.length} cube(s): [${completedCubeIds.join(', ')}]`);
+                switchTurn = false; // Grant extra turn if any cube is completed
+
+                // Loop through ALL cubes completed by this single edge
+                completedCubeIds.forEach((initialCubeId, index) => {
+                    const cube = cubes[initialCubeId];
+
+                    // Check owner just in case (should be null if checkPotential is correct)
+                    if (cube && !cube.owner) {
+                        console.log(`>>> Processing Initial Cube ${initialCubeId} (${index+1}/${completedCubeIds.length}). Scores BEFORE: R ${scores.Red} - B ${scores.Blue}`);
+                        const ownerBefore = cube.owner; // null
+                        const overriddenBoxesInfo = [];
+                        const flippedCubesInfo = []; // Store info about ADJACENT flipped cubes
+                        cube.owner = playerBeforeMove;
+                        const baseCubePointsAward = CUBE_POINTS; // 4
+
+                        // 1. Handle face overrides for this INITIAL cube
+                        cube.boxes.forEach(faceBoxId => {
+                            const faceBox = boxes[faceBoxId];
+                            if (faceBox) {
+                                const faceOwnerBefore = faceBox.owner;
+                                if (faceOwnerBefore && faceOwnerBefore !== playerBeforeMove) {
+                                    let pointsToSubtract = Math.min(scores[faceOwnerBefore], BOX_POINTS);
+                                    console.log(`--- Initial Cube ${initialCubeId}: Overriding face ${faceBoxId} owned by ${faceOwnerBefore}. Subtracting ${pointsToSubtract} pt (Score was ${scores[faceOwnerBefore]}).`);
+                                    scores[faceOwnerBefore] -= pointsToSubtract;
+                                    if (faceOwnerBefore === 'Red') scoreDeltaRed -= pointsToSubtract; else scoreDeltaBlue -= pointsToSubtract;
+                                }
+                                if (faceBox.mesh) { removeBoxPlaneVisual(faceBox); }
+                                faceBox.owner = playerBeforeMove;
+                                overriddenBoxesInfo.push({ id: faceBoxId, ownerBefore: faceOwnerBefore });
+                            }
+                        });
+                        console.log(`--- Scores after initial face overrides for Cube ${initialCubeId}: R ${scores.Red} - B ${scores.Blue}`);
+
+                        // 2. Award points for this INITIAL cube capture
+                        console.log(`--- Awarding ${baseCubePointsAward} base points to ${playerBeforeMove} for initial cube ${initialCubeId}.`);
+                        scores[playerBeforeMove] += baseCubePointsAward;
+                        if (playerBeforeMove === 'Red') scoreDeltaRed += baseCubePointsAward; else scoreDeltaBlue += baseCubePointsAward;
+                        console.log(`--- Scores AFTER initial cube ${initialCubeId} award: R ${scores.Red} - B ${scores.Blue}`);
+
+                        // 3. Check ADJACENT cubes for flipping (NO CHAIN REACTION)
+                        const opponent = (playerBeforeMove === 'Red' ? 'Blue' : 'Red');
+                        console.log(`--- Checking adjacent cubes of Cube ${initialCubeId} for flipping...`);
+
+                        cube.adjacentCubes.forEach((neighborCubeId, flipIndex) => {
+                            const neighborCube = cubes[neighborCubeId];
+                            // Check if neighbor exists and is owned by the opponent
+                            if (neighborCube && neighborCube.owner === opponent) {
+                                console.log(`>>> Adjacent Flip: Flipping Cube ${neighborCubeId} from ${opponent} to ${playerBeforeMove}!`);
+
+                                // Calculate points opponent loses (capped at 0)
+                                let pointsToSubtract = Math.min(scores[opponent], CUBE_POINTS);
+                                // Store actual points lost for undo
+                                flippedCubesInfo.push({ id: neighborCubeId, ownerBefore: opponent, pointsLost: pointsToSubtract });
+
+                                // Subtract points from opponent (capped)
+                                console.log(`--- Adjacent Flip: Subtracting ${pointsToSubtract} points from ${opponent} for flipped cube ${neighborCubeId} (Score was ${scores[opponent]}).`);
+                                scores[opponent] -= pointsToSubtract;
+                                if (opponent === 'Red') scoreDeltaRed -= pointsToSubtract; else scoreDeltaBlue -= pointsToSubtract;
+
+                                // Add points to current player for the flipped cube
+                                console.log(`--- Adjacent Flip: Awarding ${CUBE_POINTS} points to ${playerBeforeMove} for flipped cube ${neighborCubeId}.`);
+                                scores[playerBeforeMove] += CUBE_POINTS;
+                                if (playerBeforeMove === 'Red') scoreDeltaRed += CUBE_POINTS; else scoreDeltaBlue += CUBE_POINTS;
+
+                                // Flip ownership & visuals
+                                removeShadeCube(neighborCube);
+                                neighborCube.owner = playerBeforeMove;
+                                setTimeout(() => shadeCube(neighborCube), CUBE_SHADE_DELAY * (flipIndex + 1)); // Stagger visuals slightly
+
+                                // Nullify faces of the FLIPPED cube (logically)
+                                neighborCube.boxes.forEach(faceBoxId => {
+                                    const faceBox = boxes[faceBoxId];
+                                    if(faceBox) {
+                                        if (faceBox.mesh) { removeBoxPlaneVisual(faceBox); }
+                                        faceBox.owner = playerBeforeMove;
+                                    }
+                                });
+                                console.log(`--- Scores after adjacent flip ${neighborCubeId}: R ${scores.Red} - B ${scores.Blue}`);
+                            } // End if opponent owned
+                        }); // End adjacent check loop
+                        console.log(`--- Adjacent flip check finished for initial Cube ${initialCubeId}. Flipped ${flippedCubesInfo.length} cubes.`);
+
+                        // 4. Finalize visuals & store undo info for this initial cube + its adjacent flips
+                        setTimeout(() => shadeCube(cube), CUBE_SHADE_DELAY * index); // Shade initial cube with stagger
+                        undoCubesCompleted.push({ id: initialCubeId, ownerBefore: ownerBefore, overriddenBoxes: overriddenBoxesInfo, flippedCubes: flippedCubesInfo });
+
+                    } else {
+                        // This case handles if edge completes CUBE A and CUBE B, and CUBE A's chain flips CUBE B before CUBE B's own loop executes.
+                        console.warn(`Edge ${edgeId} completed Cube ${initialCubeId}, but it was already processed or owned? Owner: ${cube?.owner}`);
+                    }
+                }); // End loop through completedCubeIds
+            }
+
+            // --- Check for BOX completion ONLY IF NO cube was completed by this edge ---
+            if (!cubeWasCompleted) {
+                const completedBoxIds = checkPotentialBoxCompletion(edgeId);
+                completedBoxIds.forEach(boxId => {
+                    const box = boxes[boxId];
+                    if (box && !box.owner) {
+                        const ownerBefore = box.owner; // null
+                        box.owner = playerBeforeMove;
+                        scores[playerBeforeMove] += BOX_POINTS;
+                        if (playerBeforeMove === 'Red') scoreDeltaRed += BOX_POINTS; else scoreDeltaBlue += BOX_POINTS;
+                        createBoxPlane(box);
+                        undoBoxesCompleted.push({ id: boxId, ownerBefore: ownerBefore });
+                        console.log(`--- Box ${boxId} captured (+${BOX_POINTS} pt). Score: R ${scores.Red} - B ${scores.Blue}`);
+                    }
+                });
+            }
+
+            // Store move history
+            const moveData = {
+                edgeId: edgeId,
+                playerWhoMoved: playerBeforeMove,
+                timerValueBeforeMove: timerValueBeforeMove,
+                scoreDeltaRed: scoreDeltaRed, // Net delta for the entire move
+                scoreDeltaBlue: scoreDeltaBlue,
+                boxesCompleted: undoBoxesCompleted,
+                cubesCompleted: undoCubesCompleted // Array of completed cubes + their adjacent flips
+            };
+            moveHistory.push(moveData);
+            undoButton.disabled = false;
+            undoButton.style.display = 'block';
+            console.log(">>> Move finished, Undo enabled. Final deltas: Red="+scoreDeltaRed+", Blue="+scoreDeltaBlue);
+
+            // Finalize turn
+            if (!checkGameOver()) {
+                if (switchTurn) {
+                    switchPlayer();
+                } else {
+                    console.log(`>>> ${playerBeforeMove} gets another turn.`);
+                    resetTimer();
+                    updateUI();
+                }
+            }
+            // Allow next interaction
+            const maxFade = Math.max(EDGE_FADE_DURATION, BOX_FADE_DURATION, GAS_FADE_DURATION);
+            setTimeout(() => { turnMade = false; }, maxFade + 50);
+        }
+
+        // NEW Helper to remove box visual
+        function removeBoxPlaneVisual(box) {
+             if (box && box.mesh) {
+                animatingObjects = animatingObjects.filter(obj => obj !== box.mesh);
+                scene.remove(box.mesh);
+                if(box.mesh.geometry) box.mesh.geometry.dispose();
+                if(box.mesh.material) box.mesh.material.dispose();
+                box.mesh = null;
+            }
+        }
+
+
+        // --- Switch Player --- (Unchanged)
+        function switchPlayer() { currentPlayer=(currentPlayer==='Red'?'Blue':'Red'); console.log(`>>> Turn switched to ${currentPlayer}`); resetTimer(); updateUI(); }
+
+        // --- Get Winner Text --- (Unchanged)
+        function getWinner() { if(!gameOver)return''; if(scores.Red>scores.Blue)return'<span class="player-red">Red</span>'; if(scores.Blue>scores.Red)return'<span class="player-blue">Blue</span>'; return'Nobody (Tie)'; }
+
+        // --- Interaction Handlers (Universal Hold Logic - Unchanged) ---
+        function handleInteractionStart(x, y) { if (!scene || !gameStarted || gameOver || turnMade || isHolding) return; let targetElement = null; try { targetElement = document.elementFromPoint(x, y); } catch (e) {} if (targetElement?.closest('#start-menu') || targetElement?.closest('#undo-button')) return; hidePreviewLine(); holdStartPosition.x = x; holdStartPosition.y = y; holdStartTime = Date.now(); holdEdgeId = null; interactionCoords.x = (x / window.innerWidth) * 2 - 1; interactionCoords.y = -(y / window.innerHeight) * 2 + 1; raycaster.setFromCamera(interactionCoords, camera); const intersects = raycaster.intersectObjects(edgeHitboxes); const hit = intersects.length > 0 ? intersects[0] : null; if (hit) { const edgeId = hit.object.userData.edgeId; const edge = edges[edgeId]; if (edge && !edge.owner && (hit.object.material.opacity > 0 || !isTouchDevice)) { holdEdgeId = edgeId; isHolding = true; updatePreviewLine(edgeId); previewEdgeMaterial.opacity = 0; previewEdgeMesh.visible = true; if (holdTimerId) clearTimeout(holdTimerId); holdTimerId = setTimeout(confirmHoldSelection, HOLD_DURATION); } } }
+        function handleInteractionMove(x, y) { if (!isHolding || !holdEdgeId) return; const dx = x - holdStartPosition.x; const dy = y - holdStartPosition.y; const distSq = dx * dx + dy * dy; if (distSq > MAX_HOLD_MOVE_DISTANCE_SQ) { cancelHold(); } }
+        function handleInteractionEnd() { if (isHolding) { cancelHold(); } }
+        function cancelHold() { if (!isHolding) return; if (holdTimerId) { clearTimeout(holdTimerId); holdTimerId = null; } hidePreviewLine(); holdEdgeId = null; holdStartTime = 0; isHolding = false; holdStartPosition.x = null; holdStartPosition.y = null; }
+        function confirmHoldSelection() { if (isHolding && holdEdgeId) { console.log("Hold confirmed for edge:", holdEdgeId); const edgeToClaim = holdEdgeId; holdTimerId = null; isHolding = false; holdEdgeId = null; holdStartTime = 0; holdStartPosition.x = null; holdStartPosition.y = null; claimEdge(edgeToClaim); } else { holdTimerId = null; isHolding = false; holdEdgeId = null; holdStartTime = 0; holdStartPosition.x = null; holdStartPosition.y = null; } }
+
+        // --- Event Listeners --- (Reverted to Universal Hold - Unchanged)
+        function onWindowResize() { if (camera && renderer) { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); } }
+        function onMouseDown(event) { if (event.button !== 0) return; if (event.target.closest('#start-menu') || event.target.closest('#undo-button') || event.target.closest('#rules-button')) return; /* Added rules button check */ if (!gameStarted || gameOver || turnMade) return; handleInteractionStart(event.clientX, event.clientY); }
+        function onMouseMove(event) { if (isHolding) { handleInteractionMove(event.clientX, event.clientY); } else if (!isTouchDevice) { if (!scene || !gameStarted || gameOver || turnMade) { hidePreviewLine(); return; } interactionCoords.x = (event.clientX / window.innerWidth) * 2 - 1; interactionCoords.y = -(event.clientY / window.innerHeight) * 2 + 1; raycaster.setFromCamera(interactionCoords, camera); const intersects = raycaster.intersectObjects(edgeHitboxes); let previewableEdgeId = null; for (const hit of intersects) { const edgeId = hit.object.userData.edgeId; const edge = edges[edgeId]; if (edge && !edge.owner) { previewableEdgeId = edgeId; break; } } if (previewableEdgeId) { if (currentPreviewEdgeId !== previewableEdgeId) { updatePreviewLine(previewableEdgeId); previewEdgeMaterial.opacity = MOUSE_PREVIEW_OPACITY; previewEdgeMesh.visible = true; currentPreviewEdgeId = previewableEdgeId; } } else { hidePreviewLine(); } } }
+        function onMouseUp(event) { if (event.button !== 0) return; if (event.target.closest('#start-menu') || event.target.closest('#undo-button') || event.target.closest('#rules-button')) return; /* Added rules button check */ handleInteractionEnd(); }
+        function onTouchStart(event) { if (event.touches.length === 1) { // Check if touch is on UI
+            const touch = event.touches[0]; let targetElement = null; try { targetElement = document.elementFromPoint(touch.clientX, touch.clientY); } catch (e) {} if (targetElement?.closest('#start-menu') || targetElement?.closest('#undo-button') || targetElement?.closest('#rules-button')) return; handleInteractionStart(touch.clientX, touch.clientY); } else { cancelHold(); } }
+        function onTouchMove(event) { if (event.touches.length === 1) { event.preventDefault(); handleInteractionMove(event.touches[0].clientX, event.touches[0].clientY); } else { cancelHold(); } }
+        function onTouchEnd(event) { // Check if touch end is on UI (might not be needed depending on browser behavior)
+            // let targetElement = null; try { targetElement = document.elementFromPoint(event.changedTouches[0].clientX, event.changedTouches[0].clientY); } catch (e) {} if (targetElement?.closest('#start-menu') || targetElement?.closest('#undo-button') || targetElement?.closest('#rules-button')) return;
+            handleInteractionEnd(); }
+
+
+        // --- Animation Loop --- (Updated for Particle Velocity/Bouncing)
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!scene || !camera || !renderer) return;
+
+            controls.update();
+            const now = Date.now();
+
+            // Animate Hold Preview Opacity
+            if (isHolding && holdEdgeId && previewEdgeMesh && previewEdgeMesh.visible) {
+                 const elapsed = now - holdStartTime;
+                 const progress = Math.min(elapsed / HOLD_DURATION, 1.0);
+                 previewEdgeMaterial.opacity = progress;
+            }
+
+            // Process fade-in animations (Edges, Boxes, Gas)
+            const stillAnimating = [];
+            for (const obj of animatingObjects) {
+                 const anim = obj.userData.animation;
+                 if (!anim) continue;
+                 const elapsed = now - anim.startTime;
+                 const progress = Math.min(elapsed / anim.duration, 1.0);
+                 if (obj.material) { obj.material.opacity = progress * anim.targetOpacity; }
+                 else { console.warn("Animating object missing material"); continue; }
+                 if (progress < 1.0) { stillAnimating.push(obj); }
+                 else { if (obj.material) { obj.material.opacity = anim.targetOpacity; } delete obj.userData.animation; }
+            }
+            animatingObjects = stillAnimating;
+
+            // Animate Gas Particles (Velocity + Bouncing)
+            gasParticleSystems.forEach(points => {
+                const positions = points.geometry.attributes.position.array;
+                const velocities = points.userData.velocities; // Get velocities
+                const basePos = points.userData.basePos;
+                const maxPos = {
+                    x: basePos.x + SPACING,
+                    y: basePos.y + SPACING,
+                    z: basePos.z + SPACING
+                };
+
+                if (!velocities) return; // Skip if velocities aren't set up yet
+
+                for (let i = 0; i < positions.length; i += 3) {
+                    // Update position based on velocity
+                    positions[i]   += velocities[i];   // x += vx
+                    positions[i+1] += velocities[i+1]; // y += vy
+                    positions[i+2] += velocities[i+2]; // z += vz
+
+                    // Boundary checks and bouncing
+                    // X axis
+                    if (positions[i] < basePos.x) {
+                        positions[i] = basePos.x + (basePos.x - positions[i]); // Reflect position
+                        velocities[i] *= -1; // Reverse velocity
+                    } else if (positions[i] > maxPos.x) {
+                        positions[i] = maxPos.x - (positions[i] - maxPos.x); // Reflect position
+                        velocities[i] *= -1; // Reverse velocity
+                    }
+                    // Y axis
+                    if (positions[i+1] < basePos.y) {
+                        positions[i+1] = basePos.y + (basePos.y - positions[i+1]);
+                        velocities[i+1] *= -1;
+                    } else if (positions[i+1] > maxPos.y) {
+                        positions[i+1] = maxPos.y - (positions[i+1] - maxPos.y);
+                        velocities[i+1] *= -1;
+                    }
+                    // Z axis
+                    if (positions[i+2] < basePos.z) {
+                        positions[i+2] = basePos.z + (basePos.z - positions[i+2]);
+                        velocities[i+2] *= -1;
+                    } else if (positions[i+2] > maxPos.z) {
+                        positions[i+2] = maxPos.z - (positions[i+2] - maxPos.z);
+                        velocities[i+2] *= -1;
+                    }
+                }
+                points.geometry.attributes.position.needsUpdate = true;
+            });
+
+            // Dynamic Fog Adjustment
+            if (scene.fog) {
+                const currentDist = camera.position.distanceTo(gridCenter);
+                const distDiff = currentDist - initialCameraDist;
+                const newNear = Math.max(0.1, BASE_FOG_NEAR + distDiff);
+                const newFar = BASE_FOG_FAR + distDiff;
+                if (newNear < newFar) { scene.fog.near = newNear; scene.fog.far = newFar; }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- Menu Setup & Start Game --- (Show Rules Button)
+        gridSizeSlider.addEventListener('input', (event) => { const newSize = parseInt(event.target.value, 10); gridSizeValueSpan.textContent = newSize; if (scene) { updateGrid(newSize); } });
+        timeLimitSlider.addEventListener('input', (event) => { const selectedIndex = parseInt(event.target.value, 10); timeLimitValueSpan.textContent = timeLimitLabels[selectedIndex]; });
+        startButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            startMenu.classList.add('hidden');
+            // Show game UI elements
+            redScoreDisplay.style.display = 'block';
+            timerDisplay.style.display = 'block'; // Timer might still be hidden by updateUI if disabled
+            blueScoreDisplay.style.display = 'block';
+            undoButton.style.display = 'block'; // Show undo button
+            rulesButton.style.display = 'inline-block'; // Show rules button
+            gameOverMessage.style.display = 'none'; // Ensure game over message is hidden
+
+            const selectedTimeIndex = parseInt(timeLimitSlider.value, 10);
+            const selectedTime = timeLimitOptions[selectedTimeIndex];
+            timeLimitEnabled = (selectedTime !== Infinity);
+            currentGameTimerDuration = selectedTime;
+            startHalfFilled = halfFilledCheckbox.checked;
+            currentPlayer = Math.random() < 0.5 ? 'Red' : 'Blue';
+            console.log("Starting player:", currentPlayer);
+            if (startHalfFilled) { prepopulateGrid(); moveHistory = []; undoButton.disabled = true; console.log("Grid pre-populated."); } else { undoButton.disabled = true; }
+            if (timeLimitEnabled) { /* timerDisplay shown above */ resetTimer(); console.log("Timer started."); } else { timerDisplay.style.display = 'none'; }
+
+            gameStarted = true;
+            updateUI();
+            console.log(`Game started with grid size ${currentGridSize}`);
+         });
+
+        // --- Pre-populate Grid Function --- (Unchanged)
+        function prepopulateGrid() { const allEdgeIds = Object.keys(edges); shuffleArray(allEdgeIds); let prepopPlayer = 'Red'; let edgesPlacedCount = 0; const maxEdgesToPlace = Math.floor(allEdgeIds.length * 0.55); console.log("Pre-populating grid..."); for (const edgeId of allEdgeIds) { if (edgesPlacedCount >= maxEdgesToPlace) break; const edge = edges[edgeId]; if (edge && !edge.owner) { edge.owner = prepopPlayer; const completesBox = checkPotentialBoxCompletion(edgeId).length > 0; const completesCube = checkPotentialCubeCompletion(edgeId).length > 0; if (!completesBox && !completesCube) { createEdgeLine(edge, true); const hitbox = edgeIdToHitboxMap[edgeId]; if (hitbox) { hitbox.visible = false; } edgesPlacedCount++; prepopPlayer = (prepopPlayer === 'Red' ? 'Blue' : 'Red'); } else { edge.owner = null; } } } console.log(`Pre-populated ${edgesPlacedCount} edges.`); updateUI(); }
+
+        // --- Initial Setup ---
+        setupScene();
+        timeLimitValueSpan.textContent = timeLimitLabels[parseInt(timeLimitSlider.value, 10)];
+        updateGrid(parseInt(gridSizeSlider.value, 10));
+        animate();
+
+    </script>
+</body>
+</html>
