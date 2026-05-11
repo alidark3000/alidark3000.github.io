@@ -6,7 +6,6 @@
  <meta name="description" content="Ali Dark: Creative technologist in Brisbane Australia">
  <title>Ali Dark | Creative Technologist</title>
  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap');
 
     :root {
         --color-cyan: #00E5FF;
@@ -28,7 +27,7 @@
     }
 
     body {
-        font-family: 'Outfit', sans-serif;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         background-color: var(--color-bg);
         color: #fff;
         line-height: 1.6;
@@ -62,33 +61,34 @@
     .orb-1 {
         width: 45vw;
         height: 45vw;
-        background: #E0FFFF;
-        box-shadow: inset 0 0 0 6vw #0099CC, inset 0 0 0 12vw #00BFFF, inset 0 0 0 18vw #00E5FF;
+        background: hsl(180, 100%, 55%);
+        box-shadow: inset 0 0 0 6vw hsl(235, 100%, 55%), inset 0 0 0 12vw hsl(215, 100%, 55%), inset 0 0 0 18vw hsl(195, 100%, 55%);
     }
 
     .orb-2 {
         width: 25vw;
         height: 25vw;
-        background: #FFB3FF;
-        box-shadow: inset 0 0 0 3vw #CC00CC, inset 0 0 0 7vw #FF00FF, inset 0 0 0 10vw #FF4DFF;
+        background: hsl(290, 100%, 55%);
+        box-shadow: inset 0 0 0 3vw hsl(305, 100%, 55%), inset 0 0 0 7vw hsl(300, 100%, 55%), inset 0 0 0 10vw hsl(295, 100%, 55%);
     }
 
     .orb-3 {
         width: 35vw;
         height: 35vw;
-        background: #FFD1A3;
-        box-shadow: inset 0 0 0 4.5vw #CC5500, inset 0 0 0 9.5vw #FF7700, inset 0 0 0 14vw #FF9933;
+        background: hsl(10, 100%, 55%);
+        box-shadow: inset 0 0 0 4.5vw hsl(25, 100%, 55%), inset 0 0 0 9.5vw hsl(20, 100%, 55%), inset 0 0 0 14vw hsl(15, 100%, 55%);
     }
     
     .orb-4 {
         width: 50vw;
         height: 50vw;
-        background: #B3FFB3;
-        box-shadow: inset 0 0 0 6vw #009900, inset 0 0 0 14vw #00CC00, inset 0 0 0 20vw #33FF33;
+        background: hsl(110, 100%, 55%);
+        box-shadow: inset 0 0 0 6vw hsl(125, 100%, 55%), inset 0 0 0 14vw hsl(120, 100%, 55%), inset 0 0 0 20vw hsl(115, 100%, 55%);
     }
 
     /* Container */
     .container {
+        width: 90%;
         max-width: 900px;
         margin: 5rem auto;
         padding: 4rem;
@@ -96,7 +96,7 @@
         backdrop-filter: blur(20px) brightness(0.8);
         -webkit-backdrop-filter: blur(20px) brightness(0.8);
         border: 1px solid rgba(255, 255, 255, 0.03);
-        border-radius: 32px;
+        border-radius: 5px;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
         position: relative;
         z-index: 1;
@@ -141,6 +141,7 @@
     p, ul {
         color: #fff;
         margin-bottom: 1.5rem;
+        font-size: 1.4em;
     }
 
     ul {
@@ -193,12 +194,18 @@
     /* Responsive */
     @media (max-width: 768px) {
         .container {
-            margin: 2rem 1.5rem;
-            padding: 2.5rem;
-            border-radius: 24px;
+            width: 100%;
+            margin: 0;
+            padding: 2.5rem 1.5rem;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
         }
         h1 {
             font-size: 3rem;
+        }
+        p, ul {
+            font-size: 1.2em;
         }
     }
  </style>
@@ -272,8 +279,31 @@
                 mouse.active = true;
             });
 
-            window.addEventListener('mouseout', () => {
+            window.addEventListener('mouseleave', () => {
                 mouse.active = false;
+            });
+
+            let lastScrollY = window.scrollY;
+            let scrollTimeout;
+            window.addEventListener('scroll', () => {
+                const currentScrollY = window.scrollY;
+                const deltaY = currentScrollY - lastScrollY;
+                
+                particles.forEach(p => {
+                    p.vy -= deltaY * 0.05;
+                    
+                    if (Math.abs(deltaY) > 5 && !p.isDodging) {
+                        p.isDodging = true;
+                        p.el.style.borderRadius = randomShape(Math.min(Math.abs(deltaY)/50, 0.8));
+                    }
+                });
+                
+                lastScrollY = currentScrollY;
+
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    particles.forEach(p => p.isDodging = false);
+                }, 150);
             });
 
             function randomShape(intensity = 0) {
@@ -348,6 +378,12 @@
                     if (speed < 0.05) {
                         p.vx = 0;
                         p.vy = 0;
+                    }
+
+                    const maxSpeed = 30;
+                    if (speed > maxSpeed) {
+                        p.vx = (p.vx / speed) * maxSpeed;
+                        p.vy = (p.vy / speed) * maxSpeed;
                     }
 
                     p.x += p.vx;
