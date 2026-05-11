@@ -1,94 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width,initial-scale=1">
- <meta name="description" content="Ali Dark: Creative technologist in Brisbane Australia">
- <title>Ali Dark | Creative Technologist</title>
- <style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Ali Dark: Creative technologist in Brisbane Australia">
+    <title>Ali Dark | Creative Technologist</title>
+    <style>
+        :root {
+            --color-cyan: #00E5FF;
+            --color-magenta: #FF00FF;
+            --color-green: #00FF00;
+            --color-yellow: #FFFF00;
+            --color-indigo: #1A237E;
+            --color-red: #FF1100;
+            --color-orange: #FF8800;
+            --color-bg: #333333;
+            --text-dark: #FFFFFF;
+            --text-muted: #BBBBBB;
+        }
 
-    :root {
-        --color-cyan: #00E5FF;
-        --color-magenta: #FF00FF;
-        --color-green: #00FF00;
-        --color-yellow: #FFFF00;
-        --color-indigo: #1A237E;
-        --color-red: #FF1100;
-        --color-orange: #FF8800;
-        --color-bg: #333333;
-        --text-dark: #FFFFFF;
-        --text-muted: #BBBBBB;
-    }
+        * {
+            box-sizing: border-box;
+        }
 
-    * {
-        box-sizing: border-box;
-    }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            color: #fff;
+            background: url('darknoise.jpg') repeat;
+            background-size: 200px;
+        }
 
-    body {
-        margin: 0;
-        min-height: 100vh;
-        overflow-x: hidden;
-        position: relative;
-        color: #fff;
-        background-color: #333;
-    }
+        /* Animated Abstract Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            background: url('darknoise.jpg') repeat;
+            background-size: 500px;
+            filter: saturate(2000%);
+        }
 
-    /* Animated Abstract Background */
-    .bg-animation {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: -1;
-        overflow: hidden;
-        background: #333;
-    }
+        .bg-animation::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-color: hsl(0, 0%, 60%);
+            mix-blend-mode: darken;
+            pointer-events: none;
+            z-index: 10;
+        }
 
-    .orb {
-        position: absolute;
-        top: 0;
-        left: 0;
-        opacity: 0.85;
-        mix-blend-mode: color-dodge;
-        transition: border-radius 1.2s cubic-bezier(0.25, 1, 0.5, 1);
-        will-change: transform, border-radius;
-    }
+        .orb {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0.85;
+            mix-blend-mode: color-dodge;
+            transition: border-radius 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform, border-radius;
+        }
 
-    .orb-1 {
-        width: min(65vw, 550px);
-        height: min(65vw, 550px);
-        background: radial-gradient(circle at 30% 30%, hsl(205, 100%, 55%), hsl(215, 100%, 55%), hsl(225, 100%, 55%), hsl(235, 100%, 55%));
-    }
+        .orb-1 {
+            width: min(65vw, 550px);
+            height: min(65vw, 550px);
+            background: radial-gradient(circle at 30% 30%, hsl(205, 100%, 55%), hsl(215, 100%, 55%), hsl(225, 100%, 55%), hsl(235, 100%, 55%));
+        }
 
-    .orb-3 {
-        width: min(55vw, 450px);
-        height: min(55vw, 450px);
-        background: radial-gradient(circle at 30% 30%, hsl(10, 100%, 55%), hsl(15, 100%, 55%), hsl(20, 100%, 55%), hsl(25, 100%, 55%));
-    }
-    
-    .orb-4 {
-        width: min(70vw, 600px);
-        height: min(70vw, 600px);
-        background: radial-gradient(circle at 20% 80%, hsl(110, 100%, 55%), hsl(115, 100%, 55%), hsl(120, 100%, 55%), hsl(125, 100%, 55%));
-    }
+        .orb-3 {
+            width: min(55vw, 450px);
+            height: min(55vw, 450px);
+            background: radial-gradient(circle at 30% 30%, hsl(10, 100%, 55%), hsl(15, 100%, 55%), hsl(20, 100%, 55%), hsl(25, 100%, 55%));
+        }
 
-    /* Container */
-    .container {
-        margin: 1em;
-        position: relative;
-        z-index: 1;
-    }
+        .orb-4 {
+            width: min(70vw, 600px);
+            height: min(70vw, 600px);
+            background: radial-gradient(circle at 20% 80%, hsl(110, 100%, 55%), hsl(115, 100%, 55%), hsl(120, 100%, 55%), hsl(125, 100%, 55%));
+        }
 
-    a, a:visited {
-        color: var(--color-orange);
-    }
+        /* Container */
+        .container {
+            margin: 1em;
+            position: relative;
+            z-index: 1;
+        }
 
-    a:hover {
-        color: var(--color-yellow);
-    }
- </style>
+        a,
+        a:visited {
+            color: var(--color-orange);
+        }
+
+        a:hover {
+            color: var(--color-yellow);
+        }
+    </style>
 </head>
+
 <body>
     <div class="bg-animation">
         <div class="orb orb-1"></div>
@@ -99,7 +114,8 @@
     <main class="container">
         <header>
             <h1>Ali Dark</h1>
-            <p>Creative technologist based in Brisbane Australia. <a href="https://cls.alidark.com/about">More about me</a>.</p>
+            <p>Creative technologist based in Brisbane Australia. <a href="https://cls.alidark.com/about">More about
+                    me</a>.</p>
         </header>
 
         <hr>
@@ -116,11 +132,14 @@
             <h2>Games</h2>
             <article>
                 <h3>Dots & Cubes & Boxes</h3>
-                <p>A 3d version of the classic pen and paper game "Dots & Boxes," <a href="/Dots/">Dots & Cubes & Boxes</a> was built with Gemini 2.5 pro in 2025. It's a 2 player browser game.</p>
+                <p>A 3d version of the classic pen and paper game "Dots & Boxes," <a href="/Dots/">Dots & Cubes &
+                        Boxes</a> was built with Gemini 2.5 pro in 2025. It's a 2 player browser game.</p>
             </article>
             <article>
                 <h3>Glitch Arena</h3>
-                <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">Glitch</a> is an independently published PvP 3d Arena first person shooter (In other words, an old school, minimalistic strategic 1v1 action FPS). This passion project started in 2019 and is ongoing here and there. </p>
+                <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">Glitch</a> is an independently
+                    published PvP 3d Arena first person shooter (In other words, an old school, minimalistic strategic
+                    1v1 action FPS). This passion project started in 2019 and is ongoing here and there. </p>
             </article>
         </section>
 
@@ -130,10 +149,13 @@
             <h2>Tools</h2>
             <article>
                 <h3>Gems</h3>
-                <p>AI prompts to help with specific tasks. Switch mode from Fast to Thinking if you can (in the chat box dropdown).</p>
+                <p>AI prompts to help with specific tasks. Switch mode from Fast to Thinking if you can (in the chat box
+                    dropdown).</p>
                 <ul>
-                    <li><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to Structure</a> - brain dump here and get some clarity.</li>
-                    <li><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction Finder</a> - answer some questions to get ideas for the future.</li>
+                    <li><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to
+                            Structure</a> - brain dump here and get some clarity.</li>
+                    <li><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction
+                            Finder</a> - answer some questions to get ideas for the future.</li>
                 </ul>
             </article>
         </section>
@@ -142,7 +164,11 @@
 
         <section>
             <h2>Music</h2>
-            <p>I have made a few tracks I'm proud of. Check out <a href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">Caravan</a> and <a href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">How We Do It</a> on soundcloud.</p>
+            <p>I have made a few tracks I'm proud of. Check out <a
+                    href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">Caravan</a>
+                and <a
+                    href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">How
+                    We Do It</a> on soundcloud.</p>
         </section>
     </main>
 
@@ -166,16 +192,16 @@
             window.addEventListener('scroll', () => {
                 const currentScrollY = window.scrollY;
                 const deltaY = currentScrollY - lastScrollY;
-                
+
                 particles.forEach(p => {
                     p.vy -= deltaY * 0.05;
-                    
+
                     if (Math.abs(deltaY) > 5 && !p.isDodging) {
                         p.isDodging = true;
-                        p.el.style.borderRadius = randomShape(Math.min(Math.abs(deltaY)/50, 0.8));
+                        p.el.style.borderRadius = randomShape(Math.min(Math.abs(deltaY) / 50, 0.8));
                     }
                 });
-                
+
                 lastScrollY = currentScrollY;
 
                 clearTimeout(scrollTimeout);
@@ -198,8 +224,8 @@
                 return {
                     el: orb,
                     radius: rect.width / 2,
-                    x: Math.random() * (window.innerWidth - rect.width) + rect.width/2,
-                    y: Math.random() * (window.innerHeight - rect.height) + rect.height/2,
+                    x: Math.random() * (window.innerWidth - rect.width) + rect.width / 2,
+                    y: Math.random() * (window.innerHeight - rect.height) + rect.height / 2,
                     vx: (Math.random() - 0.5) * 1.5,
                     vy: (Math.random() - 0.5) * 1.5,
                     mass: rect.width / 2,
@@ -229,13 +255,13 @@
                     if (mouse.active) {
                         const dx = p.x - mouse.x;
                         const dy = p.y - mouse.y;
-                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        const dist = Math.sqrt(dx * dx + dy * dy);
                         if (dist < p.radius) {
                             // Quadratic falloff so it's strong in center, almost zero at edges
                             const intensity = Math.pow((p.radius - dist) / p.radius, 2);
                             p.vx += (dx / dist) * intensity * 3.0;
                             p.vy += (dy / dist) * intensity * 3.0;
-                            
+
                             // Morph on mouse repel
                             if (!p.isDodging) {
                                 p.isDodging = true;
@@ -251,7 +277,7 @@
                     p.vx *= 0.98;
                     p.vy *= 0.98;
 
-                    const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+                    const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
                     if (speed < 0.05) {
                         p.vx = 0;
                         p.vy = 0;
@@ -269,32 +295,35 @@
                     let hitWall = false;
                     const bounceCap = 10;
                     const bounceBoost = 3;
-                    
-                    const preImpactSpeed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
-                    
-                    if (p.x - p.radius < 0) { 
-                        p.x = p.radius; 
-                        p.vx = Math.min(Math.abs(p.vx) + bounceBoost, bounceCap); 
-                        hitWall = true; 
+
+                    const preImpactSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+
+                    const isMobile = width < 768;
+                    const horizCoef = isMobile ? 0.5 : 1.0;
+
+                    if (p.x - p.radius < 0) {
+                        p.x = p.radius;
+                        p.vx = Math.min(Math.abs(p.vx) + bounceBoost, bounceCap) * horizCoef;
+                        hitWall = true;
                     }
-                    if (p.x + p.radius > width) { 
-                        p.x = width - p.radius; 
-                        p.vx = -Math.min(Math.abs(p.vx) + bounceBoost, bounceCap); 
-                        hitWall = true; 
+                    if (p.x + p.radius > width) {
+                        p.x = width - p.radius;
+                        p.vx = -Math.min(Math.abs(p.vx) + bounceBoost, bounceCap) * horizCoef;
+                        hitWall = true;
                     }
-                    if (p.y - p.radius < 0) { 
-                        p.y = p.radius; 
-                        p.vy = Math.min(Math.abs(p.vy) + bounceBoost, bounceCap); 
-                        hitWall = true; 
+                    if (p.y - p.radius < 0) {
+                        p.y = p.radius;
+                        p.vy = Math.min(Math.abs(p.vy) + bounceBoost, bounceCap);
+                        hitWall = true;
                     }
-                    if (p.y + p.radius > height) { 
-                        p.y = height - p.radius; 
-                        p.vy = -Math.min(Math.abs(p.vy) + bounceBoost, bounceCap); 
-                        hitWall = true; 
+                    if (p.y + p.radius > height) {
+                        p.y = height - p.radius;
+                        p.vy = -Math.min(Math.abs(p.vy) + bounceBoost, bounceCap);
+                        hitWall = true;
                     }
 
                     if (hitWall) {
-                        p.impactJiggle = Math.floor(preImpactSpeed * 1.5); 
+                        p.impactJiggle = Math.floor(preImpactSpeed * 1.5);
                         if (p.impactJiggle < 4) p.impactJiggle = 4;
                         p.maxJiggle = p.impactJiggle;
                         p.jiggleIntensity = Math.min(preImpactSpeed / 10, 1.0);
@@ -302,7 +331,7 @@
 
                     if (p.impactJiggle > 0) {
                         p.impactJiggle--;
-                        
+
                         const decayRatio = Math.max(p.impactJiggle / (p.maxJiggle || 1), 0);
                         const currentIntensity = p.jiggleIntensity * Math.pow(decayRatio, 3.0);
 
@@ -311,7 +340,7 @@
                             p.el.style.transitionDuration = `${transTime.toFixed(2)}s`;
                             p.el.style.borderRadius = randomShape(currentIntensity);
                         }
-                        
+
                         if (p.impactJiggle === 0) {
                             p.el.style.transitionDuration = "1.5s";
                             p.el.style.borderRadius = randomShape(0);
@@ -329,4 +358,5 @@
         });
     </script>
 </body>
+
 </html>
