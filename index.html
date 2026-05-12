@@ -60,6 +60,8 @@
             position: absolute;
             top: 0;
             left: 0;
+            width: min(32.5vw, 275px);
+            height: min(32.5vw, 275px);
             opacity: 0.85;
             mix-blend-mode: color-dodge;
             transition: border-radius 1.2s cubic-bezier(0.25, 1, 0.5, 1);
@@ -67,20 +69,14 @@
         }
 
         .orb-1 {
-            width: min(32.5vw, 275px);
-            height: min(32.5vw, 275px);
             background: radial-gradient(circle at 30% 30%, hsl(205, 100%, 55%), hsl(215, 100%, 55%), hsl(225, 100%, 55%), hsl(235, 100%, 55%));
         }
 
         .orb-3 {
-            width: min(27.5vw, 225px);
-            height: min(27.5vw, 225px);
             background: radial-gradient(circle at 30% 30%, hsl(10, 100%, 55%), hsl(15, 100%, 55%), hsl(20, 100%, 55%), hsl(25, 100%, 55%));
         }
 
         .orb-4 {
-            width: min(35vw, 300px);
-            height: min(35vw, 300px);
             background: radial-gradient(circle at 20% 80%, hsl(110, 100%, 55%), hsl(115, 100%, 55%), hsl(120, 100%, 55%), hsl(125, 100%, 55%));
         }
 
@@ -114,6 +110,10 @@
             body {
                 font-size: 1.2rem;
             }
+        }
+
+        @media (min-width: 768px) {
+            .orb { width: min(48vw, 412px); height: min(48vw, 412px); }
         }
     </style>
 </head>
