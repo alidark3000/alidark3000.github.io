@@ -188,6 +188,18 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const header = document.querySelector('header');
+            if (header) {
+                const introPara = document.createElement('p');
+                if (window.innerWidth >= 768) {
+                    introPara.innerHTML = "<em>There's a mini game build into this page - catch the balls with your mouse. Easy mode is to catch one. Hard mode is to catch two. glhf.</em>";
+                } else {
+                    introPara.innerHTML = "<em>Don't mind the balls.</em>";
+                }
+                introPara.style.color = "var(--text-muted)";
+                header.appendChild(introPara);
+            }
+
             const orbs = document.querySelectorAll('.orb');
             let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false };
 
