@@ -30,8 +30,7 @@
             overflow-x: hidden;
             position: relative;
             color: #fff;
-            background: url('darknoise.jpg') repeat;
-            background-size: 200px;
+            background-color: #222;
             font-size: 1.4rem;
         }
 
@@ -44,8 +43,7 @@
             height: 100vh;
             z-index: -1;
             overflow: hidden;
-            background: url('darknoise.jpg') repeat;
-            background-size: 500px;
+            background-color: #222;
         }
 
         .bg-animation::after {
@@ -69,20 +67,20 @@
         }
 
         .orb-1 {
-            width: min(65vw, 550px);
-            height: min(65vw, 550px);
+            width: min(32.5vw, 275px);
+            height: min(32.5vw, 275px);
             background: radial-gradient(circle at 30% 30%, hsl(205, 100%, 55%), hsl(215, 100%, 55%), hsl(225, 100%, 55%), hsl(235, 100%, 55%));
         }
 
         .orb-3 {
-            width: min(55vw, 450px);
-            height: min(55vw, 450px);
+            width: min(27.5vw, 225px);
+            height: min(27.5vw, 225px);
             background: radial-gradient(circle at 30% 30%, hsl(10, 100%, 55%), hsl(15, 100%, 55%), hsl(20, 100%, 55%), hsl(25, 100%, 55%));
         }
 
         .orb-4 {
-            width: min(70vw, 600px);
-            height: min(70vw, 600px);
+            width: min(35vw, 300px);
+            height: min(35vw, 300px);
             background: radial-gradient(circle at 20% 80%, hsl(110, 100%, 55%), hsl(115, 100%, 55%), hsl(120, 100%, 55%), hsl(125, 100%, 55%));
         }
 
@@ -91,6 +89,16 @@
             margin: 1em;
             position: relative;
             z-index: 1;
+        }
+
+        h3, h4 {
+            margin-bottom: 0;
+        }
+
+        h3 + p,
+        h3 + ul,
+        h3 + ol {
+            margin-top: 0;
         }
 
         a,
