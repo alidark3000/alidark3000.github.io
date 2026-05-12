@@ -1,0 +1,32 @@
+volume Help Documentation
+
+Getting Started:
+- Open a media folder using File > Open Media Folder (Cmd+O). The app will scan for folders, subfolders and artwork images and load into the sidebar. 
+- Navigate through your folders using the sidebar.
+- Double click a folder to play  contents
+- Click a file to play it.
+- The app will automatically play the next file in the folder (gapless playback).
+
+Playback Controls:
+- Play / Pause     : Space
+- Previous Track   : Cmd + Left Arrow
+- Next Track       : Cmd + Right Arrow
+- Show / Hide Sidebar : S
+- Show / Hide Track List : L
+
+Features & Operations:
+- Fullscreen Artwork: Press F to view high-quality artwork in fullscreen.
+- App Fullscreen    : Press Ctrl + Cmd + F to toggle standard window fullscreen.
+- Track List Toggle : Press L to hide or show the track list view, devoting more space to the Player.
+- OLED Care Mode    : When in Fullscreen Artwork mode, toggle "Fullscreen OLED Care" in the View menu to slowly bounce the artwork and prevent screen burn-in on OLED displays.
+- Sleep Prevention  : The system will not sleep automatically while music is actively playing.
+- Grid View         : Toggle between List and Grid views for folder browsing in the View menu.
+- Waveform          : The player bar at the bottom visualizes the audio waveform for the current track.
+
+Managing Artwork:
+- Add or Replace Artwork: Drag and drop an image file onto a folder in the list/grid view to set its artwork.
+- Supported Formats: JPG, PNG, WEBP.
+- The app prioritizes "folder.jpg", followed by common names like "cover.jpg" or "artwork.png". If none of those are found it will use whatever image is in there.
+
+Permissions:
+- The app requires write access to the media folder to save assigned artwork. If the folder becomes read-only, you may be prompted to grant access again.
