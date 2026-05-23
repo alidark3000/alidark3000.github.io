@@ -128,7 +128,7 @@
       const [activeTags, setActiveTags] = useState([]);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
-      const [chatScope, setChatScope] = useState('selected'); // 'selected' or 'all'
+      const [chatScope, setChatScope] = useState('selected'); 
       
       const [isEditing, setIsEditing] = useState(false);
       const [editData, setEditData] = useState({ title: '', summary: '', shortVersion: '', fullContent: '', categories: '', tags: '', sourceUrl: '' });
@@ -602,12 +602,14 @@
         setChats(prev => ({ ...prev, [currentChatKey]: updatedHistory }));
 
         const targetEntries = chatScope === 'all' ? entries : selectedEntries;
-        const contextText = targetEntries.map(e => `Title: ${e.title}\nSummary: ${e.summary}\nContent: ${e.fullContent}`).join('\n\n---\n\n');
+        
+        // Present multiple notes distinctly in the prompt context
+        const contextText = targetEntries.map(e => `[START OF DOCUMENT ${e.numericId}]\nTitle: ${e.title}\nSummary: ${e.summary}\nContent: ${e.fullContent}\n[END OF DOCUMENT ${e.numericId}]`).join('\n\n');
 
         try {
           const payload = {
             contents: [...currentHistory.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })), { role: 'user', parts: [{ text: userMessage }] }],
-            systemInstruction: { parts: [{ text: `Answer strictly based on this document context. Context scope: ${chatScope}.\n\nDocuments:\n${contextText}` }] }
+            systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${targetEntries.length} separate documents. Cite the document number when combining information. Context scope: ${chatScope}.\n\nDocuments:\n${contextText}` }] }
           };
           const result = await callGemini(apiKey, payload, model);
           setChats(prev => ({ ...prev, [currentChatKey]: [...updatedHistory, { role: 'model', text: result.candidates[0].content.parts[0].text }] }));
@@ -794,8 +796,9 @@
               <p className="text-xs text-slate-400 text-center mb-2">Cmd/Ctrl + Click to select multiple</p>
               {filteredEntries.map(entry => {
                 const isSelected = selectedEntryIds.includes(entry.id);
+                const isManual = !entry.sourceUrl;
                 return (
-                  <div key={entry.id} onClick={(e) => handleEntryClick(e, entry.id)} className={`p-4 rounded-xl cursor-pointer border ${isSelected ? 'bg-white border-indigo-200 shadow-sm ring-1 ring-indigo-500/10' : 'border-transparent hover:bg-white hover:border-slate-200'}`}>
+                  <div key={entry.id} onClick={(e) => handleEntryClick(e, entry.id)} className={`p-4 rounded-xl cursor-pointer border transition-colors ${isManual ? 'bg-yellow-50' : 'bg-white'} ${isSelected ? (isManual ? 'border-yellow-400 shadow-sm ring-1 ring-yellow-500' : 'border-indigo-200 shadow-sm ring-1 ring-indigo-500/10') : 'border-transparent hover:border-slate-200'}`}>
                     <h4 className="text-sm font-semibold mb-1 line-clamp-2">
                       <span className="text-slate-400 font-normal mr-1">{entry.numericId}:</span>
                       {entry.title}
