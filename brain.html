@@ -307,7 +307,6 @@
         const droppedData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
         if (!droppedData) return;
         
-        // Prevent processing if it's an internal note drag
         if (e.dataTransfer.getData('kb-ref-id')) return;
 
         if (!apiKey) return setError("Please set your Gemini API key first (key icon top left).");
@@ -667,7 +666,16 @@
         try {
           const payload = {
             contents: [...currentHistory.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })), { role: 'user', parts: [{ text: userMessage }] }],
-            systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${contextEntries.length} separate documents. Cite the document number when combining information. Context scope: ${chatScope}.\n\nDocuments:\n${contextText}` }] }
+            systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${contextEntries.length} separate documents. Cite the document number when combining information. Context scope: ${chatScope}.
+            
+CRITICAL WRITING RULES:
+- Limit responses to 50 words max unless explicitly asked to expand.
+- Use Hemingway rules: short words, active voice, simple language.
+- Delete unnecessary words. No filler, fluff, jargon, or prefaces.
+- Short, declarative sentences. One idea per sentence.
+- Use contractions. Keep it direct and factual.
+
+Documents:\n${contextText}` }] }
           };
           const result = await callGemini(apiKey, payload, model);
           setChats(prev => ({ ...prev, [activeChatKey]: [...updatedHistory, { role: 'model', text: result.candidates[0].content.parts[0].text }] }));
@@ -899,6 +907,17 @@
                       <span className={`${isCombined ? 'text-rose-400' : 'text-slate-400'} font-normal mr-1`}>{entry.numericId}:</span>
                       {entry.title}
                     </h4>
+                    
+                    {Array.isArray(entry.categories) && entry.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2 mt-1.5">
+                        {entry.categories.map(c => (
+                          <span key={c} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${isCombined ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
                     <p className={`text-xs line-clamp-2 mb-2 ${isCombined ? 'text-rose-700' : 'text-slate-500'}`}>{entry.summary}</p>
                   </div>
                 );
