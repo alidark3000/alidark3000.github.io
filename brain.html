@@ -1,581 +1,1419 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  UploadCloud, 
-  Search, 
-  Hash, 
-  Folder, 
-  MessageSquare, 
-  Send, 
-  Loader2, 
-  AlignLeft, 
-  FileText,
-  AlertCircle,
-  X,
-  ChevronRight,
-  Sparkles,
-  Bot
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KnowledgeBase AI</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+  <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans overflow-hidden">
+  <div id="root"></div>
 
-const INITIAL_ENTRY = {
-  id: 'sample-1',
-  title: 'Welcome to your AI Knowledge Base',
-  summary: 'A quick guide on how to use your new AI-powered knowledge management tool.',
-  shortVersion: [
-    'Drag and drop text or web links into the top-left drop zone.',
-    'Gemini AI will automatically summarize, extract key points, and tag your content.',
-    'Filter your entries using the dynamic taxonomies or the search bar.',
-    'Chat directly with your documents using the AI chat box below.'
-  ],
-  fullContent: '<p>Welcome to your personal AI-powered Knowledge Management tool! To get started, simply drag and drop any text snippet or URL into the designated drop zone in the top left corner of the interface.</p><p>Behind the scenes, the system securely passes your content to Gemini AI. The AI will intelligently read the text (scrubbing unnecessary web page boilerplate if it is a link), generate a concise title, provide a brief summary, extract the most important bullet points, and categorize it using an intelligent taxonomy system.</p><p>Once an entry is added, it will appear in the middle column. You can use the categories and tags on the left to filter your view. Selecting an entry opens it here in the reading pane.</p><p>Finally, the most powerful feature is the Contextual Chat. At the bottom of this pane, you can ask the AI specific questions about the document you are currently reading, and it will answer based strictly on the document\'s contents.</p>',
-  categories: ['Getting Started'],
-  tags: ['AI', 'Tutorial', 'Productivity'],
-  createdAt: Date.now()
-};
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
 
-// Core API configuration for Gemini using the environment's implicit key
-const API_KEY = ""; 
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`;
+    const APP_VERSION = "v1.4.0";
+    const normalizeTaxonomy = (arr) => [...new Set((arr || []).map(item => item.trim().toLowerCase()))];
 
-// Helper to scrape clean text from a URL using a public CORS proxy
-const fetchAndScrubUrl = async (urlString) => {
-  try {
-    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlString)}`);
-    const data = await response.json();
-    const html = data.contents;
-    
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const baseUrl = new URL(urlString);
-    
-    // Remove boilerplate elements that clutter the AI context
-    const unwanted = doc.querySelectorAll('script, style, noscript, iframe, svg, video, header, footer, nav, aside, form, .sidebar, .comments, #sidebar, #comments, .menu, .mega-menu, .global-nav, .site-header, .navbar, [role="navigation"], [role="banner"], [role="contentinfo"]');
-    unwanted.forEach(el => el.remove());
-    
-    // Helper to extract text and preserve image placeholders
-    const extractContent = (node) => {
-      let result = '';
-      if (node.nodeType === Node.TEXT_NODE) {
-        result += node.textContent;
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const tag = node.tagName.toLowerCase();
-        if (tag === 'img') {
-          let src = node.getAttribute('src') || node.getAttribute('data-src');
-          const alt = node.getAttribute('alt') || '';
-          if (src && !src.startsWith('data:')) {
-            try {
-              // Ensure we have an absolute URL for the image
-              src = new URL(src, baseUrl.href).href;
-              result += `\n[IMAGE: ${alt} | URL: ${src}]\n`;
-            } catch(e) {}
-          }
-        } else {
-          for (let child of node.childNodes) {
-            result += extractContent(child);
-          }
-          // Add spacing for block elements
-          const blockTags = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'article', 'section', 'main'];
-          if (blockTags.includes(tag)) {
-            result += '\n\n';
-          }
-        }
-      }
-      return result;
+    const INITIAL_ENTRY = {
+      id: 'sample-1',
+      title: 'Welcome to your AI Knowledge Base',
+      summary: 'A quick guide on how to use your new offline-first AI tool.',
+      shortVersion: [
+        'Drag and drop text or web links into the top-left drop zone.',
+        'Everything saves automatically to your linked local file.',
+        'Switch workspaces to manage different JSON files.',
+        'Chat directly with your documents below.'
+      ],
+      fullContent: 'Welcome! This version runs entirely in your browser and syncs directly to a file on your hard drive.\n\n### Markdown Support\n* Use **Markdown** to edit your notes.\n* Drag and drop URLs; the scraper will automatically convert web pages into clean Markdown for you.',
+      categories: ['getting started'],
+      tags: ['tutorial'],
+      numericId: 1,
+      createdAt: Date.now(),
+      sourceUrl: null,
+      references: [],
+      pinned: false
     };
 
-    // Try to find the main article content area, fallback to body
-    let mainNode = doc.querySelector('article') || 
-                   doc.querySelector('main') || 
-                   doc.querySelector('[role="main"]') || 
-                   doc.querySelector('#main-content') ||
-                   doc.querySelector('.main-content') ||
-                   doc.querySelector('#main') ||
-                   doc.querySelector('.entry-content') ||
-                   doc.querySelector('.page-content') ||
-                   doc.querySelector('.post-content') ||
-                   doc.querySelector('.article-content') ||
-                   doc.querySelector('#content') ||
-                   doc.body;
-
-    let textContent = extractContent(mainNode);
-    textContent = textContent.replace(/\n{3,}/g, '\n\n').trim();
-    
-    // Cap at ~50k characters to ensure it fits safely within reasonable processing times and token limits
-    return textContent.substring(0, 50000); 
-  } catch (err) {
-    console.error("URL Scrape Error:", err);
-    throw new Error("Could not extract content from the provided URL. It might be protected or unreachable.");
-  }
-};
-
-export default function App() {
-  // App State
-  const [entries, setEntries] = useState([INITIAL_ENTRY]);
-  const [activeCategories, setActiveCategories] = useState([]);
-  const [activeTags, setActiveTags] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEntryId, setSelectedEntryId] = useState(INITIAL_ENTRY.id);
-  
-  // UI State
-  const [isDragging, setIsDragging] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState(null);
-  
-  // Chat State mapping: { [entryId]: [{ role, text }] }
-  const [chats, setChats] = useState({});
-  const [chatInput, setChatInput] = useState('');
-  const [isChatting, setIsChatting] = useState(false);
-  const chatScrollRef = useRef(null);
-
-  // Derived Taxonomies
-  const allCategories = new Set();
-  const allTags = new Set();
-  entries.forEach(e => {
-    e.categories.forEach(c => allCategories.add(c));
-    e.tags.forEach(t => allTags.add(t));
-  });
-
-  const selectedEntry = entries.find(e => e.id === selectedEntryId);
-
-  // Scroll chat to bottom when new messages arrive
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [chats, selectedEntryId, isChatting]);
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    setError(null);
-    
-    let droppedData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-    if (!droppedData) return;
-
-    setIsAnalyzing(true);
-    
-    try {
-      let rawContent = droppedData;
-      const isUrl = /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(droppedData.trim());
+    const fetchAndScrubUrl = async (urlString) => {
+      let html = '';
+      try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlString)}`);
+        const data = await response.json();
+        if (data.contents) html = data.contents;
+        else throw new Error("Invalid proxy response");
+      } catch (err) {
+        try {
+          const response2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(urlString)}`);
+          if (!response2.ok) throw new Error("Network response failed");
+          html = await response2.text();
+        } catch (err2) {
+          throw new Error("Scrape blocked. Falling back to search.");
+        }
+      }
       
-      if (isUrl) {
-        rawContent = await fetchAndScrubUrl(droppedData.trim());
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      let originalTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute('content') || 
+                          doc.querySelector('title')?.textContent || 
+                          doc.querySelector('h1')?.textContent || 
+                          "Untitled Page";
+      originalTitle = originalTitle.trim();
+      originalTitle = originalTitle.replace(/\s*[|•-]\s*([A-Za-z0-9 ]+Substack|[A-Za-z0-9 ]+Medium|[A-Za-z0-9 ]+Blog|[A-Za-z0-9 ]+HQ|QUT.*)$/i, '').trim();
+
+      const unwanted = doc.querySelectorAll('script, style, noscript, iframe, svg, video, header, footer, nav, aside, form, .menu, .mega-menu, .global-nav, .navbar');
+      unwanted.forEach(el => el.remove());
+      
+      let mainNode = doc.querySelector('.profile-details') || doc.querySelector('article') || doc.querySelector('main') || doc.body;
+      
+      const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+      let markdownContent = turndownService.turndown(mainNode);
+      
+      if (!markdownContent || markdownContent.length < 50) throw new Error("No text found. Falling back to search.");
+      return {
+        title: originalTitle,
+        content: markdownContent.substring(0, 50000)
+      }; 
+    };
+
+    async function verifyPermission(fileHandle, readWrite) {
+      const options = { mode: readWrite ? 'readwrite' : 'read' };
+      if ((await fileHandle.queryPermission(options)) === 'granted') return true;
+      if ((await fileHandle.requestPermission(options)) === 'granted') return true;
+      return false;
+    }
+
+    const callGemini = async (key, payload, model) => {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const result = await response.json();
+        
+        if (result.error) throw new Error(result.error.message);
+        if (!result.candidates || result.candidates.length === 0) {
+          const reason = result.promptFeedback?.blockReason || "Empty response from API";
+          throw new Error(`AI rejected the prompt. Reason: ${reason}`);
+        }
+        
+        return result;
+      } catch (err) {
+        throw err;
+      }
+    };
+
+    function KnowledgeApp() {
+      const [appState, setAppState] = useState('init'); 
+      const [savedHandle, setSavedHandle] = useState(null);
+      const [fileHandle, setFileHandle] = useState(null);
+      const [fileName, setFileName] = useState('');
+      
+      const [entries, setEntries] = useState([]);
+      const [chats, setChats] = useState({});
+      const [apiKey, setApiKey] = useState('');
+      const [model, setModel] = useState('gemini-3.1-flash-lite');
+      
+      const [showKeyModal, setShowKeyModal] = useState(false);
+      const [tempKey, setTempKey] = useState('');
+      const [tempModel, setTempModel] = useState('');
+      
+      const [activeCategories, setActiveCategories] = useState([]);
+      const [activeTags, setActiveTags] = useState([]);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [selectedEntryIds, setSelectedEntryIds] = useState([]);
+      const [chatScope, setChatScope] = useState('selected'); 
+      
+      const [editingEntryId, setEditingEntryId] = useState(null);
+      const [editData, setEditData] = useState({ title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] });
+      const [editCatInput, setEditCatInput] = useState('');
+      const [editTagInput, setEditTagInput] = useState('');
+
+      const [isDragging, setIsDragging] = useState(false);
+      const [isAnalyzing, setIsAnalyzing] = useState(false);
+      const [error, setError] = useState(null);
+      
+      const [chatInput, setChatInput] = useState('');
+      const [isChatting, setIsChatting] = useState(false);
+      const chatScrollRef = useRef(null);
+      
+      const [taxonomyInput, setTaxonomyInput] = useState('');
+      const [isTaxonomyProcessing, setIsTaxonomyProcessing] = useState(false);
+
+      const [dragOverEntryId, setDragOverEntryId] = useState(null);
+      const [editingTitleId, setEditingTitleId] = useState(null);
+      const [tempTitle, setTempTitle] = useState('');
+
+      useEffect(() => {
+        idbKeyval.get('kb_file_handle').then(handle => {
+          if (handle) setSavedHandle(handle);
+          setAppState('landing');
+        });
+      }, []);
+
+      useEffect(() => {
+        if (appState !== 'workspace' || !fileHandle) return;
+        const timer = setTimeout(async () => {
+          try {
+            const hasPerm = await verifyPermission(fileHandle, true);
+            if (!hasPerm) return;
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify({ entries, chats, apiKey, model }, null, 2));
+            await writable.close();
+          } catch (err) {
+            console.error("Auto-save failed:", err);
+          }
+        }, 1000);
+        return () => clearTimeout(timer);
+      }, [entries, chats, apiKey, model, appState, fileHandle]);
+
+      const ensureNumericIds = (loadedEntries) => {
+        let maxId = loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0);
+        return loadedEntries.map(e => {
+          if (!e.numericId) {
+            maxId += 1;
+            return { ...e, numericId: maxId };
+          }
+          return e;
+        });
+      };
+
+      const loadWorkspaceData = async (handle) => {
+        try {
+          const hasPerm = await verifyPermission(handle, true);
+          if (!hasPerm) return;
+          const file = await handle.getFile();
+          const text = await file.text();
+          let data = { entries: [], chats: {} };
+          
+          if (text.trim()) data = JSON.parse(text);
+          
+          if (data.entries?.length > 0) {
+            const migrated = ensureNumericIds(data.entries.map(e => ({
+                ...e,
+                categories: normalizeTaxonomy(e.categories),
+                tags: normalizeTaxonomy(e.tags)
+            })));
+            setEntries(migrated);
+            setSelectedEntryIds([migrated[0].id]);
+          } else {
+            setEntries([INITIAL_ENTRY]);
+            setSelectedEntryIds([INITIAL_ENTRY.id]);
+          }
+          
+          if (data.chats) setChats(data.chats);
+          if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
+          if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
+          
+          setFileHandle(handle);
+          setFileName(file.name);
+          await idbKeyval.set('kb_file_handle', handle);
+          setAppState('workspace');
+        } catch (err) {
+          setError(`Failed to open workspace: ${err.message}`);
+        }
+      };
+
+      const handleResume = () => loadWorkspaceData(savedHandle);
+
+      const handleOpenFile = async () => {
+        try {
+          if (!window.showOpenFilePicker) throw new Error("API_NOT_SUPPORTED");
+          const [handle] = await window.showOpenFilePicker({
+            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+          });
+          await loadWorkspaceData(handle);
+        } catch (err) {
+          if (err.name !== 'AbortError') setError(`File error: ${err.message}`);
+        }
+      };
+
+      const handleNewFile = async () => {
+        try {
+          if (!window.showSaveFilePicker) throw new Error("API_NOT_SUPPORTED");
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'my-knowledge-base.json',
+            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+          });
+          setFileHandle(handle);
+          setFileName(handle.name);
+          setEntries([INITIAL_ENTRY]);
+          setChats({});
+          setApiKey('');
+          setModel('gemini-3.1-flash-lite');
+          setSelectedEntryIds([INITIAL_ENTRY.id]);
+          await idbKeyval.set('kb_file_handle', handle);
+          setAppState('workspace');
+        } catch (err) {
+           if (err.name !== 'AbortError') setError(`File error: ${err.message}`);
+        }
+      };
+      
+      const handleManualImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (data.entries) {
+              const migrated = ensureNumericIds(data.entries.map(e => ({
+                ...e,
+                categories: normalizeTaxonomy(e.categories),
+                tags: normalizeTaxonomy(e.tags)
+              })));
+              setEntries(migrated);
+              if (migrated.length > 0) setSelectedEntryIds([migrated[0].id]);
+            }
+            if (data.chats) setChats(data.chats);
+            if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
+            if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
+            setFileName(file.name);
+            setFileHandle(null);
+            setAppState('workspace');
+          } catch (err) {
+            setError("Invalid JSON file.");
+          }
+        };
+        reader.readAsText(file);
+      };
+
+      const handleCloseWorkspace = () => {
+        setAppState('landing');
+        setFileHandle(null);
+        setEntries([]);
+        setChats({});
+        setApiKey('');
+      };
+
+      const allCategories = new Set();
+      const allTags = new Set();
+      entries.forEach(e => {
+        if (Array.isArray(e.categories)) e.categories.forEach(c => allCategories.add(c));
+        if (Array.isArray(e.tags)) e.tags.forEach(t => allTags.add(t));
+      });
+
+      const availableTags = new Set();
+      entries.forEach(e => {
+        const matchesCat = activeCategories.length === 0 || (Array.isArray(e.categories) && e.categories.some(c => activeCategories.includes(c)));
+        if (matchesCat && Array.isArray(e.tags)) e.tags.forEach(t => availableTags.add(t));
+      });
+
+      const selectedEntries = entries.filter(e => selectedEntryIds.includes(e.id));
+      const currentChatKey = chatScope === 'all' ? 'global_all' : selectedEntryIds.slice().sort().join(',');
+
+      useEffect(() => {
+        if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      }, [chats, currentChatKey, isChatting]);
+
+      const handleDrop = async (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        setError(null);
+        
+        const droppedData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+        if (!droppedData) return;
+        
+        if (e.dataTransfer.getData('kb-ref-id') || e.dataTransfer.getData('kb-tax') || e.dataTransfer.getData('kb-tax-remove')) return;
+
+        if (!apiKey) return setError("Please set your Gemini API key first.");
+
+        setIsAnalyzing(true);
+        try {
+          const isUrl = /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(droppedData.trim());
+          const sourceUrl = isUrl ? droppedData.trim() : null;
+          let rawContent = droppedData;
+          let originalWebTitle = null;
+          let useSearchTool = false;
+
+          const schema = {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING" },
+              summary: { type: "STRING" },
+              shortVersion: { type: "ARRAY", items: { type: "STRING" } },
+              fullContent: { type: "STRING" },
+              categories: { type: "ARRAY", items: { type: "STRING" } },
+              tags: { type: "ARRAY", items: { type: "STRING" } }
+            },
+            required: ["title", "summary", "shortVersion", "fullContent", "categories", "tags"]
+          };
+
+          const taxonomyRules = `
+          5. Categories: Assign 1-2 SUPER BROAD domain categories. Review these existing categories: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse an existing category if it is a PERFECT fit. Output strictly in lowercase.
+          6. Tags: Assign 3-5 highly specific concept tags. Include the author's name as a tag. Review existing tags: ${JSON.stringify(Array.from(allTags))}. ONLY reuse existing tags if they are highly relevant. Output strictly in lowercase.`;
+          
+          const summaryRules = `4. fullContent string: Create an expanded summary. Succinctly summarize each point of the source, regardless of its length. Format with clean Markdown. Do NOT include any external links or 'Read more' text.`;
+
+          let prompt = '';
+          if (isUrl) {
+            const urlStr = droppedData.trim();
+            const isYouTube = urlStr.includes('youtube.com') || urlStr.includes('youtu.be');
+
+            if (isYouTube) {
+              useSearchTool = true;
+              let ytMeta = urlStr;
+              try {
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/oembed?url=' + urlStr + '&format=json')}`);
+                const data = await res.json();
+                const oembed = JSON.parse(data.contents);
+                ytMeta = `"${oembed.title}" by ${oembed.author_name}`;
+                originalWebTitle = oembed.title;
+              } catch (e) {
+                console.error("YouTube fetch failed", e);
+              }
+
+              prompt = `Use Google Search to find details and summarize this YouTube video: ${ytMeta} (${urlStr}). Return strictly as JSON. 
+              1. Title. 2. Summary. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
+            } else {
+              try {
+                const scrapeResult = await fetchAndScrubUrl(urlStr);
+                rawContent = scrapeResult.content;
+                originalWebTitle = scrapeResult.title;
+                prompt = `Analyze this markdown text. Return strictly as JSON. 
+                1. Title: Create a title for this piece (or use: "${originalWebTitle.replace(/"/g, '\\"')}"). 
+                2. 1-2 sentence summary. Include author's name if identifiable. 
+                3. 3-5 key points in 'shortVersion'.
+                ${taxonomyRules}
+                ${summaryRules}
+                Content:\n${rawContent.substring(0, 40000)}`;
+              } catch (err) {
+                useSearchTool = true;
+                prompt = `Use Google Search to find exact content for this URL: ${urlStr}. Return strictly as JSON. 
+                1. Title. 2. Summary. Include author's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
+              }
+            }
+          } else {
+             prompt = `Analyze this text. Return strictly as JSON. 1. Title. 2. Summary. 3. 3-5 points in 'shortVersion'. 4. Format the input text as clean Markdown as 'fullContent'. ${taxonomyRules}\nContent:\n${rawContent.substring(0, 40000)}`;
+          }
+
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+          };
+          if (useSearchTool) payload.tools = [{ google_search: {} }];
+
+          const result = await callGemini(apiKey, payload, model);
+          const parsedResult = JSON.parse(result.candidates[0].content.parts[0].text);
+          const nextNumericId = entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0) + 1;
+          const newEntry = { 
+            ...parsedResult, 
+            title: originalWebTitle || parsedResult.title || 'Untitled Note',
+            categories: normalizeTaxonomy(parsedResult.categories),
+            tags: normalizeTaxonomy(parsedResult.tags),
+            numericId: nextNumericId,
+            id: 'entry-' + Date.now(), 
+            createdAt: Date.now(),
+            sourceUrl: sourceUrl,
+            references: [],
+            pinned: false
+          };
+          
+          setEntries(prev => [newEntry, ...prev]);
+          setSelectedEntryIds([newEntry.id]);
+          setActiveCategories([]);
+          setActiveTags([]);
+        } catch (err) {
+          setError(err.message || "Failed to process content.");
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+
+      const handleEntryClick = (e, id) => {
+        if (e.ctrlKey || e.metaKey) {
+          setSelectedEntryIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+        } else {
+          setSelectedEntryIds([id]);
+        }
+        setEditingEntryId(null);
+      };
+
+      const deleteEntry = (id) => {
+        setEntries(prev => prev.filter(e => e.id !== id));
+        setSelectedEntryIds(prev => prev.filter(i => i !== id));
+        if (editingEntryId === id) setEditingEntryId(null);
+      };
+
+      const handleNewNote = () => {
+        const nextNumericId = entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0) + 1;
+        const newId = 'entry-' + Date.now();
+        const newEntry = {
+          id: newId, title: 'Untitled Note', numericId: nextNumericId, summary: '', shortVersion: [], fullContent: '',
+          categories: [], tags: [], createdAt: Date.now(), sourceUrl: null, references: [], pinned: false
+        };
+        setEntries(prev => [newEntry, ...prev]);
+        setSelectedEntryIds([newId]);
+        setEditData({ title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] });
+        setEditingEntryId(newId);
+      };
+
+      const startEditing = (entry) => {
+        setEditData({
+          title: entry.title || '', summary: entry.summary || '', fullContent: entry.fullContent || '',
+          shortVersion: (Array.isArray(entry.shortVersion) ? entry.shortVersion : []).join('\n'),
+          categories: Array.isArray(entry.categories) ? [...entry.categories] : [], 
+          tags: Array.isArray(entry.tags) ? [...entry.tags] : [], 
+          sourceUrl: entry.sourceUrl || '',
+          references: Array.isArray(entry.references) ? entry.references : []
+        });
+        setEditingEntryId(entry.id);
+      };
+
+      const saveNote = () => {
+        setEntries(prev => prev.map(e => {
+          if (e.id === editingEntryId) {
+            return {
+              ...e, title: editData.title || 'Untitled', summary: editData.summary, fullContent: editData.fullContent,
+              shortVersion: editData.shortVersion.split('\n').map(s => s.trim()).filter(Boolean),
+              sourceUrl: editData.sourceUrl || null,
+              categories: normalizeTaxonomy(editData.categories),
+              tags: normalizeTaxonomy(editData.tags),
+              references: editData.references || []
+            };
+          }
+          return e;
+        }));
+        setEditingEntryId(null);
+      };
+
+      const removeEditCategory = (cat) => setEditData(prev => ({ ...prev, categories: prev.categories.filter(c => c !== cat) }));
+      const removeEditTag = (tag) => setEditData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
+
+      const handleAddEditCategory = (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          const val = editCatInput.trim().toLowerCase().replace(/^,|,$/g, '');
+          if (val && !editData.categories.includes(val)) {
+            setEditData(prev => ({ ...prev, categories: [...prev.categories, val] }));
+          }
+          setEditCatInput('');
+        }
+      };
+
+      const handleAddEditTag = (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          const val = editTagInput.trim().toLowerCase().replace(/^,|,$/g, '');
+          if (val && !editData.tags.includes(val)) {
+            setEditData(prev => ({ ...prev, tags: [...prev.tags, val] }));
+          }
+          setEditTagInput('');
+        }
+      };
+
+      const removeTaxonomyFromEntry = (entryId, type, val) => {
+        setEntries(prev => prev.map(ent => {
+          if (ent.id === entryId) {
+            if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val) };
+            if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val) };
+          }
+          return ent;
+        }));
+      };
+
+      const handleGenerateSummary = async () => {
+        if (!apiKey) return setError("Set your API key first.");
+        setIsAnalyzing(true);
+        try {
+          const prompt = `Analyze this note and write a 1-2 sentence summary. Return JSON: {"summary": "text"}.\nTitle: ${editData.title}\nContent: ${editData.fullContent}`;
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
+          };
+          const result = await callGemini(apiKey, payload, model);
+          const data = JSON.parse(result.candidates[0].content.parts[0].text);
+          setEditData(prev => ({ ...prev, summary: data.summary || prev.summary }));
+        } catch(err) {
+          setError("Summary generation failed: " + err.message);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+
+      const handleGenerateTakeaways = async () => {
+        if (!apiKey) return setError("Set your API key first.");
+        setIsAnalyzing(true);
+        try {
+          const prompt = `Analyze this note. Extract 3-5 key points. Return JSON: {"shortVersion": ["point 1", "point 2"]}. Format each point in Markdown.\nTitle: ${editData.title}\nContent: ${editData.fullContent}`;
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } } }
+          };
+          const result = await callGemini(apiKey, payload, model);
+          const data = JSON.parse(result.candidates[0].content.parts[0].text);
+          if (data.shortVersion && Array.isArray(data.shortVersion)) {
+            setEditData(prev => ({ ...prev, shortVersion: data.shortVersion.join('\n') }));
+          }
+        } catch(err) {
+          setError("Takeaway generation failed: " + err.message);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+
+      const handleGenerateTaxonomies = async () => {
+        if (!apiKey) return setError("Set your API key first.");
+        setIsAnalyzing(true);
+        try {
+          const prompt = `Analyze this note. Return strictly JSON matching this schema: {"categories": ["Category"], "tags": ["tag1", "tag2"]}.
+          Rules: 1. Categories: Assign 1-2 SUPER BROAD domain categories. Review existing: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse if perfect match.
+          2. Tags: Assign 3-5 highly specific concept keywords. Review existing: ${JSON.stringify(Array.from(allTags))}. ONLY reuse if highly relevant.
+          Title: ${editData.title}\nContent: ${editData.fullContent}`;
+
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } } }
+          };
+          
+          const result = await callGemini(apiKey, payload, model);
+          const data = JSON.parse(result.candidates[0].content.parts[0].text);
+          setEditData(prev => ({ 
+            ...prev, 
+            categories: Array.isArray(data.categories) ? data.categories : prev.categories, 
+            tags: Array.isArray(data.tags) ? data.tags : prev.tags 
+          }));
+        } catch(err) {
+          setError("Taxonomy generation failed: " + err.message);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+
+      const handleTaxonomyCommand = async (e) => {
+        e.preventDefault();
+        if (!taxonomyInput.trim() || !apiKey) {
+          if (!apiKey) setError("Set your API key first.");
+          return;
+        }
+
+        setIsTaxonomyProcessing(true);
+        try {
+          const prompt = `You are a careful database taxonomy manager.
+          Current Categories: ${JSON.stringify(Array.from(allCategories))}
+          Current Tags: ${JSON.stringify(Array.from(allTags))}
+          Command: "${taxonomyInput}"
+
+          Safety Rule: Deleting multiple categories/tags is high-risk. Only delete if explicitly requested by the user. Do not delete broad categories unless the user is certain.
+          Return JSON matching:
+          {
+            "categoryChanges": [{"old": "OldName", "new": "NewName"}],
+            "categoryDeletions": ["NameToRemove"],
+            "tagChanges": [{"old": "OldName", "new": "NewName"}],
+            "tagDeletions": ["NameToRemove"]
+          }`;
+
+          const schema = {
+            type: "OBJECT",
+            properties: {
+              categoryChanges: { type: "ARRAY", items: { type: "OBJECT", properties: { old: { type: "STRING" }, new: { type: "STRING" } } } },
+              categoryDeletions: { type: "ARRAY", items: { type: "STRING" } },
+              tagChanges: { type: "ARRAY", items: { type: "OBJECT", properties: { old: { type: "STRING" }, new: { type: "STRING" } } } },
+              tagDeletions: { type: "ARRAY", items: { type: "STRING" } }
+            }
+          };
+
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+          };
+          
+          const result = await callGemini(apiKey, payload, model);
+          const data = JSON.parse(result.candidates[0].content.parts[0].text);
+
+          setEntries(prev => prev.map(entry => {
+            let newCats = [...(Array.isArray(entry.categories) ? entry.categories : [])];
+            let newTags = [...(Array.isArray(entry.tags) ? entry.tags : [])];
+
+            if (data.categoryChanges) {
+              data.categoryChanges.forEach(change => {
+                if (newCats.includes(change.old)) {
+                  newCats = newCats.filter(c => c !== change.old);
+                  if (change.new && !newCats.includes(change.new)) newCats.push(change.new.toLowerCase());
+                }
+              });
+            }
+            if (data.categoryDeletions) {
+              newCats = newCats.filter(c => !data.categoryDeletions.includes(c));
+            }
+
+            if (data.tagChanges) {
+              data.tagChanges.forEach(change => {
+                if (newTags.includes(change.old)) {
+                  newTags = newTags.filter(t => t !== change.old);
+                  if (change.new && !newTags.includes(change.new)) newTags.push(change.new.toLowerCase());
+                }
+              });
+            }
+            if (data.tagDeletions) {
+              newTags = newTags.filter(t => !data.tagDeletions.includes(t));
+            }
+
+            return { ...entry, categories: normalizeTaxonomy(newCats), tags: normalizeTaxonomy(newTags) };
+          }));
+          
+          setTaxonomyInput('');
+        } catch(err) {
+          setError("Taxonomy update failed: " + err.message);
+        } finally {
+          setIsTaxonomyProcessing(false);
+        }
+      };
+
+      const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!chatInput.trim() || (!selectedEntryIds.length && chatScope === 'selected')) return;
+        if (!apiKey) return setChats(prev => ({ ...prev, [currentChatKey]: [...(chats[currentChatKey] || []), { role: 'model', text: "⚠️ Please set your Gemini API key first." }] }));
+
+        const userMessage = chatInput.trim();
+        setChatInput('');
+        setIsChatting(true);
+
+        let targetEntries = chatScope === 'all' ? entries.filter(e => !e.isCombined) : selectedEntries.filter(e => !e.isCombined);
+        let activeChatKey = currentChatKey;
+        let newCombinedEntry = null;
+
+        if ((selectedEntryIds.length > 1 && targetEntries.length > 1) || chatScope === 'all') {
+          if (targetEntries.length === 0) {
+            setIsChatting(false);
+            return setError("No standard notes found to query.");
+          }
+          
+          const nextNumericId = entries.reduce((max, ent) => Math.max(max, ent.numericId || 0), 0) + 1;
+          const newId = 'entry-' + Date.now();
+          newCombinedEntry = {
+            id: newId,
+            title: `Query: ${userMessage.substring(0, 30)}${userMessage.length > 30 ? '...' : ''}`,
+            numericId: nextNumericId,
+            summary: `Combined chat session across ${targetEntries.length} notes.`,
+            shortVersion: [],
+            fullContent: '',
+            categories: [],
+            tags: [],
+            createdAt: Date.now(),
+            sourceUrl: null,
+            isCombined: true,
+            referencedIds: targetEntries.map(ent => ent.id),
+            references: [],
+            pinned: false
+          };
+          
+          setEntries(prev => [newCombinedEntry, ...prev]);
+          setSelectedEntryIds([newId]);
+          setChatScope('selected');
+          activeChatKey = newId;
+        } else if (selectedEntryIds.length === 1) {
+          activeChatKey = selectedEntryIds[0];
+        } else {
+          if (targetEntries.length > 0) {
+            activeChatKey = targetEntries[0].id;
+            setSelectedEntryIds([activeChatKey]);
+          } else {
+            setIsChatting(false);
+            return setError("Select valid notes to query.");
+          }
+        }
+
+        const currentHistory = chats[activeChatKey] || [];
+        const updatedHistory = [...currentHistory, { role: 'user', text: userMessage }];
+        setChats(prev => ({ ...prev, [activeChatKey]: updatedHistory }));
+
+        const activeEntry = newCombinedEntry || entries.find(ent => ent.id === activeChatKey);
+        let contextEntries = targetEntries;
+        
+        if (activeEntry && activeEntry.isCombined) {
+            contextEntries = (newCombinedEntry ? targetEntries : entries).filter(ent => activeEntry.referencedIds.includes(ent.id));
+        } else if (activeEntry) {
+            contextEntries = [activeEntry];
+        }
+
+        const contextText = contextEntries.map(ent => `[START OF DOCUMENT ${ent.numericId}]\nTitle: ${ent.title}\nSummary: ${ent.summary}\nContent: ${ent.fullContent}\n[END OF DOCUMENT ${ent.numericId}]`).join('\n\n');
+
+        try {
+          const payload = {
+            contents: [...currentHistory.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })), { role: 'user', parts: [{ text: userMessage }] }],
+            systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${contextEntries.length} separate documents. Cite the document number when combining information. Context scope: ${chatScope}.
+            
+CRITICAL WRITING RULES:
+- Limit responses to 50 words max unless explicitly asked to expand.
+- Use Hemingway rules: short words, active voice, simple language.
+- Delete unnecessary words. No filler, fluff, jargon, or prefaces.
+- Short, declarative sentences. One idea per sentence.
+- Use contractions. Keep it direct and factual.
+
+Documents:\n${contextText}` }] }
+          };
+          const result = await callGemini(apiKey, payload, model);
+          setChats(prev => ({ ...prev, [activeChatKey]: [...updatedHistory, { role: 'model', text: result.candidates[0].content.parts[0].text }] }));
+        } catch (err) {
+          setChats(prev => ({ ...prev, [activeChatKey]: [...updatedHistory, { role: 'model', text: `⚠️ Error: ${err.message}` }] }));
+        } finally {
+          setIsChatting(false);
+        }
+      };
+
+      const openSettings = () => {
+        setTempKey(apiKey);
+        setTempModel(model);
+        setShowKeyModal(true);
+      };
+
+      const saveSettings = () => {
+        setApiKey(tempKey);
+        setModel(tempModel);
+        setShowKeyModal(false);
+      };
+
+      const handleCategoryClick = (cat, e) => {
+        if (e.ctrlKey || e.metaKey) {
+          setActiveCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+        } else {
+          setActiveCategories([cat]);
+        }
+      };
+
+      const handleTagClick = (tag, e) => {
+        if (e.ctrlKey || e.metaKey) {
+          setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+        } else {
+          setActiveTags([tag]);
+        }
+      };
+
+      const togglePin = (e, id) => {
+        e.stopPropagation();
+        setEntries(prev => prev.map(ent => ent.id === id ? { ...ent, pinned: !ent.pinned } : ent));
+      };
+
+      const handleEntryDrop = (e, targetId) => {
+        e.preventDefault();
+        setDragOverEntryId(null);
+        let handledTaxonomy = false;
+        
+        const taxData = e.dataTransfer.getData('kb-tax');
+        if (taxData) {
+          const { type, val } = JSON.parse(taxData);
+          setEntries(prev => prev.map(ent => {
+            if (ent.id === targetId) {
+              if (type === 'cat' && !(ent.categories || []).includes(val)) return { ...ent, categories: [...(ent.categories || []), val.toLowerCase()] };
+              if (type === 'tag' && !(ent.tags || []).includes(val)) return { ...ent, tags: [...(ent.tags || []), val.toLowerCase()] };
+            }
+            return ent;
+          }));
+          handledTaxonomy = true;
+        }
+
+        const removeTaxData = e.dataTransfer.getData('kb-tax-remove');
+        if (removeTaxData && handledTaxonomy) {
+          const { entryId, type, val } = JSON.parse(removeTaxData);
+          if (entryId !== targetId) {
+            setEntries(prev => prev.map(ent => {
+              if (ent.id === entryId) {
+                if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val) };
+                if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val) };
+              }
+              return ent;
+            }));
+          }
+        }
+
+        const draggedId = e.dataTransfer.getData('kb-ref-id');
+        if (draggedId && draggedId !== targetId) {
+          setEntries(prev => prev.map(ent => {
+            if (ent.id === targetId) {
+              const refs = ent.references || [];
+              if (!refs.includes(draggedId)) {
+                return { ...ent, references: [...refs, draggedId] };
+              }
+            }
+            return ent;
+          }));
+        }
+      };
+
+      const removeReferenceFromEdit = (refIdToRemove) => {
+        setEditData(prev => ({
+          ...prev,
+          references: prev.references.filter(id => id !== refIdToRemove)
+        }));
+      };
+
+      if (appState === 'init') return <div className="flex h-screen items-center justify-center bg-slate-50"><i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600"></i></div>;
+
+      if (appState === 'landing') {
+        return (
+          <div className="flex h-screen items-center justify-center bg-slate-50">
+            <div className="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center max-w-md w-full relative">
+              <i className="fa-solid fa-folder-tree text-5xl text-indigo-600 mb-6"></i>
+              <h1 className="text-2xl font-bold text-slate-800 mb-2">Knowledge Workspaces</h1>
+              <p className="text-slate-500 mb-8 text-sm">Select a local JSON file to start syncing your research.</p>
+              <div className="space-y-3">
+                {savedHandle && <button onClick={handleResume} className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center"><i className="fa-solid fa-rotate-right mr-2"></i> Resume "{savedHandle.name}"</button>}
+                <button onClick={handleOpenFile} className="w-full py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-regular fa-folder-open mr-2"></i> Open Existing File</button>
+                <button onClick={handleNewFile} className="w-full py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-solid fa-plus mr-2"></i> Create New File</button>
+                <div className="pt-4 border-t border-slate-100">
+                  <label className="w-full py-2 px-4 text-slate-500 hover:text-indigo-600 text-sm font-medium transition-colors flex items-center justify-center cursor-pointer">
+                    <i className="fa-solid fa-upload mr-2"></i> Manual Import (No Auto-sync)
+                    <input type="file" accept=".json" className="hidden" onChange={handleManualImport} />
+                  </label>
+                </div>
+              </div>
+              <p className="mt-6 text-[10px] text-slate-400 font-mono font-bold tracking-wider">{APP_VERSION}</p>
+              {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+            </div>
+          </div>
+        );
       }
 
-      const schema = {
-        type: "OBJECT",
-        properties: {
-          title: { type: "STRING" },
-          summary: { type: "STRING" },
-          shortVersion: { type: "ARRAY", items: { type: "STRING" } },
-          fullContent: { type: "STRING" },
-          categories: { type: "ARRAY", items: { type: "STRING" } },
-          tags: { type: "ARRAY", items: { type: "STRING" } }
-        },
-        required: ["title", "summary", "shortVersion", "fullContent", "categories", "tags"]
-      };
-
-      const prompt = `
-        Analyze the following text extracted from a webpage or document. Extract the information and return it STRICTLY as a JSON object matching the requested schema.
-        Task:
-        1. Generate a concise, descriptive title.
-        2. Generate a 1-2 sentence summary.
-        3. Extract 3-5 of the most important points as a 'shortVersion' array.
-        4. Create a 'fullContent' string. **CRITICAL: DO NOT SUMMARIZE the full content. Retain the ENTIRE length of the extracted article text.** Format it beautifully using clean HTML tags (e.g., <p>, <h2>, <ul>, <li>, <strong>). If there are image placeholders like [IMAGE: alt | URL: src] in the text, convert them into HTML <img src="src" alt="alt" class="max-w-full rounded-lg my-6 shadow-md border border-slate-200" /> tags so they display inline.
-        5. Assign 1-2 relevant categories. Try to use these existing ones if they fit perfectly: ${JSON.stringify(Array.from(allCategories))}. Otherwise, create a new one.
-        6. Assign relevant tags. Try to use these existing ones if they fit: ${JSON.stringify(Array.from(allTags))}. Otherwise, create new ones.
-
-        Content to analyze:
-        ${rawContent.substring(0, 40000)} // Truncated slightly for prompt safety
-      `;
-
-      const payload = {
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: schema
-        }
-      };
-
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const filteredEntries = entries.filter(entry => {
+        if (!entry) return false;
+        const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.includes(c)));
+        const matchesTag = activeTags.length === 0 || (Array.isArray(entry.tags) && entry.tags.some(t => activeTags.includes(t)));
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch = !searchQuery || 
+                              (entry.title && entry.title.toLowerCase().includes(searchLower)) || 
+                              (entry.summary && entry.summary.toLowerCase().includes(searchLower));
+        return matchesCat && matchesTag && matchesSearch;
+      }).sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return (b.numericId || 0) - (a.numericId || 0);
       });
 
-      const result = await response.json();
-      if (result.error) throw new Error(result.error.message);
-      
-      const jsonText = result.candidates[0].content.parts[0].text;
-      const parsedData = JSON.parse(jsonText);
-      
-      const newEntry = {
-        ...parsedData,
-        id: 'entry-' + Date.now(),
-        createdAt: Date.now()
-      };
+      const activeSingleEntry = selectedEntryIds.length === 1 ? entries.find(e => e.id === selectedEntryIds[0]) : null;
+      const isCombinedView = activeSingleEntry?.isCombined;
+      const entriesToDisplay = isCombinedView 
+          ? entries.filter(e => activeSingleEntry.referencedIds.includes(e.id))
+          : selectedEntries;
 
-      setEntries(prev => [newEntry, ...prev]);
-      setSelectedEntryId(newEntry.id);
-      
-      // Auto-select 'All' filters to ensure the new item is visible
-      setActiveCategories([]);
-      setActiveTags([]);
-
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Failed to process the content. Please try again.");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !selectedEntryId) return;
-
-    const userMessage = chatInput.trim();
-    setChatInput('');
-    setIsChatting(true);
-
-    const currentHistory = chats[selectedEntryId] || [];
-    const updatedHistory = [...currentHistory, { role: 'user', text: userMessage }];
-    
-    setChats(prev => ({ ...prev, [selectedEntryId]: updatedHistory }));
-
-    try {
-      const payload = {
-        contents: [
-          ...currentHistory.map(msg => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-          })),
-          { role: 'user', parts: [{ text: userMessage }] }
-        ],
-        systemInstruction: {
-          parts: [{ text: `You are a helpful AI assistant inside a knowledge management app. Answer questions strictly based on the following document context. Do not make up information outside of this document.\n\nDocument Title: ${selectedEntry.title}\n\nDocument Content: ${selectedEntry.fullContent}` }]
-        }
-      };
-
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-      if (result.error) throw new Error(result.error.message);
-
-      const aiResponse = result.candidates[0].content.parts[0].text;
-      
-      setChats(prev => ({
-        ...prev,
-        [selectedEntryId]: [...updatedHistory, { role: 'model', text: aiResponse }]
-      }));
-    } catch (err) {
-      console.error(err);
-      setChats(prev => ({
-        ...prev,
-        [selectedEntryId]: [...updatedHistory, { role: 'model', text: "⚠️ Sorry, I encountered an error while thinking. Please try again." }]
-      }));
-    } finally {
-      setIsChatting(false);
-    }
-  };
-
-  const toggleCategory = (cat) => {
-    setActiveCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
-  };
-
-  const toggleTag = (tag) => {
-    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  };
-
-  const filteredEntries = entries.filter(entry => {
-    const matchesCat = activeCategories.length === 0 || entry.categories.some(c => activeCategories.includes(c));
-    const matchesTag = activeTags.length === 0 || entry.tags.some(t => activeTags.includes(t));
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = !searchQuery || 
-      entry.title.toLowerCase().includes(searchLower) || 
-      entry.summary.toLowerCase().includes(searchLower);
-      
-    return matchesCat && matchesTag && matchesSearch;
-  });
-
-  return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-800 font-sans overflow-hidden">
-      
-      {/* PANE 1: TAXONOMIES & INGESTION */}
-      <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col hidden md:flex">
-        
-        {/* Drop Target */}
-        <div className="p-4 border-b border-slate-100">
-          <div 
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`
-              relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all duration-200 text-center
-              ${isDragging ? 'border-indigo-500 bg-indigo-50 shadow-inner' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'}
-              ${isAnalyzing ? 'opacity-75 pointer-events-none' : ''}
-            `}
-          >
-            {isAnalyzing ? (
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
-            ) : (
-              <UploadCloud className={`w-8 h-8 mb-2 ${isDragging ? 'text-indigo-600' : 'text-slate-400'}`} />
-            )}
-            <h3 className="font-semibold text-sm mb-1 text-slate-700">
-              {isAnalyzing ? 'Analyzing with AI...' : 'Add New Entry'}
-            </h3>
-            <p className="text-xs text-slate-500">
-              Drag & drop text or a URL here
-            </p>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {/* Categories */}
-          <div>
-            <div className="flex items-center text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              <Folder className="w-3.5 h-3.5 mr-1.5" /> Categories
+      return (
+        <div className="flex h-screen w-full bg-slate-50 text-slate-800 font-sans overflow-hidden">
+          
+          {showKeyModal && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg w-96 border border-slate-200">
+                <div className="flex items-center mb-4">
+                  <i className="fa-solid fa-gear text-indigo-600 text-xl mr-3"></i>
+                  <h3 className="text-lg font-bold text-slate-800">Workspace Settings</h3>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">API Key</label>
+                  <input type="password" value={tempKey} onChange={e => setTempKey(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIzaSy..." />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">AI Model</label>
+                  <select value={tempModel} onChange={e => setTempModel(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setShowKeyModal(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                  <button onClick={saveSettings} className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Save</button>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col space-y-1">
-              <button 
-                onClick={() => setActiveCategories([])}
-                className={`text-left px-3 py-1.5 rounded-md text-sm transition-colors ${activeCategories.length === 0 ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100'}`}
-              >
-                All Categories
-              </button>
-              {Array.from(allCategories).map(cat => (
-                <button 
-                  key={cat}
-                  onClick={() => toggleCategory(cat)}
-                  className={`text-left px-3 py-1.5 rounded-md text-sm transition-colors ${activeCategories.includes(cat) ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100'}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
 
-          {/* Tags */}
-          <div>
-            <div className="flex items-center text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              <Hash className="w-3.5 h-3.5 mr-1.5" /> Tags
+          {/* LEFT SIDEBAR */}
+          <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col hidden md:flex">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+               <div className="flex items-center text-xs font-semibold text-slate-600 truncate">
+                 <i className="fa-solid fa-file-code mr-2 text-indigo-500"></i> <span className="truncate max-w-[120px]">{fileName}</span>
+                 <button onClick={openSettings} className={`ml-2 px-1.5 py-0.5 rounded transition-colors flex-shrink-0 ${apiKey ? 'text-green-500 hover:bg-green-100' : 'text-slate-400 hover:bg-slate-200 hover:text-indigo-600'}`} title="Settings"><i className="fa-solid fa-gear"></i></button>
+               </div>
+               <button onClick={handleCloseWorkspace} className="text-xs text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200 transition-colors flex-shrink-0" title="Switch Workspace"><i className="fa-solid fa-right-from-bracket"></i></button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button 
-                onClick={() => setActiveTags([])}
-                className={`px-3 py-1 rounded-full text-xs transition-colors border ${activeTags.length === 0 ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
-              >
-                All
-              </button>
-              {Array.from(allTags).map(tag => (
-                <button 
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1 rounded-full text-xs transition-colors border ${activeTags.includes(tag) ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
-                >
-                  {tag}
-                </button>
-              ))}
+            
+            <div className="p-4 border-b border-slate-100">
+              <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} className={`relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all text-center ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'} ${isAnalyzing ? 'opacity-75 pointer-events-none' : ''}`}>
+                {isAnalyzing ? <i className="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 mb-2"></i> : <i className={`fa-solid fa-cloud-arrow-up text-3xl mb-2 ${isDragging ? 'text-indigo-600' : 'text-slate-400'}`}></i>}
+                <h3 className="font-semibold text-sm mb-1">{isAnalyzing ? 'Analyzing...' : 'Add New Entry'}</h3>
+                <p className="text-xs text-slate-500">Drag text or URL here</p>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* PANE 2: ENTRIES LIST */}
-      <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col hidden lg:flex">
-        <div className="p-4 border-b border-slate-200 bg-white/50 backdrop-blur">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-            <input 
-              type="text"
-              placeholder="Search knowledge base..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-            />
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {filteredEntries.length === 0 ? (
-             <div className="text-center p-6 text-sm text-slate-500">
-               No entries found matching your filters.
-             </div>
-          ) : (
-            filteredEntries.map(entry => (
-              <div 
-                key={entry.id}
-                onClick={() => setSelectedEntryId(entry.id)}
-                className={`
-                  p-4 rounded-xl cursor-pointer transition-all border
-                  ${selectedEntryId === entry.id ? 'bg-white border-indigo-200 shadow-sm ring-1 ring-indigo-500/10' : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200 hover:shadow-sm'}
-                `}
-              >
-                <h4 className={`text-sm font-semibold mb-1 line-clamp-2 ${selectedEntryId === entry.id ? 'text-indigo-900' : 'text-slate-800'}`}>
-                  {entry.title}
-                </h4>
-                <p className="text-xs text-slate-500 line-clamp-2 mb-2 leading-relaxed">
-                  {entry.summary}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {entry.categories.slice(0, 1).map(c => (
-                    <span key={c} className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-medium uppercase tracking-wider">{c}</span>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <div>
+                <div className="flex items-center text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Categories</div>
+                <div className="flex flex-col space-y-1">
+                  <button onClick={() => setActiveCategories([])} className={`text-left px-3 py-1.5 rounded-md text-sm ${activeCategories.length === 0 ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100'}`}>All Categories</button>
+                  {Array.from(allCategories).map(cat => (
+                    <button 
+                      key={cat} 
+                      draggable 
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('kb-tax', JSON.stringify({type: 'cat', val: cat}));
+                        e.dataTransfer.effectAllowed = 'copyMove';
+                      }} 
+                      onClick={(e) => handleCategoryClick(cat, e)} 
+                      className={`text-left px-3 py-1.5 rounded-md text-sm ${activeCategories.includes(cat) ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      {cat}
+                    </button>
                   ))}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* PANE 3: CONTENT & CHAT */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white relative">
-        
-        {/* Error Banner */}
-        {error && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-100 w-11/12 max-w-md">
-            <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-            <p className="text-sm flex-1">{error}</p>
-            <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {!selectedEntry ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
-            <FileText className="w-16 h-16 mb-4 opacity-20" />
-            <p>Select an entry to view details</p>
-          </div>
-        ) : (
-          <>
-            {/* Main Content Scroll Area */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="max-w-3xl mx-auto p-8 lg:p-12 pb-32">
-                <div className="mb-8">
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    {selectedEntry.categories.map(c => (
-                       <span key={c} className="flex items-center text-xs font-medium text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
-                         <Folder className="w-3 h-3 mr-1" /> {c}
-                       </span>
-                    ))}
-                    {selectedEntry.tags.map(t => (
-                       <span key={t} className="flex items-center text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md">
-                         <Hash className="w-3 h-3 mr-1" /> {t}
-                       </span>
-                    ))}
-                  </div>
-                  <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4 leading-tight">
-                    {selectedEntry.title}
-                  </h1>
-                  <p className="text-lg text-slate-500 leading-relaxed font-medium">
-                    {selectedEntry.summary}
-                  </p>
+              <div>
+                <div className="flex items-center text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Tags</div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setActiveTags([])} className={`px-3 py-1 rounded-full text-xs border ${activeTags.length === 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-600'}`}>All</button>
+                  {Array.from(availableTags).map(tag => (
+                    <button 
+                      key={tag} 
+                      draggable 
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('kb-tax', JSON.stringify({type: 'tag', val: tag}));
+                        e.dataTransfer.effectAllowed = 'copyMove';
+                      }} 
+                      onClick={(e) => handleTagClick(tag, e)} 
+                      className={`px-3 py-1 rounded-full text-xs border ${activeTags.includes(tag) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-600'}`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
                 </div>
-
-                <div className="bg-slate-50 rounded-2xl p-6 lg:p-8 mb-8 border border-slate-100">
-                  <h3 className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">
-                    <Sparkles className="w-4 h-4 mr-2 text-indigo-500" /> Key Takeaways
-                  </h3>
-                  <ul className="space-y-3">
-                    {selectedEntry.shortVersion.map((point, idx) => (
-                      <li key={idx} className="flex items-start">
-                    <ChevronRight className="w-5 h-5 mr-2 text-indigo-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-slate-700 leading-relaxed">{point}</span>
-                  </li>
-                ))}
-              </ul>
+              </div>
             </div>
 
-            <div>
-              <h3 className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">
-                <AlignLeft className="w-4 h-4 mr-2" /> Full Content
-              </h3>
-              <div 
-                className="prose prose-slate max-w-none text-slate-800 leading-loose"
-                dangerouslySetInnerHTML={{ __html: selectedEntry.fullContent }}
-              />
+            <div className="p-4 border-t border-slate-100 bg-slate-50">
+              <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                <i className="fa-solid fa-robot mr-1.5"></i> Manage Taxonomies
+              </div>
+              <form onSubmit={handleTaxonomyCommand} className="relative">
+                <input 
+                  type="text" 
+                  value={taxonomyInput} 
+                  onChange={(e) => setTaxonomyInput(e.target.value)} 
+                  placeholder="Merge tags, rename..." 
+                  className="w-full pl-3 pr-8 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  disabled={isTaxonomyProcessing}
+                />
+                <button 
+                  type="submit" 
+                  disabled={isTaxonomyProcessing || !taxonomyInput.trim()} 
+                  className="absolute right-2 top-2 text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+                >
+                  {isTaxonomyProcessing ? <i className="fa-solid fa-spinner fa-spin text-xs"></i> : <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>}
+                </button>
+              </form>
+            </div>
+            <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-[10px] uppercase font-medium tracking-wider">
+              <div className="flex items-center">
+                {fileHandle ? (
+                  <><div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div> <span className="text-slate-400">Auto-saving</span></>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      const dataStr = JSON.stringify({ entries, chats, apiKey, model }, null, 2);
+                      const blob = new Blob([dataStr], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = fileName || 'knowledge-base-backup.json';
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="text-indigo-600 hover:text-indigo-800 transition-colors flex items-center"
+                  >
+                    <i className="fa-solid fa-download mr-2"></i> Manual Export
+                  </button>
+                )}
+              </div>
+              <span className="text-slate-400 font-mono font-bold">{APP_VERSION}</span>
             </div>
           </div>
-        </div>
 
-        {/* Chat Box (Sticky Bottom) */}
-            <div className="border-t border-slate-200 bg-white shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)]">
-               <div className="max-w-3xl mx-auto w-full flex flex-col" style={{ maxHeight: '400px' }}>
-                 
-                 {/* Messages Area */}
-                 <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 max-h-64 scroll-smooth">
-                    {(!chats[selectedEntry.id] || chats[selectedEntry.id].length === 0) && (
-                      <div className="text-center text-sm text-slate-400 mt-4 mb-2 flex flex-col items-center">
-                        <Bot className="w-8 h-8 mb-2 opacity-50" />
-                        <p>Ask a question about this document.</p>
+          {/* MIDDLE COLUMN */}
+          <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col hidden lg:flex">
+            <div className="p-4 border-b border-slate-200 bg-white">
+              <input type="text" placeholder="Search knowledge base..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+              <button onClick={handleNewNote} className="w-full mt-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                <i className="fa-solid fa-plus mr-2"></i> New Note
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              <p className="text-xs text-slate-400 text-center mb-2">Cmd/Ctrl + Click to select multiple</p>
+              {filteredEntries.map(entry => {
+                const isSelected = selectedEntryIds.includes(entry.id);
+                const isCombined = entry.isCombined;
+                const isManual = !entry.sourceUrl && !isCombined;
+                const isPinned = entry.pinned;
+                
+                return (
+                  <div 
+                    key={entry.id} 
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData('kb-ref-id', entry.id)}
+                    onClick={(e) => handleEntryClick(e, entry.id)} 
+                    onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
+                    onDragLeave={() => setDragOverEntryId(null)}
+                    onDrop={(e) => handleEntryDrop(e, entry.id)}
+                    className={`relative p-4 rounded-xl cursor-pointer border transition-colors ${isCombined ? 'bg-rose-200' : isManual ? 'bg-amber-100' : 'bg-white'} ${isSelected ? (isCombined ? 'border-rose-500 shadow-md ring-2 ring-rose-500' : isManual ? 'border-amber-500 shadow-md ring-2 ring-amber-500' : 'border-indigo-400 shadow-md ring-2 ring-indigo-500/30') : (isCombined ? 'border-rose-300 hover:border-rose-400' : isManual ? 'border-amber-300 hover:border-amber-400' : 'border-slate-200 hover:border-slate-300')} ${dragOverEntryId === entry.id ? 'opacity-80 scale-[0.98]' : ''}`}
+                  >
+                    <button onClick={(e) => togglePin(e, entry.id)} className={`absolute top-3 right-3 transition-colors ${isPinned ? 'text-indigo-700' : 'text-slate-400 hover:text-indigo-500'}`}>
+                      <i className="fa-solid fa-thumbtack"></i>
+                    </button>
+                    <h4 className={`text-sm font-semibold mb-1 pr-6 line-clamp-2 ${isCombined ? 'text-rose-900' : isManual ? 'text-amber-900' : 'text-slate-800'}`}>
+                      <span className={`${isCombined ? 'text-rose-600' : isManual ? 'text-amber-600' : 'text-slate-400'} font-normal mr-1`}>{entry.numericId}:</span>
+                      {entry.title}
+                    </h4>
+                    
+                    {Array.isArray(entry.categories) && entry.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2 mt-1.5">
+                        {entry.categories.map(c => (
+                          <span 
+                            key={c} 
+                            draggable
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              e.dataTransfer.setData('kb-tax', JSON.stringify({ type: 'cat', val: c }));
+                              e.dataTransfer.setData('kb-tax-remove', JSON.stringify({ entryId: entry.id, type: 'cat', val: c }));
+                              e.dataTransfer.effectAllowed = 'copyMove';
+                            }}
+                            onDragEnd={(e) => {
+                              if (e.dataTransfer.dropEffect === 'none') {
+                                removeTaxonomyFromEntry(entry.id, 'cat', c);
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold lowercase tracking-wider shadow-sm border cursor-grab active:cursor-grabbing ${isCombined ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-indigo-50 text-indigo-700 border-indigo-100'}`}
+                            title="Drag to another card, or drag away to remove"
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {Array.isArray(entry.tags) && entry.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2 mt-1">
+                        {entry.tags.map(t => (
+                          <span 
+                            key={t} 
+                            draggable
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              e.dataTransfer.setData('kb-tax', JSON.stringify({ type: 'tag', val: t }));
+                              e.dataTransfer.setData('kb-tax-remove', JSON.stringify({ entryId: entry.id, type: 'tag', val: t }));
+                              e.dataTransfer.effectAllowed = 'copyMove';
+                            }}
+                            onDragEnd={(e) => {
+                              if (e.dataTransfer.dropEffect === 'none') {
+                                removeTaxonomyFromEntry(entry.id, 'tag', t);
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold lowercase tracking-wider shadow-sm border cursor-grab active:cursor-grabbing ${isCombined ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                            title="Drag to another card, or drag away to remove"
+                          >
+                            {t}
+                          </span>
+                        ))}
                       </div>
                     )}
                     
-                    {chats[selectedEntry.id]?.map((msg, idx) => (
+                    {isCombined ? (
+                      <div className="mt-2 space-y-1">
+                        {entry.referencedIds?.slice(0, 3).map(id => {
+                          const ref = entries.find(e => e.id === id);
+                          return ref ? <div key={id} className="text-xs text-rose-800 truncate border-l-2 border-rose-400 pl-1.5">{ref.numericId}: {ref.title}</div> : null;
+                        })}
+                        {entry.referencedIds?.length > 3 && <div className="text-xs text-rose-800 opacity-70 italic">+{entry.referencedIds.length - 3} more notes</div>}
+                      </div>
+                    ) : (
+                      <p className={`text-xs line-clamp-2 mb-2 ${isManual ? 'text-amber-800' : 'text-slate-500'}`}>{entry.summary}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* MAIN CONTENT + CHAT WRAPPER */}
+          <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-white relative">
+            {error && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg"><p className="text-sm mr-4">{error}</p><button onClick={() => setError(null)}><i className="fa-solid fa-xmark"></i></button></div>
+            )}
+
+            {/* CONTENT AREA */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+              {isCombinedView && (
+                 <div className="w-full bg-rose-50 p-6 border-b border-rose-100 flex justify-between items-center shrink-0 shadow-sm z-10">
+                     <div className="flex-1 mr-4">
+                         <div className="text-[10px] font-bold uppercase tracking-wider text-rose-500 mb-1"><i className="fa-solid fa-layer-group mr-1"></i> Combined Query Session</div>
+                         {editingTitleId === activeSingleEntry.id ? (
+                           <input
+                             autoFocus
+                             value={tempTitle}
+                             onChange={e => setTempTitle(e.target.value)}
+                             onBlur={() => {
+                               setEntries(prev => prev.map(e => e.id === activeSingleEntry.id ? {...e, title: tempTitle} : e));
+                               setEditingTitleId(null);
+                             }}
+                             onKeyDown={e => {
+                               if (e.key === 'Enter') e.target.blur();
+                             }}
+                             className="text-xl font-bold text-rose-900 bg-white border border-rose-300 rounded px-2 py-1 outline-none w-full shadow-sm"
+                           />
+                         ) : (
+                           <h2 
+                             className="text-xl font-bold text-rose-900 cursor-pointer hover:bg-rose-100 p-1 -ml-1 rounded transition-colors inline-block"
+                             onClick={() => { setTempTitle(activeSingleEntry.title); setEditingTitleId(activeSingleEntry.id); }}
+                             title="Click to rename"
+                           >
+                             {activeSingleEntry.title} <i className="fa-solid fa-pen text-xs ml-2 opacity-50"></i>
+                           </h2>
+                         )}
+                         <p className="text-sm text-rose-700 mt-1">{activeSingleEntry.summary}</p>
+                     </div>
+                     <button onClick={() => deleteEntry(activeSingleEntry.id)} className="text-rose-500 hover:bg-rose-100 p-2 rounded transition-colors shrink-0" title="Delete Session"><i className="fa-solid fa-trash-can"></i></button>
+                 </div>
+              )}
+              
+              <div className="flex-1 flex overflow-x-auto min-w-0">
+                {!selectedEntryIds.length ? (
+                  <div className="flex-1 flex items-center justify-center text-slate-400 flex-col w-full"><i className="fa-solid fa-file-lines text-5xl mb-4 opacity-20"></i><p>Select an entry</p></div>
+                ) : (
+                  entriesToDisplay.map((entry) => (
+                    <div 
+                      key={entry.id} 
+                      className={`flex-1 min-w-[500px] border-r border-slate-100 last:border-r-0 overflow-y-auto relative transition-colors ${dragOverEntryId === entry.id ? 'bg-indigo-50/50' : ''}`}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
+                      onDragLeave={() => setDragOverEntryId(null)}
+                      onDrop={(e) => handleEntryDrop(e, entry.id)}
+                    >
+                      {editingEntryId === entry.id ? (
+                        <div className="max-w-3xl mx-auto p-8 pb-32">
+                          <div className="space-y-6">
+                            <div className="flex justify-between items-center mb-6">
+                              <h2 className="text-2xl font-bold">Edit Note #{entry.numericId}</h2>
+                              <div className="flex gap-2">
+                                <button onClick={() => setEditingEntryId(null)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button onClick={saveNote} className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Save Note</button>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">Title</label>
+                              <input type="text" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} className="w-full px-4 py-2 text-lg font-bold border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Note Title" />
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="block text-xs font-semibold text-slate-500">Summary</label>
+                                <button type="button" onClick={handleGenerateSummary} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                  <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate
+                                </button>
+                              </div>
+                              <input type="text" value={editData.summary} onChange={e => setEditData({...editData, summary: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Brief summary..." />
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="block text-xs font-semibold text-slate-500">Key Takeaways (One per line)</label>
+                                <button type="button" onClick={handleGenerateTakeaways} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                  <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate
+                                </button>
+                              </div>
+                              <textarea value={editData.shortVersion} onChange={e => setEditData({...editData, shortVersion: e.target.value})} className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" placeholder="Point 1&#10;Point 2..."></textarea>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">Source URL</label>
+                              <input type="text" value={editData.sourceUrl} onChange={e => setEditData({...editData, sourceUrl: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/source-url" />
+                            </div>
+
+                            <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                              <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-sm font-bold text-indigo-900">Taxonomies</h3>
+                                <button type="button" onClick={handleGenerateTaxonomies} disabled={isAnalyzing} className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-50">
+                                  {isAnalyzing ? <i className="fa-solid fa-spinner fa-spin mr-1"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-1"></i>} Generate
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-xs font-semibold text-indigo-500 mb-1">Categories</label>
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {editData.categories.map(c => (
+                                      <span key={c} className="group relative flex items-center px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-bold lowercase tracking-wider rounded-full shadow-sm transition-colors hover:bg-indigo-100">
+                                        {c}
+                                        <button type="button" onClick={() => removeEditCategory(c)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-400 hover:text-red-500">
+                                          <i className="fa-solid fa-xmark"></i>
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <input 
+                                    type="text"
+                                    list="cat-suggestions"
+                                    value={editCatInput}
+                                    onChange={e => setEditCatInput(e.target.value)}
+                                    onKeyDown={handleAddEditCategory}
+                                    placeholder="Add category (Enter or comma)"
+                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                  />
+                                  <datalist id="cat-suggestions">
+                                    {Array.from(allCategories).map(c => <option key={c} value={c} />)}
+                                  </datalist>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-indigo-500 mb-1">Tags</label>
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {editData.tags.map(t => (
+                                      <span key={t} className="group relative flex items-center px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold lowercase tracking-wider rounded-full shadow-sm transition-colors hover:bg-slate-200">
+                                        {t}
+                                        <button type="button" onClick={() => removeEditTag(t)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500">
+                                          <i className="fa-solid fa-xmark"></i>
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <input 
+                                    type="text"
+                                    list="tag-suggestions"
+                                    value={editTagInput}
+                                    onChange={e => setEditTagInput(e.target.value)}
+                                    onKeyDown={handleAddEditTag}
+                                    placeholder="Add tag (Enter or comma)"
+                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                  />
+                                  <datalist id="tag-suggestions">
+                                    {Array.from(allTags).map(t => <option key={t} value={t} />)}
+                                  </datalist>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-500 mb-1">Expanded Summary (Markdown)</label>
+                              <textarea value={editData.fullContent} onChange={e => setEditData({...editData, fullContent: e.target.value})} className="w-full h-96 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" placeholder="Start writing Expanded Summary in Markdown..."></textarea>
+                            </div>
+
+                            {editData.references && editData.references.length > 0 && (
+                              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                <h3 className="text-sm font-bold text-slate-700 mb-3">Linked References</h3>
+                                <div className="space-y-2">
+                                  {editData.references.map(refId => {
+                                    const refEnt = entries.find(e => e.id === refId);
+                                    return refEnt ? (
+                                      <div key={refId} className="flex justify-between items-center text-sm bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                        <span className="font-medium text-slate-700 truncate mr-4"><span className="text-slate-400 font-normal mr-1">{refEnt.numericId}:</span>{refEnt.title}</span>
+                                        <button type="button" onClick={() => removeReferenceFromEdit(refId)} className="text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors text-xs font-semibold uppercase tracking-wide">Remove</button>
+                                      </div>
+                                    ) : null;
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="max-w-3xl mx-auto p-8 pb-32">
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-bold lowercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full shadow-sm">{c}</span>)}
+                              {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-bold lowercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full shadow-sm">{t}</span>)}
+                              {entry.sourceUrl && <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-sm"><i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Source</a>}
+                            </div>
+                            {(!isCombinedView || selectedEntryIds.length > 1) && (
+                              <div className="flex gap-2">
+                                <button onClick={() => startEditing(entry)} className="text-slate-400 hover:text-indigo-600 p-2 rounded hover:bg-indigo-50 transition-colors" title="Edit Note"><i className="fa-solid fa-pen"></i></button>
+                                <button onClick={() => deleteEntry(entry.id)} className="text-slate-400 hover:text-red-500 p-2 rounded hover:bg-red-50 transition-colors" title="Delete Note"><i className="fa-solid fa-trash-can"></i></button>
+                              </div>
+                            )}
+                          </div>
+                          <h1 className="text-3xl font-bold mb-4">
+                            <span className="text-slate-400 font-normal mr-2">{entry.numericId}:</span>
+                            {entry.title || 'Untitled'}
+                          </h1>
+                          <p className="text-lg text-slate-500 mb-8">{entry.summary}</p>
+                          {Array.isArray(entry.shortVersion) && entry.shortVersion.length > 0 && (
+                            <div className="bg-slate-50 rounded-xl p-6 mb-8 border border-slate-100">
+                              <h3 className="text-sm font-bold uppercase text-slate-400 mb-4">Key Takeaways</h3>
+                              <ul className="space-y-2">
+                                {entry.shortVersion.map((point, idx) => (
+                                  <li key={idx} className="flex"><i className="fa-solid fa-chevron-right text-indigo-400 mt-1 mr-2 text-sm"></i><span className="text-slate-700 prose-a:text-indigo-600 prose-a:underline" dangerouslySetInnerHTML={{ __html: marked.parseInline(point) }}></span></li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <h3 className="text-sm font-bold uppercase text-slate-400 mb-4">Expanded Summary</h3>
+                          <div className="prose prose-slate max-w-none text-slate-800" dangerouslySetInnerHTML={{ __html: marked.parse(entry.fullContent || '') }} />
+                          
+                          {Array.isArray(entry.references) && entry.references.length > 0 && (
+                            <div className="mt-12 pt-8 border-t border-slate-100">
+                              <h3 className="text-sm font-bold uppercase text-slate-400 mb-4 flex items-center"><i className="fa-solid fa-link mr-2"></i> Linked References</h3>
+                              <div className="grid grid-cols-1 gap-3">
+                                {entry.references.map(refId => {
+                                  const refEntry = entries.find(e => e.id === refId);
+                                  if (!refEntry) return null;
+                                  return (
+                                    <div 
+                                      key={refId} 
+                                      onClick={() => setSelectedEntryIds(prev => prev.includes(refId) ? prev : [...prev, refId])} 
+                                      className="p-4 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all bg-white flex justify-between items-center group"
+                                    >
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-slate-800 mb-1 group-hover:text-indigo-700 transition-colors"><span className="text-slate-400 font-normal mr-1">{refEntry.numericId}:</span>{refEntry.title}</h4>
+                                        <p className="text-xs text-slate-500 line-clamp-1">{refEntry.summary}</p>
+                                      </div>
+                                      <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-indigo-400 transition-colors ml-4"></i>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* CHAT AREA */}
+            {editingEntryId === null && (
+              <div className="border-t min-[1500px]:border-t-0 min-[1500px]:border-l border-slate-200 bg-slate-100 min-[1500px]:w-[400px] flex flex-col flex-shrink-0 h-[40vh] min-[1500px]:h-full transition-all">
+                 <div className="flex bg-slate-200/60 p-1 rounded-lg m-4 mt-5">
+                    <button onClick={() => setChatScope('selected')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${chatScope === 'selected' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}>Selected ({selectedEntryIds.length})</button>
+                    <button onClick={() => setChatScope('all')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${chatScope === 'all' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}>All ({entries.filter(e => !e.isCombined).length})</button>
+                 </div>
+                 
+                 <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+                    {chats[currentChatKey]?.map((msg, idx) => (
                       <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`
-                          max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed
-                          ${msg.role === 'user' 
-                            ? 'bg-indigo-600 text-white rounded-br-none' 
-                            : 'bg-slate-100 text-slate-800 rounded-bl-none'}
-                        `}>
+                        <div className={`max-w-[90%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'}`}>
                           {msg.text}
                         </div>
                       </div>
                     ))}
-                    
-                    {isChatting && (
-                      <div className="flex justify-start">
-                        <div className="bg-slate-100 text-slate-800 rounded-2xl rounded-bl-none px-4 py-3 flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
-                      </div>
-                    )}
+                    {isChatting && <div className="text-slate-400 text-sm italic ml-2">AI is typing...</div>}
                  </div>
 
-                 {/* Input Area */}
-                 <div className="p-4 bg-slate-50/50">
-                    <form onSubmit={handleSendMessage} className="relative flex items-center">
-                      <MessageSquare className="absolute left-4 w-5 h-5 text-slate-400" />
-                      <input 
-                        type="text"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="Query this document..."
-                        className="w-full pl-12 pr-14 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
-                      />
-                      <button 
-                        type="submit"
-                        disabled={isChatting || !chatInput.trim()}
-                        className="absolute right-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <Send className="w-4 h-4 ml-0.5" />
-                      </button>
-                    </form>
-                 </div>
+                 <form onSubmit={handleSendMessage} className="p-4 bg-slate-100 border-t border-slate-200 relative shrink-0">
+                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder={`Query ${chatScope === 'all' ? 'entire knowledge base' : 'selected documents'}...`} className="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white shadow-sm" />
+                    <button type="submit" disabled={isChatting} className="absolute right-6 top-6 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"><i className="fa-solid fa-paper-plane"></i></button>
+                 </form>
+              </div>
+            )}
 
-               </div>
-            </div>
-          </>
-        )}
-      </div>
-      
-    </div>
-  );
-}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<KnowledgeApp />);
+  </script>
+</body>
+</html>
