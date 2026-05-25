@@ -23,11 +23,10 @@
     const { useState, useEffect, useRef } = React;
 
     const APP_VERSION = "v1.4.0";
-    const normalizeTaxonomy = (arr) => [...new Set((arr || []).map(item => item.trim().toLowerCase()))];
 
     const INITIAL_ENTRY = {
       id: 'sample-1',
-      title: 'Welcome to your AI Knowledge Base',
+      title: `Welcome to your AI Knowledge Base (${APP_VERSION})`,
       summary: 'A quick guide on how to use your new offline-first AI tool.',
       shortVersion: [
         'Drag and drop text or web links into the top-left drop zone.',
@@ -43,6 +42,14 @@
       sourceUrl: null,
       references: [],
       pinned: false
+    };
+
+    const normalizeTaxonomy = (entries) => {
+      return entries.map(e => ({
+        ...e,
+        categories: Array.isArray(e.categories) ? [...new Set(e.categories.map(c => c.toLowerCase()))] : [],
+        tags: Array.isArray(e.tags) ? [...new Set(e.tags.map(t => t.toLowerCase()))] : []
+      }));
     };
 
     const fetchAndScrubUrl = async (urlString) => {
@@ -124,6 +131,7 @@
       const [model, setModel] = useState('gemini-3.1-flash-lite');
       
       const [showKeyModal, setShowKeyModal] = useState(false);
+      const [showManual, setShowManual] = useState(false);
       const [tempKey, setTempKey] = useState('');
       const [tempModel, setTempModel] = useState('');
       
@@ -187,6 +195,10 @@
         });
       };
 
+      const processLoadedEntries = (entries) => {
+        return normalizeTaxonomy(ensureNumericIds(entries));
+      };
+
       const loadWorkspaceData = async (handle) => {
         try {
           const hasPerm = await verifyPermission(handle, true);
@@ -198,11 +210,7 @@
           if (text.trim()) data = JSON.parse(text);
           
           if (data.entries?.length > 0) {
-            const migrated = ensureNumericIds(data.entries.map(e => ({
-                ...e,
-                categories: normalizeTaxonomy(e.categories),
-                tags: normalizeTaxonomy(e.tags)
-            })));
+            const migrated = processLoadedEntries(data.entries);
             setEntries(migrated);
             setSelectedEntryIds([migrated[0].id]);
           } else {
@@ -266,11 +274,7 @@
           try {
             const data = JSON.parse(event.target.result);
             if (data.entries) {
-              const migrated = ensureNumericIds(data.entries.map(e => ({
-                ...e,
-                categories: normalizeTaxonomy(e.categories),
-                tags: normalizeTaxonomy(e.tags)
-              })));
+              const migrated = processLoadedEntries(data.entries);
               setEntries(migrated);
               if (migrated.length > 0) setSelectedEntryIds([migrated[0].id]);
             }
@@ -330,6 +334,7 @@
         setIsAnalyzing(true);
         try {
           const isUrl = /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(droppedData.trim());
+          const isYouTube = isUrl && /(youtube\.com|youtu\.be)/i.test(droppedData.trim());
           const sourceUrl = isUrl ? droppedData.trim() : null;
           let rawContent = droppedData;
           let originalWebTitle = null;
@@ -349,48 +354,41 @@
           };
 
           const taxonomyRules = `
-          5. Categories: Assign 1-2 SUPER BROAD domain categories. Review these existing categories: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse an existing category if it is a PERFECT fit. Output strictly in lowercase.
-          6. Tags: Assign 3-5 highly specific concept tags. Include the author's name as a tag. Review existing tags: ${JSON.stringify(Array.from(allTags))}. ONLY reuse existing tags if they are highly relevant. Output strictly in lowercase.`;
+          5. Categories: Assign 1-2 SUPER BROAD domain categories. Review these existing categories: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse an existing category if it is a PERFECT fit. Create a new accurate domain if needed. Return strictly in lowercase.
+          6. Tags: Assign 3-5 highly specific concept tags. Include the author's name as a tag. Review existing tags: ${JSON.stringify(Array.from(allTags))}. ONLY reuse existing tags if they are highly relevant. Create new ones otherwise. Return strictly in lowercase.`;
           
           const summaryRules = `4. fullContent string: Create an expanded summary. Succinctly summarize each point of the source, regardless of its length. Format with clean Markdown. Do NOT include any external links or 'Read more' text.`;
 
           let prompt = '';
-          if (isUrl) {
-            const urlStr = droppedData.trim();
-            const isYouTube = urlStr.includes('youtube.com') || urlStr.includes('youtu.be');
-
-            if (isYouTube) {
-              useSearchTool = true;
-              let ytMeta = urlStr;
-              try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/oembed?url=' + urlStr + '&format=json')}`);
-                const data = await res.json();
-                const oembed = JSON.parse(data.contents);
-                ytMeta = `"${oembed.title}" by ${oembed.author_name}`;
-                originalWebTitle = oembed.title;
-              } catch (e) {
-                console.error("YouTube fetch failed", e);
-              }
-
-              prompt = `Use Google Search to find details and summarize this YouTube video: ${ytMeta} (${urlStr}). Return strictly as JSON. 
-              1. Title. 2. Summary. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
+          if (isYouTube) {
+            useSearchTool = true;
+            
+            let videoId = '';
+            const urlObj = new URL(droppedData.trim());
+            if (urlObj.hostname.includes('youtu.be')) {
+               videoId = urlObj.pathname.slice(1);
             } else {
-              try {
-                const scrapeResult = await fetchAndScrubUrl(urlStr);
-                rawContent = scrapeResult.content;
-                originalWebTitle = scrapeResult.title;
-                prompt = `Analyze this markdown text. Return strictly as JSON. 
-                1. Title: Create a title for this piece (or use: "${originalWebTitle.replace(/"/g, '\\"')}"). 
-                2. 1-2 sentence summary. Include author's name if identifiable. 
-                3. 3-5 key points in 'shortVersion'.
-                ${taxonomyRules}
-                ${summaryRules}
-                Content:\n${rawContent.substring(0, 40000)}`;
-              } catch (err) {
-                useSearchTool = true;
-                prompt = `Use Google Search to find exact content for this URL: ${urlStr}. Return strictly as JSON. 
-                1. Title. 2. Summary. Include author's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
-              }
+               videoId = urlObj.searchParams.get('v');
+            }
+
+            prompt = `Use Google Search to find exact content, transcript, or summary for this SPECIFIC YouTube video ID: ${videoId} (URL: ${droppedData.trim()}). CRITICAL: You must only summarize this exact video, do not summarize general topics related to it. Return strictly as JSON. 
+            1. Title. 2. Summary. Include creator's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
+          } else if (isUrl) {
+            try {
+              const scrapeResult = await fetchAndScrubUrl(droppedData.trim());
+              rawContent = scrapeResult.content;
+              originalWebTitle = scrapeResult.title;
+              prompt = `Analyze this markdown text. Return strictly as JSON. 
+              1. Title: Create a title for this piece (or use: "${originalWebTitle.replace(/"/g, '\\"')}"). 
+              2. 1-2 sentence summary. Include author's name if identifiable. 
+              3. 3-5 key points in 'shortVersion'.
+              ${taxonomyRules}
+              ${summaryRules}
+              Content:\n${rawContent.substring(0, 40000)}`;
+            } catch (err) {
+              useSearchTool = true;
+              prompt = `Use Google Search to find exact content for this URL: ${droppedData.trim()}. Return strictly as JSON. 
+              1. Title. 2. Summary. Include author's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
             }
           } else {
              prompt = `Analyze this text. Return strictly as JSON. 1. Title. 2. Summary. 3. 3-5 points in 'shortVersion'. 4. Format the input text as clean Markdown as 'fullContent'. ${taxonomyRules}\nContent:\n${rawContent.substring(0, 40000)}`;
@@ -404,12 +402,14 @@
 
           const result = await callGemini(apiKey, payload, model);
           const parsedResult = JSON.parse(result.candidates[0].content.parts[0].text);
+          
+          parsedResult.categories = (parsedResult.categories || []).map(c => c.toLowerCase());
+          parsedResult.tags = (parsedResult.tags || []).map(t => t.toLowerCase());
+
           const nextNumericId = entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0) + 1;
           const newEntry = { 
             ...parsedResult, 
             title: originalWebTitle || parsedResult.title || 'Untitled Note',
-            categories: normalizeTaxonomy(parsedResult.categories),
-            tags: normalizeTaxonomy(parsedResult.tags),
             numericId: nextNumericId,
             id: 'entry-' + Date.now(), 
             createdAt: Date.now(),
@@ -476,8 +476,8 @@
               ...e, title: editData.title || 'Untitled', summary: editData.summary, fullContent: editData.fullContent,
               shortVersion: editData.shortVersion.split('\n').map(s => s.trim()).filter(Boolean),
               sourceUrl: editData.sourceUrl || null,
-              categories: normalizeTaxonomy(editData.categories),
-              tags: normalizeTaxonomy(editData.tags),
+              categories: editData.categories.map(c => c.toLowerCase()),
+              tags: editData.tags.map(t => t.toLowerCase()),
               references: editData.references || []
             };
           }
@@ -492,7 +492,7 @@
       const handleAddEditCategory = (e) => {
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
-          const val = editCatInput.trim().toLowerCase().replace(/^,|,$/g, '');
+          const val = editCatInput.trim().replace(/^,|,$/g, '').toLowerCase();
           if (val && !editData.categories.includes(val)) {
             setEditData(prev => ({ ...prev, categories: [...prev.categories, val] }));
           }
@@ -503,7 +503,7 @@
       const handleAddEditTag = (e) => {
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
-          const val = editTagInput.trim().toLowerCase().replace(/^,|,$/g, '');
+          const val = editTagInput.trim().replace(/^,|,$/g, '').toLowerCase();
           if (val && !editData.tags.includes(val)) {
             setEditData(prev => ({ ...prev, tags: [...prev.tags, val] }));
           }
@@ -566,8 +566,8 @@
         setIsAnalyzing(true);
         try {
           const prompt = `Analyze this note. Return strictly JSON matching this schema: {"categories": ["Category"], "tags": ["tag1", "tag2"]}.
-          Rules: 1. Categories: Assign 1-2 SUPER BROAD domain categories. Review existing: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse if perfect match.
-          2. Tags: Assign 3-5 highly specific concept keywords. Review existing: ${JSON.stringify(Array.from(allTags))}. ONLY reuse if highly relevant.
+          Rules: 1. Categories: Assign 1-2 SUPER BROAD domain categories. Review existing: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse if perfect match. Return in lowercase.
+          2. Tags: Assign 3-5 highly specific concept keywords. Review existing: ${JSON.stringify(Array.from(allTags))}. ONLY reuse if highly relevant. Return in lowercase.
           Title: ${editData.title}\nContent: ${editData.fullContent}`;
 
           const payload = {
@@ -579,8 +579,8 @@
           const data = JSON.parse(result.candidates[0].content.parts[0].text);
           setEditData(prev => ({ 
             ...prev, 
-            categories: Array.isArray(data.categories) ? data.categories : prev.categories, 
-            tags: Array.isArray(data.tags) ? data.tags : prev.tags 
+            categories: Array.isArray(data.categories) ? data.categories.map(c => c.toLowerCase()) : prev.categories, 
+            tags: Array.isArray(data.tags) ? data.tags.map(t => t.toLowerCase()) : prev.tags 
           }));
         } catch(err) {
           setError("Taxonomy generation failed: " + err.message);
@@ -604,7 +604,7 @@
           Command: "${taxonomyInput}"
 
           Safety Rule: Deleting multiple categories/tags is high-risk. Only delete if explicitly requested by the user. Do not delete broad categories unless the user is certain.
-          Return JSON matching:
+          Return JSON matching (ensure all new values are lowercase):
           {
             "categoryChanges": [{"old": "OldName", "new": "NewName"}],
             "categoryDeletions": ["NameToRemove"],
@@ -658,7 +658,11 @@
               newTags = newTags.filter(t => !data.tagDeletions.includes(t));
             }
 
-            return { ...entry, categories: normalizeTaxonomy(newCats), tags: normalizeTaxonomy(newTags) };
+            return { 
+              ...entry, 
+              categories: [...new Set(newCats.map(c => c.toLowerCase()))], 
+              tags: [...new Set(newTags.map(t => t.toLowerCase()))] 
+            };
           }));
           
           setTaxonomyInput('');
@@ -860,16 +864,63 @@ Documents:\n${contextText}` }] }
                 {savedHandle && <button onClick={handleResume} className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center"><i className="fa-solid fa-rotate-right mr-2"></i> Resume "{savedHandle.name}"</button>}
                 <button onClick={handleOpenFile} className="w-full py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-regular fa-folder-open mr-2"></i> Open Existing File</button>
                 <button onClick={handleNewFile} className="w-full py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-solid fa-plus mr-2"></i> Create New File</button>
-                <div className="pt-4 border-t border-slate-100">
+                <div className="pt-4 border-t border-slate-100 flex flex-col space-y-3 mt-4">
                   <label className="w-full py-2 px-4 text-slate-500 hover:text-indigo-600 text-sm font-medium transition-colors flex items-center justify-center cursor-pointer">
                     <i className="fa-solid fa-upload mr-2"></i> Manual Import (No Auto-sync)
                     <input type="file" accept=".json" className="hidden" onChange={handleManualImport} />
                   </label>
+                  <button onClick={() => setShowManual(true)} className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                    <i className="fa-solid fa-book mr-2"></i> User Manual
+                  </button>
                 </div>
               </div>
               <p className="mt-6 text-[10px] text-slate-400 font-mono font-bold tracking-wider">{APP_VERSION}</p>
               {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
             </div>
+            
+            {showManual && (
+              <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 text-left">
+                  <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50 shrink-0">
+                    <h2 className="text-lg font-bold text-slate-800"><i className="fa-solid fa-book text-indigo-600 mr-2"></i> KnowledgeBase AI Manual</h2>
+                    <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
+                  </div>
+                  <div className="p-8 overflow-y-auto prose prose-slate prose-sm max-w-none text-slate-700">
+                    <h3>1. Welcome to your Workspace</h3>
+                    <p>This application is designed to be <strong>offline-first</strong>. All your notes, categories, and settings are saved directly to a local JSON file on your computer. You retain complete ownership of your data.</p>
+                    
+                    <h3>2. Getting Started & API Key</h3>
+                    <p>To use the AI features (summarizing links, generating tags, and chatting), you must provide a <strong>Google Gemini API Key</strong>. Click the gear icon <i className="fa-solid fa-gear"></i> in the top left sidebar to enter your key.</p>
+
+                    <h3>3. Adding Content</h3>
+                    <p>The fastest way to add content is to drag and drop text or a URL directly into the <strong>"Add New Entry"</strong> cloud area in the left sidebar.</p>
+                    <ul>
+                      <li><strong>Web Links:</strong> Drag an article URL. The AI will scrape it, generate a clean Markdown version, title it, summarize it, and tag it.</li>
+                      <li><strong>YouTube Videos:</strong> Drag a YouTube URL. The AI will search for transcripts/summaries and create detailed notes for you.</li>
+                      <li><strong>Raw Text:</strong> Drop any text block to have it instantly formatted and categorized.</li>
+                    </ul>
+
+                    <h3>4. Organization: Categories vs. Tags</h3>
+                    <p>The system uses a strict two-tier taxonomy:</p>
+                    <ul>
+                      <li><strong>Categories:</strong> Broad domains (e.g., "technology", "finance"). Notes usually have 1-2 categories.</li>
+                      <li><strong>Tags:</strong> Specific, granular concepts or author names (e.g., "artificial intelligence", "sam altman").</li>
+                    </ul>
+                    <p><strong>Drag and Drop Management:</strong> You can drag a category or tag from the left sidebar directly onto a note card to apply it. To remove a tag, simply click and drag it <em>off</em> the note card.</p>
+
+                    <h3>5. Chatting with your Documents</h3>
+                    <p>The bottom right section is your AI chat interface. You can ask questions based entirely on your saved documents.</p>
+                    <ul>
+                      <li><strong>Scope:</strong> Choose "Selected" to only query notes you have highlighted (Cmd/Ctrl + Click to select multiple), or choose "All" to query the entire database.</li>
+                      <li><strong>Combined Views:</strong> Querying multiple documents generates a temporary "Combined Session" note, allowing you to save the insights from that specific conversation.</li>
+                    </ul>
+
+                    <h3>6. Editing & AI Assistance</h3>
+                    <p>Click the pencil icon <i className="fa-solid fa-pen"></i> on any note to enter Edit Mode. Here you can write in Markdown. If you get stuck, use the "Generate" buttons to have AI write your summaries, extract takeaways, or clean up your tags based on your text.</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       }
@@ -896,10 +947,10 @@ Documents:\n${contextText}` }] }
           : selectedEntries;
 
       return (
-        <div className="flex h-screen w-full bg-slate-50 text-slate-800 font-sans overflow-hidden">
+        <div className="flex h-screen w-full bg-slate-50 text-slate-800 font-sans overflow-hidden relative">
           
           {showKeyModal && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[60]">
               <div className="bg-white p-6 rounded-xl shadow-lg w-96 border border-slate-200">
                 <div className="flex items-center mb-4">
                   <i className="fa-solid fa-gear text-indigo-600 text-xl mr-3"></i>
@@ -917,16 +968,65 @@ Documents:\n${contextText}` }] }
                     <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                   </select>
                 </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => setShowKeyModal(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-                  <button onClick={saveSettings} className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Save</button>
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100">
+                  <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center transition-colors">
+                    <i className="fa-solid fa-book mr-1.5"></i> Read Manual
+                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowKeyModal(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                    <button onClick={saveSettings} className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Save</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showManual && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+                <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50 shrink-0">
+                  <h2 className="text-lg font-bold text-slate-800"><i className="fa-solid fa-book text-indigo-600 mr-2"></i> KnowledgeBase AI Manual</h2>
+                  <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div className="p-8 overflow-y-auto prose prose-slate prose-sm max-w-none text-slate-700">
+                  <h3>1. Welcome to your Workspace</h3>
+                  <p>This application is designed to be <strong>offline-first</strong>. All your notes, categories, and settings are saved directly to a local JSON file on your computer. You retain complete ownership of your data.</p>
+                  
+                  <h3>2. Getting Started & API Key</h3>
+                  <p>To use the AI features (summarizing links, generating tags, and chatting), you must provide a <strong>Google Gemini API Key</strong>. Click the gear icon <i className="fa-solid fa-gear"></i> in the top left sidebar to enter your key.</p>
+
+                  <h3>3. Adding Content</h3>
+                  <p>The fastest way to add content is to drag and drop text or a URL directly into the <strong>"Add New Entry"</strong> cloud area in the left sidebar.</p>
+                  <ul>
+                    <li><strong>Web Links:</strong> Drag an article URL. The AI will scrape it, generate a clean Markdown version, title it, summarize it, and tag it.</li>
+                    <li><strong>YouTube Videos:</strong> Drag a YouTube URL. The AI will search for transcripts/summaries and create detailed notes for you.</li>
+                    <li><strong>Raw Text:</strong> Drop any text block to have it instantly formatted and categorized.</li>
+                  </ul>
+
+                  <h3>4. Organization: Categories vs. Tags</h3>
+                  <p>The system uses a strict two-tier taxonomy:</p>
+                  <ul>
+                    <li><strong>Categories:</strong> Broad domains (e.g., "technology", "finance"). Notes usually have 1-2 categories.</li>
+                    <li><strong>Tags:</strong> Specific, granular concepts or author names (e.g., "artificial intelligence", "sam altman").</li>
+                  </ul>
+                  <p><strong>Drag and Drop Management:</strong> You can drag a category or tag from the left sidebar directly onto a note card to apply it. To remove a tag, simply click and drag it <em>off</em> the note card.</p>
+
+                  <h3>5. Chatting with your Documents</h3>
+                  <p>The bottom right section is your AI chat interface. You can ask questions based entirely on your saved documents.</p>
+                  <ul>
+                    <li><strong>Scope:</strong> Choose "Selected" to only query notes you have highlighted (Cmd/Ctrl + Click to select multiple), or choose "All" to query the entire database.</li>
+                    <li><strong>Combined Views:</strong> Querying multiple documents generates a temporary "Combined Session" note, allowing you to save the insights from that specific conversation.</li>
+                  </ul>
+
+                  <h3>6. Editing & AI Assistance</h3>
+                  <p>Click the pencil icon <i className="fa-solid fa-pen"></i> on any note to enter Edit Mode. Here you can write in Markdown. If you get stuck, use the "Generate" buttons to have AI write your summaries, extract takeaways, or clean up your tags based on your text.</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* LEFT SIDEBAR */}
-          <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col hidden md:flex">
+          <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col hidden md:flex z-10 relative">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                <div className="flex items-center text-xs font-semibold text-slate-600 truncate">
                  <i className="fa-solid fa-file-code mr-2 text-indigo-500"></i> <span className="truncate max-w-[120px]">{fileName}</span>
@@ -1011,7 +1111,7 @@ Documents:\n${contextText}` }] }
             <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-[10px] uppercase font-medium tracking-wider">
               <div className="flex items-center">
                 {fileHandle ? (
-                  <><div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div> <span className="text-slate-400">Auto-saving</span></>
+                  <><div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div> <span className="text-slate-400">Auto-saving</span> <span className="ml-2 text-[10px] text-slate-400 font-mono opacity-50">{APP_VERSION}</span></>
                 ) : (
                   <button 
                     onClick={() => {
@@ -1030,12 +1130,11 @@ Documents:\n${contextText}` }] }
                   </button>
                 )}
               </div>
-              <span className="text-slate-400 font-mono font-bold">{APP_VERSION}</span>
             </div>
           </div>
 
           {/* MIDDLE COLUMN */}
-          <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col hidden lg:flex">
+          <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col hidden lg:flex z-10 relative">
             <div className="p-4 border-b border-slate-200 bg-white">
               <input type="text" placeholder="Search knowledge base..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
               <button onClick={handleNewNote} className="w-full mt-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
@@ -1086,7 +1185,7 @@ Documents:\n${contextText}` }] }
                                 removeTaxonomyFromEntry(entry.id, 'cat', c);
                               }
                             }}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold lowercase tracking-wider shadow-sm border cursor-grab active:cursor-grabbing ${isCombined ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-indigo-50 text-indigo-700 border-indigo-100'}`}
+                            className="px-2 py-0.5 rounded-full text-[10px] font-medium lowercase bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm cursor-grab active:cursor-grabbing"
                             title="Drag to another card, or drag away to remove"
                           >
                             {c}
@@ -1095,32 +1194,6 @@ Documents:\n${contextText}` }] }
                       </div>
                     )}
 
-                    {Array.isArray(entry.tags) && entry.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2 mt-1">
-                        {entry.tags.map(t => (
-                          <span 
-                            key={t} 
-                            draggable
-                            onDragStart={(e) => {
-                              e.stopPropagation();
-                              e.dataTransfer.setData('kb-tax', JSON.stringify({ type: 'tag', val: t }));
-                              e.dataTransfer.setData('kb-tax-remove', JSON.stringify({ entryId: entry.id, type: 'tag', val: t }));
-                              e.dataTransfer.effectAllowed = 'copyMove';
-                            }}
-                            onDragEnd={(e) => {
-                              if (e.dataTransfer.dropEffect === 'none') {
-                                removeTaxonomyFromEntry(entry.id, 'tag', t);
-                              }
-                            }}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold lowercase tracking-wider shadow-sm border cursor-grab active:cursor-grabbing ${isCombined ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}
-                            title="Drag to another card, or drag away to remove"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
                     {isCombined ? (
                       <div className="mt-2 space-y-1">
                         {entry.referencedIds?.slice(0, 3).map(id => {
@@ -1139,7 +1212,7 @@ Documents:\n${contextText}` }] }
           </div>
 
           {/* MAIN CONTENT + CHAT WRAPPER */}
-          <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-white relative">
+          <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-white relative z-0">
             {error && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg"><p className="text-sm mr-4">{error}</p><button onClick={() => setError(null)}><i className="fa-solid fa-xmark"></i></button></div>
             )}
@@ -1244,9 +1317,9 @@ Documents:\n${contextText}` }] }
                                   <label className="block text-xs font-semibold text-indigo-500 mb-1">Categories</label>
                                   <div className="flex flex-wrap gap-1 mb-2">
                                     {editData.categories.map(c => (
-                                      <span key={c} className="group relative flex items-center px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-bold lowercase tracking-wider rounded-full shadow-sm transition-colors hover:bg-indigo-100">
+                                      <span key={c} className="group relative flex items-center px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-medium lowercase rounded-full shadow-sm">
                                         {c}
-                                        <button type="button" onClick={() => removeEditCategory(c)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-400 hover:text-red-500">
+                                        <button type="button" onClick={() => removeEditCategory(c)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
                                           <i className="fa-solid fa-xmark"></i>
                                         </button>
                                       </span>
@@ -1259,7 +1332,7 @@ Documents:\n${contextText}` }] }
                                     onChange={e => setEditCatInput(e.target.value)}
                                     onKeyDown={handleAddEditCategory}
                                     placeholder="Add category (Enter or comma)"
-                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white lowercase"
                                   />
                                   <datalist id="cat-suggestions">
                                     {Array.from(allCategories).map(c => <option key={c} value={c} />)}
@@ -1269,9 +1342,9 @@ Documents:\n${contextText}` }] }
                                   <label className="block text-xs font-semibold text-indigo-500 mb-1">Tags</label>
                                   <div className="flex flex-wrap gap-1 mb-2">
                                     {editData.tags.map(t => (
-                                      <span key={t} className="group relative flex items-center px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold lowercase tracking-wider rounded-full shadow-sm transition-colors hover:bg-slate-200">
+                                      <span key={t} className="group relative flex items-center px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-medium lowercase rounded-full shadow-sm">
                                         {t}
-                                        <button type="button" onClick={() => removeEditTag(t)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500">
+                                        <button type="button" onClick={() => removeEditTag(t)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
                                           <i className="fa-solid fa-xmark"></i>
                                         </button>
                                       </span>
@@ -1284,7 +1357,7 @@ Documents:\n${contextText}` }] }
                                     onChange={e => setEditTagInput(e.target.value)}
                                     onKeyDown={handleAddEditTag}
                                     placeholder="Add tag (Enter or comma)"
-                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white lowercase"
                                   />
                                   <datalist id="tag-suggestions">
                                     {Array.from(allTags).map(t => <option key={t} value={t} />)}
@@ -1320,9 +1393,9 @@ Documents:\n${contextText}` }] }
                         <div className="max-w-3xl mx-auto p-8 pb-32">
                           <div className="flex justify-between items-start mb-6">
                             <div className="flex flex-wrap items-center gap-2">
-                              {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-bold lowercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full shadow-sm">{c}</span>)}
-                              {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-bold lowercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full shadow-sm">{t}</span>)}
-                              {entry.sourceUrl && <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-sm"><i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Source</a>}
+                              {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full lowercase">{c}</span>)}
+                              {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full lowercase">#{t}</span>)}
+                              {entry.sourceUrl && <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-sm"><i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Source</a>}
                             </div>
                             {(!isCombinedView || selectedEntryIds.length > 1) && (
                               <div className="flex gap-2">
