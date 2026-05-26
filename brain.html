@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.4.2";
+    const APP_VERSION = "v1.4.3";
 
     // Safe Wrapper for Markdown Parsing (Avoids crashing if Marked fails to load)
     const parseMarkdown = (content) => {
@@ -838,7 +838,7 @@
             systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${contextEntries.length} separate documents. Cite the document number when combining information. Context scope: ${chatScope}.
             
 CRITICAL WRITING RULES:
-- Limit responses to 50 words max unless explicitly asked to expand.
+- Limit responses to 100 words max unless explicitly asked to expand.
 - Use Hemingway rules: short words, active voice, simple language.
 - Delete unnecessary words. No filler, fluff, jargon, or prefaces.
 - Short, declarative sentences. One idea per sentence.
@@ -1571,9 +1571,16 @@ Documents:\n${contextText}` }] }
                  <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
                     {chats[currentChatKey]?.map((msg, idx) => (
                       <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[90%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'}`}>
-                          {msg.text}
-                        </div>
+                        {msg.role === 'user' ? (
+                          <div className="max-w-[90%] rounded-2xl px-4 py-2 text-sm bg-indigo-600 text-white rounded-br-none whitespace-pre-wrap">
+                            {msg.text}
+                          </div>
+                        ) : (
+                          <div 
+                            className="max-w-[90%] rounded-2xl px-4 py-3 text-sm bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm prose prose-sm prose-slate max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 prose-a:text-indigo-600"
+                            dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.text) }}
+                          />
+                        )}
                       </div>
                     ))}
                     {isChatting && <div className="text-slate-400 text-sm italic ml-2"><i className="fa-solid fa-circle-notch fa-spin mr-2"></i>AI is processing...</div>}
