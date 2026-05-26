@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KnowledgeBase AI</title>
   
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Consolidated Tailwind CSS (Single CDN loading to prevent configuration conflicts) -->
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,12 +18,59 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans overflow-hidden">
+  
+  <!-- Global Diagnostic Screen (Catches & reveals compilation issues immediately) -->
+  <div id="error-fallback" class="hidden fixed inset-0 bg-slate-900 text-white p-8 flex flex-col items-center justify-center z-[9999]">
+    <div class="max-w-md w-full bg-slate-800 p-6 rounded-xl shadow-xl border border-red-500/30">
+      <div class="flex items-center gap-3 text-red-500 mb-4">
+        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+        <h1 class="text-xl font-bold">App Initialization Error</h1>
+      </div>
+      <p class="text-slate-300 text-sm mb-4">A background script failed or encountered a critical syntax error. This is usually due to delayed CDNs or local script blockers.</p>
+      <div id="error-details" class="bg-black/40 p-4 rounded-lg font-mono text-xs text-red-400 overflow-x-auto mb-6 max-h-40"></div>
+      <button onclick="window.location.reload()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-rotate-right mr-2"></i> Reload App
+      </button>
+    </div>
+  </div>
+
   <div id="root"></div>
+
+  <script>
+    // Listen for compilation errors before React mounts
+    window.addEventListener('error', function(e) {
+      console.error("Captured Error:", e);
+      const fallback = document.getElementById('error-fallback');
+      const details = document.getElementById('error-details');
+      if (fallback && details) {
+        fallback.classList.remove('hidden');
+        details.textContent = `${e.message}\nLine: ${e.lineno}:${e.colno}\nFile: ${e.filename}`;
+      }
+    });
+  </script>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.4.0";
+    const APP_VERSION = "v1.4.2";
+
+    // Safe Wrapper for Markdown Parsing (Avoids crashing if Marked fails to load)
+    const parseMarkdown = (content) => {
+      if (typeof marked !== 'undefined' && marked.parse) {
+        return marked.parse(content || '');
+      }
+      return (content || '')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br />');
+    };
+
+    const parseMarkdownInline = (content) => {
+      if (typeof marked !== 'undefined' && marked.parseInline) {
+        return marked.parseInline(content || '');
+      }
+      return content || '';
+    };
 
     const INITIAL_ENTRY = {
       id: 'sample-1',
@@ -84,8 +132,13 @@
       
       let mainNode = doc.querySelector('.profile-details') || doc.querySelector('article') || doc.querySelector('main') || doc.body;
       
-      const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
-      let markdownContent = turndownService.turndown(mainNode);
+      let markdownContent = '';
+      if (typeof TurndownService !== 'undefined') {
+        const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+        markdownContent = turndownService.turndown(mainNode);
+      } else {
+        markdownContent = mainNode.innerText || mainNode.textContent || '';
+      }
       
       if (!markdownContent || markdownContent.length < 50) throw new Error("No text found. Falling back to search.");
       return {
@@ -153,6 +206,7 @@
       const [chatInput, setChatInput] = useState('');
       const [isChatting, setIsChatting] = useState(false);
       const chatScrollRef = useRef(null);
+      const sourceCacheRef = useRef({});
       
       const [taxonomyInput, setTaxonomyInput] = useState('');
       const [isTaxonomyProcessing, setIsTaxonomyProcessing] = useState(false);
@@ -162,10 +216,17 @@
       const [tempTitle, setTempTitle] = useState('');
 
       useEffect(() => {
-        idbKeyval.get('kb_file_handle').then(handle => {
-          if (handle) setSavedHandle(handle);
+        if (typeof idbKeyval !== 'undefined') {
+          idbKeyval.get('kb_file_handle').then(handle => {
+            if (handle) setSavedHandle(handle);
+            setAppState('landing');
+          }).catch(err => {
+            console.error("IndexDB failed:", err);
+            setAppState('landing');
+          });
+        } else {
           setAppState('landing');
-        });
+        }
       }, []);
 
       useEffect(() => {
@@ -224,7 +285,9 @@
           
           setFileHandle(handle);
           setFileName(file.name);
-          await idbKeyval.set('kb_file_handle', handle);
+          if (typeof idbKeyval !== 'undefined') {
+            await idbKeyval.set('kb_file_handle', handle);
+          }
           setAppState('workspace');
         } catch (err) {
           setError(`Failed to open workspace: ${err.message}`);
@@ -259,7 +322,9 @@
           setApiKey('');
           setModel('gemini-3.1-flash-lite');
           setSelectedEntryIds([INITIAL_ENTRY.id]);
-          await idbKeyval.set('kb_file_handle', handle);
+          if (typeof idbKeyval !== 'undefined') {
+            await idbKeyval.set('kb_file_handle', handle);
+          }
           setAppState('workspace');
         } catch (err) {
            if (err.name !== 'AbortError') setError(`File error: ${err.message}`);
@@ -740,9 +805,34 @@
             contextEntries = [activeEntry];
         }
 
-        const contextText = contextEntries.map(ent => `[START OF DOCUMENT ${ent.numericId}]\nTitle: ${ent.title}\nSummary: ${ent.summary}\nContent: ${ent.fullContent}\n[END OF DOCUMENT ${ent.numericId}]`).join('\n\n');
-
         try {
+          for (const ent of contextEntries) {
+            if (ent.sourceUrl && !sourceCacheRef.current[ent.id]) {
+              const isYouTube = /(youtube\.com|youtu\.be)/i.test(ent.sourceUrl);
+              if (!isYouTube) {
+                try {
+                  const scrapeResult = await fetchAndScrubUrl(ent.sourceUrl);
+                  sourceCacheRef.current[ent.id] = scrapeResult.content;
+                } catch (err) {
+                  sourceCacheRef.current[ent.id] = null; 
+                }
+              }
+            }
+          }
+
+          const contextText = contextEntries.map(ent => {
+            let base = `[START OF DOCUMENT ${ent.numericId}]\nTitle: ${ent.title}\nSummary: ${ent.summary}\nContent: ${ent.fullContent}`;
+            if (ent.sourceUrl) {
+                base += `\nSource URL: ${ent.sourceUrl}`;
+                const rawSource = sourceCacheRef.current[ent.id];
+                if (rawSource) {
+                    base += `\nRaw Source Content (Full Text):\n${rawSource.substring(0, 30000)}`;
+                }
+            }
+            base += `\n[END OF DOCUMENT ${ent.numericId}]`;
+            return base;
+          }).join('\n\n');
+
           const payload = {
             contents: [...currentHistory.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })), { role: 'user', parts: [{ text: userMessage }] }],
             systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${contextEntries.length} separate documents. Cite the document number when combining information. Context scope: ${chatScope}.
@@ -756,8 +846,20 @@ CRITICAL WRITING RULES:
 
 Documents:\n${contextText}` }] }
           };
+
+          if (contextEntries.some(e => e.sourceUrl)) {
+              payload.tools = [{ google_search: {} }];
+              payload.systemInstruction.parts[0].text += `\n\nNote: If a document has a Source URL (especially YouTube), use the Google Search tool to look up the specific URL to find additional exact details, transcripts, or context to answer the query comprehensively.`;
+          }
+
           const result = await callGemini(apiKey, payload, model);
-          setChats(prev => ({ ...prev, [activeChatKey]: [...updatedHistory, { role: 'model', text: result.candidates[0].content.parts[0].text }] }));
+          let responseText = result.candidates[0].content.parts[0].text;
+          
+          if (!responseText.includes(APP_VERSION)) {
+              responseText += `\n\n*(via ${APP_VERSION})*`;
+          }
+
+          setChats(prev => ({ ...prev, [activeChatKey]: [...updatedHistory, { role: 'model', text: responseText }] }));
         } catch (err) {
           setChats(prev => ({ ...prev, [activeChatKey]: [...updatedHistory, { role: 'model', text: `⚠️ Error: ${err.message}` }] }));
         } finally {
@@ -1025,6 +1127,7 @@ Documents:\n${contextText}` }] }
             </div>
           )}
 
+          {}
           {/* LEFT SIDEBAR */}
           <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col hidden md:flex z-10 relative">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -1133,6 +1236,7 @@ Documents:\n${contextText}` }] }
             </div>
           </div>
 
+          {}
           {/* MIDDLE COLUMN */}
           <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col hidden lg:flex z-10 relative">
             <div className="p-4 border-b border-slate-200 bg-white">
@@ -1211,6 +1315,7 @@ Documents:\n${contextText}` }] }
             </div>
           </div>
 
+          {}
           {/* MAIN CONTENT + CHAT WRAPPER */}
           <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-white relative z-0">
             {error && (
@@ -1414,13 +1519,13 @@ Documents:\n${contextText}` }] }
                               <h3 className="text-sm font-bold uppercase text-slate-400 mb-4">Key Takeaways</h3>
                               <ul className="space-y-2">
                                 {entry.shortVersion.map((point, idx) => (
-                                  <li key={idx} className="flex"><i className="fa-solid fa-chevron-right text-indigo-400 mt-1 mr-2 text-sm"></i><span className="text-slate-700 prose-a:text-indigo-600 prose-a:underline" dangerouslySetInnerHTML={{ __html: marked.parseInline(point) }}></span></li>
+                                  <li key={idx} className="flex"><i className="fa-solid fa-chevron-right text-indigo-400 mt-1 mr-2 text-sm"></i><span className="text-slate-700 prose-a:text-indigo-600 prose-a:underline" dangerouslySetInnerHTML={{ __html: parseMarkdownInline(point) }}></span></li>
                                 ))}
                               </ul>
                             </div>
                           )}
                           <h3 className="text-sm font-bold uppercase text-slate-400 mb-4">Expanded Summary</h3>
-                          <div className="prose prose-slate max-w-none text-slate-800" dangerouslySetInnerHTML={{ __html: marked.parse(entry.fullContent || '') }} />
+                          <div className="prose prose-slate max-w-none text-slate-800" dangerouslySetInnerHTML={{ __html: parseMarkdown(entry.fullContent || '') }} />
                           
                           {Array.isArray(entry.references) && entry.references.length > 0 && (
                             <div className="mt-12 pt-8 border-t border-slate-100">
@@ -1454,6 +1559,7 @@ Documents:\n${contextText}` }] }
               </div>
             </div>
 
+            {}
             {/* CHAT AREA */}
             {editingEntryId === null && (
               <div className="border-t min-[1500px]:border-t-0 min-[1500px]:border-l border-slate-200 bg-slate-100 min-[1500px]:w-[400px] flex flex-col flex-shrink-0 h-[40vh] min-[1500px]:h-full transition-all">
@@ -1470,7 +1576,7 @@ Documents:\n${contextText}` }] }
                         </div>
                       </div>
                     ))}
-                    {isChatting && <div className="text-slate-400 text-sm italic ml-2">AI is typing...</div>}
+                    {isChatting && <div className="text-slate-400 text-sm italic ml-2"><i className="fa-solid fa-circle-notch fa-spin mr-2"></i>AI is processing...</div>}
                  </div>
 
                  <form onSubmit={handleSendMessage} className="p-4 bg-slate-100 border-t border-slate-200 relative shrink-0">
