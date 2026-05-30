@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.4.5";
+    const APP_VERSION = "v1.4.6";
 
     // Safe Wrapper for Markdown Parsing (Avoids crashing if Marked fails to load)
     const parseMarkdown = (content) => {
@@ -70,6 +70,25 @@
         return marked.parseInline(content || '');
       }
       return content || '';
+    };
+
+    // Helper to replace shortcodes with interactive HTML cards before Markdown parsing
+    const injectReferences = (text, allEntries) => {
+      if (!text) return '';
+      return text.replace(/\[\[kb-ref:([^\]]+)\]\]/g, (match, entryId) => {
+        const refEntry = allEntries.find(e => e.id === entryId);
+        if (!refEntry) return `<span class="text-red-500 text-xs font-semibold bg-red-50 border border-red-200 px-2 py-1 rounded">[Broken Link: ${entryId}]</span>`;
+
+        return `\n\n<div class="kb-embedded-ref not-prose my-5 p-4 border border-slate-200 rounded-xl bg-white shadow-sm cursor-pointer hover:border-indigo-400 hover:shadow-md transition-all group select-none flex items-center justify-between" data-id="${refEntry.id}" title="Click to open note">
+          <div>
+            <h4 class="text-sm font-semibold text-slate-800 mb-1 group-hover:text-indigo-700 transition-colors">
+              <span class="text-slate-400 font-normal mr-1">${refEntry.numericId}:</span>${refEntry.title}
+            </h4>
+            <p class="text-xs text-slate-500 line-clamp-2">${refEntry.summary}</p>
+          </div>
+          <i class="fa-solid fa-arrow-right text-slate-300 group-hover:text-indigo-500 transition-colors ml-4 shrink-0 text-lg"></i>
+        </div>\n\n`;
+      });
     };
 
     const INITIAL_ENTRY = {
@@ -908,6 +927,29 @@ Documents:\n${contextText}` }] }
         setEntries(prev => prev.map(ent => ent.id === id ? { ...ent, pinned: !ent.pinned } : ent));
       };
 
+      const handleContentClick = (e) => {
+        const refEl = e.target.closest('.kb-embedded-ref');
+        if (refEl) {
+          const refId = refEl.getAttribute('data-id');
+          if (refId && !selectedEntryIds.includes(refId)) {
+            setSelectedEntryIds(prev => [...prev, refId]);
+          }
+        }
+      };
+
+      const handleContentDrop = (e, targetEntry) => {
+        const draggedId = e.dataTransfer.getData('kb-ref-id');
+        if (draggedId && draggedId !== targetEntry.id) {
+          e.preventDefault();
+          const refShortcode = `\n\n[[kb-ref:${draggedId}]]`;
+          setEntries(prev => prev.map(ent => 
+            ent.id === targetEntry.id 
+            ? { ...ent, fullContent: (ent.fullContent || '') + refShortcode }
+            : ent
+          ));
+        }
+      };
+
       const handleEntryDrop = (e, targetId) => {
         e.preventDefault();
         setDragOverEntryId(null);
@@ -1266,7 +1308,10 @@ Documents:\n${contextText}` }] }
                   <div 
                     key={entry.id} 
                     draggable
-                    onDragStart={(e) => e.dataTransfer.setData('kb-ref-id', entry.id)}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('kb-ref-id', entry.id);
+                      e.dataTransfer.setData('text/plain', `[[kb-ref:${entry.id}]]`);
+                    }}
                     onClick={(e) => handleEntryClick(e, entry.id)} 
                     onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
                     onDragLeave={() => setDragOverEntryId(null)}
@@ -1482,7 +1527,7 @@ Documents:\n${contextText}` }] }
 
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">Expanded Summary (Markdown)</label>
-                              <textarea value={editData.fullContent} onChange={e => setEditData({...editData, fullContent: e.target.value})} className="w-full h-96 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" placeholder="Start writing Expanded Summary in Markdown..."></textarea>
+                              <textarea value={editData.fullContent} onChange={e => setEditData({...editData, fullContent: e.target.value})} className="w-full h-96 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" placeholder="Start writing Expanded Summary in Markdown...&#10;&#10;(Tip: You can drag and drop other notes directly into this text box to create inline references!)"></textarea>
                             </div>
 
                             {editData.references && editData.references.length > 0 && (
@@ -1534,7 +1579,13 @@ Documents:\n${contextText}` }] }
                             </div>
                           )}
                           <h3 className="text-sm font-bold uppercase text-slate-400 mb-4">Expanded Summary</h3>
-                          <div className="prose prose-slate max-w-none text-slate-800" dangerouslySetInnerHTML={{ __html: parseMarkdown(entry.fullContent || '') }} />
+                          <div 
+                            className="prose prose-slate max-w-none text-slate-800 pb-8" 
+                            dangerouslySetInnerHTML={{ __html: parseMarkdown(injectReferences(entry.fullContent || '', entries)) }} 
+                            onClick={handleContentClick}
+                            onDragOver={(e) => { e.preventDefault(); }}
+                            onDrop={(e) => handleContentDrop(e, entry)}
+                          />
                           
                           {Array.isArray(entry.references) && entry.references.length > 0 && (
                             <div className="mt-12 pt-8 border-t border-slate-100">
