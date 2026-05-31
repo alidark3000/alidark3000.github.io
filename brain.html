@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.4.8";
+    const APP_VERSION = "v1.4.9";
 
     // Safe Wrapper for Markdown Parsing (Avoids crashing if Marked fails to load)
     const parseMarkdown = (content) => {
@@ -1530,6 +1530,7 @@ Documents:\n${contextText}` }] }
                               <textarea 
                                 value={editData.fullContent} 
                                 onChange={e => setEditData(prev => ({...prev, fullContent: e.target.value}))} 
+                                onDragOver={(e) => e.stopPropagation()}
                                 onDrop={(e) => {
                                   e.stopPropagation(); // Stops parent from preventing native drop insertion
                                   const draggedId = e.dataTransfer.getData('kb-ref-id');
