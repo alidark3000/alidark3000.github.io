@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.4.6";
+    const APP_VERSION = "v1.4.7";
 
     // Safe Wrapper for Markdown Parsing (Avoids crashing if Marked fails to load)
     const parseMarkdown = (content) => {
@@ -1527,7 +1527,22 @@ Documents:\n${contextText}` }] }
 
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">Expanded Summary (Markdown)</label>
-                              <textarea value={editData.fullContent} onChange={e => setEditData({...editData, fullContent: e.target.value})} className="w-full h-96 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" placeholder="Start writing Expanded Summary in Markdown...&#10;&#10;(Tip: You can drag and drop other notes directly into this text box to create inline references!)"></textarea>
+                              <textarea 
+                                value={editData.fullContent} 
+                                onChange={e => setEditData(prev => ({...prev, fullContent: e.target.value}))} 
+                                onDrop={(e) => {
+                                  e.stopPropagation(); // Stops parent from preventing native drop insertion
+                                  const draggedId = e.dataTransfer.getData('kb-ref-id');
+                                  if (draggedId && draggedId !== editingEntryId) {
+                                    setEditData(prev => ({
+                                      ...prev,
+                                      references: prev.references.includes(draggedId) ? prev.references : [...prev.references, draggedId]
+                                    }));
+                                  }
+                                }}
+                                className="w-full h-96 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" 
+                                placeholder="Start writing Expanded Summary in Markdown...&#10;&#10;(Tip: You can drag and drop other notes directly into this text box to create inline references!)"
+                              ></textarea>
                             </div>
 
                             {editData.references && editData.references.length > 0 && (
