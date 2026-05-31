@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.4.9";
+    const APP_VERSION = "v1.5.0";
 
     // Safe Wrapper for Markdown Parsing (Avoids crashing if Marked fails to load)
     const parseMarkdown = (content) => {
@@ -824,13 +824,23 @@
         setChats(prev => ({ ...prev, [activeChatKey]: updatedHistory }));
 
         const activeEntry = newCombinedEntry || entries.find(ent => ent.id === activeChatKey);
-        let contextEntries = targetEntries;
+        let primaryContextEntries = targetEntries;
         
         if (activeEntry && activeEntry.isCombined) {
-            contextEntries = (newCombinedEntry ? targetEntries : entries).filter(ent => activeEntry.referencedIds.includes(ent.id));
+            primaryContextEntries = (newCombinedEntry ? targetEntries : entries).filter(ent => activeEntry.referencedIds.includes(ent.id));
         } else if (activeEntry) {
-            contextEntries = [activeEntry];
+            primaryContextEntries = [activeEntry];
         }
+
+        // Expand context to include referenced entries
+        let expandedContextIds = new Set(primaryContextEntries.map(e => e.id));
+        primaryContextEntries.forEach(ent => {
+          if (Array.isArray(ent.references)) {
+            ent.references.forEach(refId => expandedContextIds.add(refId));
+          }
+        });
+        
+        const contextEntries = entries.filter(ent => expandedContextIds.has(ent.id));
 
         try {
           for (const ent of contextEntries) {
