@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.5.2";
+    const APP_VERSION = "v1.6.0";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -185,6 +185,13 @@
       return false;
     }
 
+    const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
     const callGemini = async (key, payload, model) => {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
@@ -230,6 +237,7 @@
       const [editCatInput, setEditCatInput] = useState('');
       const [editTagInput, setEditTagInput] = useState('');
 
+      const [addInput, setAddInput] = useState('');
       const [isDragging, setIsDragging] = useState(false);
       const [isAnalyzing, setIsAnalyzing] = useState(false);
       const [error, setError] = useState(null);
@@ -423,26 +431,15 @@
         if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
       }, [chats, currentChatKey, isChatting]);
 
-      const handleDrop = async (e) => {
-        e.preventDefault();
-        setIsDragging(false);
-        setError(null);
-        
-        const droppedData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-        if (!droppedData) return;
-        
-        if (e.dataTransfer.getData('kb-ref-id') || e.dataTransfer.getData('kb-tax') || e.dataTransfer.getData('kb-tax-remove')) return;
-
+      const processInput = async (textContent, file = null) => {
         if (!apiKey) return setError("Please set your Gemini API key first.");
-
         setIsAnalyzing(true);
         try {
-          const isUrl = /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(droppedData.trim());
-          const isYouTube = isUrl && /(youtube\.com|youtu\.be)/i.test(droppedData.trim());
-          const sourceUrl = isUrl ? droppedData.trim() : null;
-          let rawContent = droppedData;
+          let sourceUrl = null;
           let originalWebTitle = null;
           let useSearchTool = false;
+          let prompt = '';
+          let payloadParts = [];
 
           const schema = {
             type: "OBJECT",
@@ -463,43 +460,66 @@
           
           const summaryRules = `4. fullContent string: Create an expanded summary. Succinctly summarize each point of the source, regardless of its length. Format with clean Markdown. Do NOT include any external links or 'Read more' text.`;
 
-          let prompt = '';
-          if (isYouTube) {
-            useSearchTool = true;
-            
-            let videoId = '';
-            const urlObj = new URL(droppedData.trim());
-            if (urlObj.hostname.includes('youtu.be')) {
-               videoId = urlObj.pathname.slice(1);
-            } else {
-               videoId = urlObj.searchParams.get('v');
-            }
-
-            prompt = `Use Google Search to find exact content, transcript, or summary for this SPECIFIC YouTube video ID: ${videoId} (URL: ${droppedData.trim()}). CRITICAL: You must only summarize this exact video, do not summarize general topics related to it. Return strictly as JSON. 
-            1. Title. 2. Summary. Include creator's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
-          } else if (isUrl) {
-            try {
-              const scrapeResult = await fetchAndScrubUrl(droppedData.trim());
-              rawContent = scrapeResult.content;
-              originalWebTitle = scrapeResult.title;
-              prompt = `Analyze this markdown text. Return strictly as JSON. 
-              1. Title: Create a title for this piece (or use: "${originalWebTitle.replace(/"/g, '\\"')}"). 
+          if (file && file.type === 'application/pdf') {
+             const base64Data = await readFileAsBase64(file);
+             originalWebTitle = file.name;
+             prompt = `Analyze this PDF document. Return strictly as JSON. 
+              1. Title (Use the document title or "${file.name}"). 
               2. 1-2 sentence summary. Include author's name if identifiable. 
               3. 3-5 key points in 'shortVersion'.
-              ${taxonomyRules}
-              ${summaryRules}
-              Content:\n${rawContent.substring(0, 40000)}`;
-            } catch (err) {
-              useSearchTool = true;
-              prompt = `Use Google Search to find exact content for this URL: ${droppedData.trim()}. Return strictly as JSON. 
-              1. Title. 2. Summary. Include author's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
-            }
+              4. Reconstruct detailed fullContent strictly in Markdown.
+              ${taxonomyRules}`;
+             payloadParts = [
+               { text: prompt },
+               { inlineData: { mimeType: "application/pdf", data: base64Data } }
+             ];
+          } else if (textContent) {
+              const droppedData = textContent;
+              const isUrl = /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(droppedData.trim());
+              const isYouTube = isUrl && /(youtube\.com|youtu\.be)/i.test(droppedData.trim());
+              sourceUrl = isUrl ? droppedData.trim() : null;
+              let rawContent = droppedData;
+
+              if (isYouTube) {
+                useSearchTool = true;
+                let videoId = '';
+                const urlObj = new URL(droppedData.trim());
+                if (urlObj.hostname.includes('youtu.be')) {
+                   videoId = urlObj.pathname.slice(1);
+                } else {
+                   videoId = urlObj.searchParams.get('v');
+                }
+                prompt = `Use Google Search to find exact content, transcript, or summary for this SPECIFIC YouTube video ID: ${videoId} (URL: ${droppedData.trim()}). CRITICAL: You must only summarize this exact video, do not summarize general topics related to it. Return strictly as JSON. 
+                1. Title. 2. Summary. Include creator's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
+                payloadParts = [{ text: prompt }];
+              } else if (isUrl) {
+                try {
+                  const scrapeResult = await fetchAndScrubUrl(droppedData.trim());
+                  rawContent = scrapeResult.content;
+                  originalWebTitle = scrapeResult.title;
+                  prompt = `Analyze this markdown text. Return strictly as JSON. 
+                  1. Title: Create a title for this piece (or use: "${originalWebTitle.replace(/"/g, '\\"')}"). 
+                  2. 1-2 sentence summary. Include author's name if identifiable. 
+                  3. 3-5 key points in 'shortVersion'.
+                  ${taxonomyRules}
+                  ${summaryRules}
+                  Content:\n${rawContent.substring(0, 40000)}`;
+                } catch (err) {
+                  useSearchTool = true;
+                  prompt = `Use Google Search to find exact content for this URL: ${droppedData.trim()}. Return strictly as JSON. 
+                  1. Title. 2. Summary. Include author's name if identifiable. 3. 3-5 points in 'shortVersion'. 4. Reconstruct detailed fullContent strictly in Markdown. ${taxonomyRules}`;
+                }
+                payloadParts = [{ text: prompt }];
+              } else {
+                 prompt = `Analyze this text. Return strictly as JSON. 1. Title. 2. Summary. 3. 3-5 points in 'shortVersion'. 4. Format the input text as clean Markdown as 'fullContent'. ${taxonomyRules}\nContent:\n${rawContent.substring(0, 40000)}`;
+                 payloadParts = [{ text: prompt }];
+              }
           } else {
-             prompt = `Analyze this text. Return strictly as JSON. 1. Title. 2. Summary. 3. 3-5 points in 'shortVersion'. 4. Format the input text as clean Markdown as 'fullContent'. ${taxonomyRules}\nContent:\n${rawContent.substring(0, 40000)}`;
+             throw new Error("No valid content to process.");
           }
 
           const payload = {
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            contents: [{ role: 'user', parts: payloadParts }],
             generationConfig: { responseMimeType: "application/json", responseSchema: schema }
           };
           if (useSearchTool) payload.tools = [{ google_search: {} }];
@@ -523,13 +543,32 @@
           };
           
           setEntries(prev => [newEntry, ...prev]);
-          setSelectedEntryIds([newEntry.id]);
+          setSelectedEntryIds(prev => prev.length === 0 ? [newEntry.id] : prev);
+          
           setActiveCategories([]);
           setActiveTags([]);
+          setAddInput('');
         } catch (err) {
           setError(err.message || "Failed to process content.");
         } finally {
           setIsAnalyzing(false);
+        }
+      };
+
+      const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        setError(null);
+        
+        if (e.dataTransfer.getData('kb-ref-id') || e.dataTransfer.getData('kb-tax') || e.dataTransfer.getData('kb-tax-remove')) return;
+
+        const file = e.dataTransfer.files?.[0];
+        const droppedData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+        
+        if (file && file.type === 'application/pdf') {
+            processInput(null, file);
+        } else if (droppedData) {
+            processInput(droppedData, null);
         }
       };
 
@@ -1067,11 +1106,12 @@ Documents:\n${contextText}` }] }
                     <p>To use the AI features (summarizing links, generating tags, and chatting), you must provide a <strong>Google Gemini API Key</strong>. Click the gear icon <i className="fa-solid fa-gear"></i> in the top left sidebar to enter your key.</p>
 
                     <h3>3. Adding Content</h3>
-                    <p>The fastest way to add content is to drag and drop text or a URL directly into the <strong>"Add New Entry"</strong> cloud area in the left sidebar.</p>
+                    <p>The fastest way to add content is to drag and drop text, a URL, or a PDF file directly into the <strong>"Add New Entry"</strong> cloud area in the left sidebar, or paste a link into the input field below it.</p>
                     <ul>
-                      <li><strong>Web Links:</strong> Drag an article URL. The AI will scrape it, generate a clean Markdown version, title it, summarize it, and tag it.</li>
+                      <li><strong>Web Links:</strong> Drag or paste an article URL. The AI will scrape it, generate a clean Markdown version, title it, summarize it, and tag it.</li>
                       <li><strong>YouTube Videos:</strong> Drag a YouTube URL. The AI will search for transcripts/summaries and create detailed notes for you.</li>
-                      <li><strong>Raw Text:</strong> Drop any text block to have it instantly formatted and categorized.</li>
+                      <li><strong>PDF Documents:</strong> Drag and drop a PDF file. The AI will read the document and generate comprehensive notes.</li>
+                      <li><strong>Raw Text:</strong> Drop or paste any text block to have it instantly formatted and categorized.</li>
                     </ul>
 
                     <h3>4. Organization: Categories vs. Tags</h3>
@@ -1170,11 +1210,12 @@ Documents:\n${contextText}` }] }
                   <p>To use the AI features (summarizing links, generating tags, and chatting), you must provide a <strong>Google Gemini API Key</strong>. Click the gear icon <i className="fa-solid fa-gear"></i> in the top left sidebar to enter your key.</p>
 
                   <h3>3. Adding Content</h3>
-                  <p>The fastest way to add content is to drag and drop text or a URL directly into the <strong>"Add New Entry"</strong> cloud area in the left sidebar.</p>
+                  <p>The fastest way to add content is to drag and drop text, a URL, or a PDF file directly into the <strong>"Add New Entry"</strong> cloud area in the left sidebar, or paste a link into the input field below it.</p>
                   <ul>
-                    <li><strong>Web Links:</strong> Drag an article URL. The AI will scrape it, generate a clean Markdown version, title it, summarize it, and tag it.</li>
+                    <li><strong>Web Links:</strong> Drag or paste an article URL. The AI will scrape it, generate a clean Markdown version, title it, summarize it, and tag it.</li>
                     <li><strong>YouTube Videos:</strong> Drag a YouTube URL. The AI will search for transcripts/summaries and create detailed notes for you.</li>
-                    <li><strong>Raw Text:</strong> Drop any text block to have it instantly formatted and categorized.</li>
+                    <li><strong>PDF Documents:</strong> Drag and drop a PDF file. The AI will read the document and generate comprehensive notes.</li>
+                    <li><strong>Raw Text:</strong> Drop or paste any text block to have it instantly formatted and categorized.</li>
                   </ul>
 
                   <h3>4. Organization: Categories vs. Tags</h3>
@@ -1214,8 +1255,19 @@ Documents:\n${contextText}` }] }
               <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} className={`relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all text-center ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'} ${isAnalyzing ? 'opacity-75 pointer-events-none' : ''}`}>
                 {isAnalyzing ? <i className="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 mb-2"></i> : <i className={`fa-solid fa-cloud-arrow-up text-3xl mb-2 ${isDragging ? 'text-indigo-600' : 'text-slate-400'}`}></i>}
                 <h3 className="font-semibold text-sm mb-1">{isAnalyzing ? 'Analyzing...' : 'Add New Entry'}</h3>
-                <p className="text-xs text-slate-500">Drag text or URL here</p>
+                <p className="text-xs text-slate-500">Drag text, URL, or PDF here</p>
               </div>
+              <form onSubmit={(e) => { e.preventDefault(); if (addInput.trim()) processInput(addInput.trim()); }} className="mt-3 relative">
+                <input 
+                  type="text" 
+                  value={addInput} 
+                  onChange={e => setAddInput(e.target.value)} 
+                  disabled={isAnalyzing} 
+                  placeholder="Paste link or text..." 
+                  className="w-full pl-3 pr-8 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm disabled:opacity-50" 
+                />
+                <button type="submit" disabled={isAnalyzing || !addInput.trim()} className="absolute right-2 top-1.5 text-indigo-600 hover:text-indigo-800 disabled:opacity-50 p-1 transition-colors"><i className="fa-solid fa-arrow-right"></i></button>
+              </form>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
