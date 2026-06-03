@@ -53,7 +53,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.6.1";
+    const APP_VERSION = "v1.6.2";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -1390,9 +1390,18 @@ Documents:\n${contextText}` }] }
               {filteredEntries.map(entry => {
                 const isSelected = selectedEntryIds.includes(entry.id);
                 const isCombined = entry.isCombined;
-                const isManual = !entry.sourceUrl && !isCombined;
+                const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
+                const isMedia = !isPdf && isMediaSource(entry.sourceUrl);
+                const isManual = !entry.sourceUrl && !isCombined && !isPdf;
                 const isPinned = entry.pinned;
-                const isMedia = isMediaSource(entry.sourceUrl);
+                
+                let typeClasses = 'border-white shadow-sm'; // Default (Link/Page)
+                if (isCombined) typeClasses = 'border-purple-600 shadow-sm';
+                else if (isPdf) typeClasses = 'border-blue-600 shadow-sm';
+                else if (isMedia) typeClasses = 'border-red-600 shadow-sm';
+                else if (isManual) typeClasses = 'border-yellow-500 shadow-sm';
+                
+                const selectClasses = isSelected ? 'ring-2 ring-offset-2 ring-indigo-500 shadow-md' : 'hover:shadow-md';
                 
                 return (
                   <div 
@@ -1406,13 +1415,13 @@ Documents:\n${contextText}` }] }
                     onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
                     onDragLeave={() => setDragOverEntryId(null)}
                     onDrop={(e) => handleEntryDrop(e, entry.id)}
-                    className={`relative p-4 rounded-xl cursor-pointer border transition-colors ${isCombined ? 'bg-rose-200' : isMedia ? 'bg-red-50' : isManual ? 'bg-amber-100' : 'bg-white'} ${isSelected ? (isCombined ? 'border-rose-500 shadow-md ring-2 ring-rose-500' : isMedia ? 'border-red-400 shadow-md ring-2 ring-red-400' : isManual ? 'border-amber-500 shadow-md ring-2 ring-amber-500' : 'border-indigo-400 shadow-md ring-2 ring-indigo-500/30') : (isCombined ? 'border-rose-300 hover:border-rose-400' : isMedia ? 'border-red-200 hover:border-red-300' : isManual ? 'border-amber-300 hover:border-amber-400' : 'border-slate-200 hover:border-slate-300')} ${dragOverEntryId === entry.id ? 'opacity-80 scale-[0.98]' : ''}`}
+                    className={`relative p-4 rounded-xl cursor-pointer border-[3px] bg-white transition-all group ${typeClasses} ${selectClasses} ${dragOverEntryId === entry.id ? 'opacity-80 scale-[0.98]' : ''}`}
                   >
-                    <button onClick={(e) => togglePin(e, entry.id)} className={`absolute top-3 right-3 transition-colors ${isPinned ? 'text-indigo-700' : 'text-slate-400 hover:text-indigo-500'}`}>
+                    <button onClick={(e) => togglePin(e, entry.id)} className={`absolute top-3 right-3 transition-all duration-200 z-10 ${isPinned ? 'text-indigo-700 opacity-100' : 'text-slate-500 opacity-0 group-hover:opacity-40 hover:!opacity-100'}`}>
                       <i className="fa-solid fa-thumbtack"></i>
                     </button>
-                    <h4 className={`text-sm font-semibold mb-1 pr-6 line-clamp-2 ${isCombined ? 'text-rose-900' : isMedia ? 'text-red-900' : isManual ? 'text-amber-900' : 'text-slate-800'}`}>
-                      <span className={`${isCombined ? 'text-rose-600' : isMedia ? 'text-red-500' : isManual ? 'text-amber-600' : 'text-slate-400'} font-normal mr-1`}>{entry.numericId}:</span>
+                    <h4 className="text-sm font-semibold mb-1 pr-6 line-clamp-2 text-slate-800">
+                      <span className="text-slate-400 font-normal mr-1">{entry.numericId}:</span>
                       {entry.title}
                     </h4>
                     
@@ -1451,7 +1460,7 @@ Documents:\n${contextText}` }] }
                         {entry.referencedIds?.length > 3 && <div className="text-xs text-rose-800 opacity-70 italic">+{entry.referencedIds.length - 3} more notes</div>}
                       </div>
                     ) : (
-                      <p className={`text-xs line-clamp-2 mb-2 ${isMedia ? 'text-red-700' : isManual ? 'text-amber-800' : 'text-slate-500'}`}>{entry.summary}</p>
+                      <p className="text-xs line-clamp-2 mb-2 text-slate-500">{entry.summary}</p>
                     )}
                   </div>
                 );
@@ -1459,7 +1468,6 @@ Documents:\n${contextText}` }] }
             </div>
           </div>
 
-          {}
           {/* MAIN CONTENT + CHAT WRAPPER */}
           <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-white relative z-0">
             {error && (
