@@ -53,7 +53,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.6.6";
+    const APP_VERSION = "v1.6.7";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -1378,15 +1378,15 @@ Documents:\n${contextText}` }] }
 
           {}
           {/* MIDDLE COLUMN */}
-          <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col hidden lg:flex z-10 relative">
-            <div className="p-4 border-b border-slate-200 bg-white">
-              <input type="text" placeholder="Search knowledge base..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
-              <button onClick={handleNewNote} className="w-full mt-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+          <div className="w-80 flex-shrink-0 bg-slate-50 flex flex-col hidden lg:flex z-10 relative">
+            <div className="p-4 pb-2 bg-slate-50">
+              <input type="text" placeholder="Search knowledge base..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border-none shadow-sm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white" />
+              <button onClick={handleNewNote} className="w-full mt-3 py-2 bg-white text-indigo-700 hover:bg-indigo-50 shadow-sm rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
                 <i className="fa-solid fa-plus mr-2"></i> New Note
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              <p className="text-xs text-slate-400 text-center mb-2">Cmd/Ctrl + Click to select multiple</p>
+            <div className="flex-1 overflow-y-auto p-3 pt-1 space-y-3">
+              <p className="text-[10px] text-slate-400 text-center mb-2 uppercase tracking-wider font-semibold">Cmd/Ctrl + Click to select multiple</p>
               {filteredEntries.map(entry => {
                 const isSelected = selectedEntryIds.includes(entry.id);
                 const isCombined = entry.isCombined;
@@ -1395,26 +1395,23 @@ Documents:\n${contextText}` }] }
                 const isManual = !entry.sourceUrl && !isCombined && !isPdf;
                 const isPinned = entry.pinned;
                 
-                let typeBorder = 'border-slate-300';
-                let selectedBg = 'bg-slate-300';
-                let isDarkBg = false;
-
-                if (isCombined) { typeBorder = 'border-purple-600'; selectedBg = 'bg-purple-600'; isDarkBg = true; }
-                else if (isPdf) { typeBorder = 'border-blue-600'; selectedBg = 'bg-blue-600'; isDarkBg = true; }
-                else if (isMedia) { typeBorder = 'border-red-600'; selectedBg = 'bg-red-600'; isDarkBg = true; }
-                else if (isManual) { typeBorder = 'border-yellow-500'; selectedBg = 'bg-yellow-500'; isDarkBg = false; }
+                let typeIndicator = 'border-l-slate-300';
+                if (isCombined) typeIndicator = 'border-l-purple-500';
+                else if (isPdf) typeIndicator = 'border-l-blue-500';
+                else if (isMedia) typeIndicator = 'border-l-red-500';
+                else if (isManual) typeIndicator = 'border-l-yellow-400';
                 
-                const bgClass = isSelected ? selectedBg : 'bg-white';
-                const shadowClass = isSelected ? 'shadow-md' : 'shadow-sm hover:shadow-md';
+                const bgClass = isSelected ? 'bg-indigo-50' : 'bg-white';
+                const shadowClass = isSelected ? 'shadow-md ring-1 ring-indigo-500/10' : 'shadow-sm hover:shadow-md';
                 
-                const titleText = isSelected ? (isDarkBg ? 'text-white' : 'text-slate-900') : 'text-slate-800';
-                const idText = isSelected ? (isDarkBg ? 'text-white/70' : 'text-slate-600') : 'text-slate-400';
-                const summaryText = isSelected ? (isDarkBg ? 'text-white/90' : 'text-slate-700') : 'text-slate-500';
-                const pinActiveColor = isSelected ? (isDarkBg ? 'text-white' : 'text-slate-900') : 'text-indigo-700';
-                const pinInactiveColor = isSelected ? (isDarkBg ? 'text-white' : 'text-slate-700') : 'text-slate-500';
+                const titleText = isSelected ? 'text-indigo-900' : 'text-slate-800';
+                const idText = isSelected ? 'text-indigo-600' : 'text-slate-400';
+                const summaryText = isSelected ? 'text-indigo-800/80' : 'text-slate-500';
+                const pinActiveColor = 'text-indigo-600';
+                const pinInactiveColor = 'text-slate-400';
                 const catClasses = isSelected 
-                  ? (isDarkBg ? 'bg-white/20 text-white border-white/30' : 'bg-black/10 text-slate-800 border-black/20')
-                  : 'bg-indigo-50 text-indigo-600 border-indigo-100';
+                  ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                  : 'bg-slate-50 text-slate-600 border-slate-200';
                 
                 return (
                   <div 
@@ -1428,12 +1425,12 @@ Documents:\n${contextText}` }] }
                     onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
                     onDragLeave={() => setDragOverEntryId(null)}
                     onDrop={(e) => handleEntryDrop(e, entry.id)}
-                    className={`relative p-4 rounded-xl cursor-pointer transition-all group border-[3px] ${typeBorder} ${bgClass} ${shadowClass} ${dragOverEntryId === entry.id ? 'opacity-80 scale-[0.98]' : ''}`}
+                    className={`relative p-4 rounded-xl cursor-pointer transition-all duration-200 group border-l-[4px] border-y border-r border-y-transparent border-r-transparent ${typeIndicator} ${bgClass} ${shadowClass} ${dragOverEntryId === entry.id ? 'opacity-80 scale-[0.98]' : ''}`}
                   >
-                    <button onClick={(e) => togglePin(e, entry.id)} className={`absolute top-3 right-3 transition-all duration-200 z-10 ${isPinned ? `${pinActiveColor} opacity-100` : `${pinInactiveColor} opacity-0 group-hover:opacity-40 hover:!opacity-100`}`}>
+                    <button onClick={(e) => togglePin(e, entry.id)} className={`absolute top-3 right-3 transition-all duration-200 z-10 ${isPinned ? `${pinActiveColor} opacity-100` : `${pinInactiveColor} opacity-0 group-hover:opacity-60 hover:!opacity-100`}`}>
                       <i className="fa-solid fa-thumbtack"></i>
                     </button>
-                    <h4 className={`text-sm font-semibold mb-1 pr-6 line-clamp-2 ${titleText}`}>
+                    <h4 className={`text-sm font-semibold mb-1 pr-6 line-clamp-2 transition-colors ${titleText}`}>
                       <span className={`font-normal mr-1 ${idText}`}>{entry.numericId}:</span>
                       {entry.title}
                     </h4>
@@ -1455,7 +1452,7 @@ Documents:\n${contextText}` }] }
                                 removeTaxonomyFromEntry(entry.id, 'cat', c);
                               }
                             }}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium lowercase border shadow-sm cursor-grab active:cursor-grabbing ${catClasses}`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium lowercase border cursor-grab active:cursor-grabbing transition-colors ${catClasses}`}
                             title="Drag to another card, or drag away to remove"
                           >
                             {c}
@@ -1468,12 +1465,12 @@ Documents:\n${contextText}` }] }
                       <div className="mt-2 space-y-1">
                         {entry.referencedIds?.slice(0, 3).map(id => {
                           const ref = entries.find(e => e.id === id);
-                          return ref ? <div key={id} className={`text-xs truncate border-l-2 pl-1.5 ${isSelected ? (isDarkBg ? 'text-white/90 border-white/50' : 'text-slate-800 border-slate-400') : 'text-rose-800 border-rose-400'}`}>{ref.numericId}: {ref.title}</div> : null;
+                          return ref ? <div key={id} className={`text-xs truncate border-l-2 pl-1.5 transition-colors ${isSelected ? 'text-indigo-800 border-indigo-400' : 'text-slate-600 border-slate-300'}`}>{ref.numericId}: {ref.title}</div> : null;
                         })}
-                        {entry.referencedIds?.length > 3 && <div className={`text-xs opacity-70 italic ${isSelected ? (isDarkBg ? 'text-white' : 'text-slate-800') : 'text-rose-800'}`}>+{entry.referencedIds.length - 3} more notes</div>}
+                        {entry.referencedIds?.length > 3 && <div className={`text-xs opacity-70 italic ${isSelected ? 'text-indigo-800' : 'text-slate-500'}`}>+{entry.referencedIds.length - 3} more notes</div>}
                       </div>
                     ) : (
-                      <p className={`text-xs line-clamp-2 mb-2 ${summaryText}`}>{entry.summary}</p>
+                      <p className={`text-xs line-clamp-2 transition-colors ${summaryText}`}>{entry.summary}</p>
                     )}
                   </div>
                 );
