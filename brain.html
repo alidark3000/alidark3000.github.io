@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.6.0";
+    const APP_VERSION = "v1.6.1";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -232,10 +232,10 @@
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
       const [chatScope, setChatScope] = useState('selected'); 
       
-      const [editingEntryId, setEditingEntryId] = useState(null);
-      const [editData, setEditData] = useState({ title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] });
-      const [editCatInput, setEditCatInput] = useState('');
-      const [editTagInput, setEditTagInput] = useState('');
+      const [editingEntries, setEditingEntries] = useState({});
+      const [editData, setEditData] = useState({});
+      const [editCatInput, setEditCatInput] = useState({});
+      const [editTagInput, setEditTagInput] = useState({});
 
       const [addInput, setAddInput] = useState('');
       const [isDragging, setIsDragging] = useState(false);
@@ -543,7 +543,7 @@
           };
           
           setEntries(prev => [newEntry, ...prev]);
-          setSelectedEntryIds(prev => prev.length === 0 ? [newEntry.id] : prev);
+          setSelectedEntryIds(prev => [...prev.filter(id => id !== newEntry.id), newEntry.id]);
           
           setActiveCategories([]);
           setActiveTags([]);
@@ -578,13 +578,12 @@
         } else {
           setSelectedEntryIds([id]);
         }
-        setEditingEntryId(null);
       };
 
       const deleteEntry = (id) => {
         setEntries(prev => prev.filter(e => e.id !== id));
         setSelectedEntryIds(prev => prev.filter(i => i !== id));
-        if (editingEntryId === id) setEditingEntryId(null);
+        setEditingEntries(prev => { const n = {...prev}; delete n[id]; return n; });
       };
 
       const handleNewNote = () => {
@@ -595,62 +594,68 @@
           categories: [], tags: [], createdAt: Date.now(), sourceUrl: null, references: [], pinned: false
         };
         setEntries(prev => [newEntry, ...prev]);
-        setSelectedEntryIds([newId]);
-        setEditData({ title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] });
-        setEditingEntryId(newId);
+        setSelectedEntryIds(prev => [...prev.filter(id => id !== newId), newId]);
+        setEditData(prev => ({ ...prev, [newId]: { title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] } }));
+        setEditingEntries(prev => ({ ...prev, [newId]: true }));
       };
 
       const startEditing = (entry) => {
-        setEditData({
+        setEditData(prev => ({ ...prev, [entry.id]: {
           title: entry.title || '', summary: entry.summary || '', fullContent: entry.fullContent || '',
           shortVersion: (Array.isArray(entry.shortVersion) ? entry.shortVersion : []).join('\n'),
           categories: Array.isArray(entry.categories) ? [...entry.categories] : [], 
           tags: Array.isArray(entry.tags) ? [...entry.tags] : [], 
           sourceUrl: entry.sourceUrl || '',
           references: Array.isArray(entry.references) ? entry.references : []
-        });
-        setEditingEntryId(entry.id);
+        }}));
+        setEditingEntries(prev => ({ ...prev, [entry.id]: true }));
       };
 
-      const saveNote = () => {
+      const saveNote = (id) => {
+        const data = editData[id];
+        if (!data) return;
         setEntries(prev => prev.map(e => {
-          if (e.id === editingEntryId) {
+          if (e.id === id) {
             return {
-              ...e, title: editData.title || 'Untitled', summary: editData.summary, fullContent: editData.fullContent,
-              shortVersion: editData.shortVersion.split('\n').map(s => s.trim()).filter(Boolean),
-              sourceUrl: editData.sourceUrl || null,
-              categories: editData.categories.map(c => c.toLowerCase()),
-              tags: editData.tags.map(t => t.toLowerCase()),
-              references: editData.references || []
+              ...e, title: data.title || 'Untitled', summary: data.summary, fullContent: data.fullContent,
+              shortVersion: data.shortVersion.split('\n').map(s => s.trim()).filter(Boolean),
+              sourceUrl: data.sourceUrl || null,
+              categories: data.categories.map(c => c.toLowerCase()),
+              tags: data.tags.map(t => t.toLowerCase()),
+              references: data.references || []
             };
           }
           return e;
         }));
-        setEditingEntryId(null);
+        setEditingEntries(prev => { const n = {...prev}; delete n[id]; return n; });
       };
 
-      const removeEditCategory = (cat) => setEditData(prev => ({ ...prev, categories: prev.categories.filter(c => c !== cat) }));
-      const removeEditTag = (tag) => setEditData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
+      const cancelEdit = (id) => {
+        setEditingEntries(prev => { const n = {...prev}; delete n[id]; return n; });
+      };
 
-      const handleAddEditCategory = (e) => {
+      const removeEditCategory = (id, cat) => setEditData(prev => ({ ...prev, [id]: { ...prev[id], categories: prev[id].categories.filter(c => c !== cat) } }));
+      const removeEditTag = (id, tag) => setEditData(prev => ({ ...prev, [id]: { ...prev[id], tags: prev[id].tags.filter(t => t !== tag) } }));
+
+      const handleAddEditCategory = (id, e) => {
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
-          const val = editCatInput.trim().replace(/^,|,$/g, '').toLowerCase();
-          if (val && !editData.categories.includes(val)) {
-            setEditData(prev => ({ ...prev, categories: [...prev.categories, val] }));
+          const val = (editCatInput[id] || '').trim().replace(/^,|,$/g, '').toLowerCase();
+          if (val && !editData[id].categories.includes(val)) {
+            setEditData(prev => ({ ...prev, [id]: { ...prev[id], categories: [...prev[id].categories, val] } }));
           }
-          setEditCatInput('');
+          setEditCatInput(prev => ({ ...prev, [id]: '' }));
         }
       };
 
-      const handleAddEditTag = (e) => {
+      const handleAddEditTag = (id, e) => {
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
-          const val = editTagInput.trim().replace(/^,|,$/g, '').toLowerCase();
-          if (val && !editData.tags.includes(val)) {
-            setEditData(prev => ({ ...prev, tags: [...prev.tags, val] }));
+          const val = (editTagInput[id] || '').trim().replace(/^,|,$/g, '').toLowerCase();
+          if (val && !editData[id].tags.includes(val)) {
+            setEditData(prev => ({ ...prev, [id]: { ...prev[id], tags: [...prev[id].tags, val] } }));
           }
-          setEditTagInput('');
+          setEditTagInput(prev => ({ ...prev, [id]: '' }));
         }
       };
 
@@ -664,18 +669,19 @@
         }));
       };
 
-      const handleGenerateSummary = async () => {
+      const handleGenerateSummary = async (id) => {
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
-          const prompt = `Analyze this note and write a 1-2 sentence summary. Return JSON: {"summary": "text"}.\nTitle: ${editData.title}\nContent: ${editData.fullContent}`;
+          const data = editData[id];
+          const prompt = `Analyze this note and write a 1-2 sentence summary. Return JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
           };
           const result = await callGemini(apiKey, payload, model);
-          const data = JSON.parse(result.candidates[0].content.parts[0].text);
-          setEditData(prev => ({ ...prev, summary: data.summary || prev.summary }));
+          const resData = JSON.parse(result.candidates[0].content.parts[0].text);
+          setEditData(prev => ({ ...prev, [id]: { ...prev[id], summary: resData.summary || prev[id].summary } }));
         } catch(err) {
           setError("Summary generation failed: " + err.message);
         } finally {
@@ -683,19 +689,20 @@
         }
       };
 
-      const handleGenerateTakeaways = async () => {
+      const handleGenerateTakeaways = async (id) => {
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
-          const prompt = `Analyze this note. Extract 3-5 key points. Return JSON: {"shortVersion": ["point 1", "point 2"]}. Format each point in Markdown.\nTitle: ${editData.title}\nContent: ${editData.fullContent}`;
+          const data = editData[id];
+          const prompt = `Analyze this note. Extract 3-5 key points. Return JSON: {"shortVersion": ["point 1", "point 2"]}. Format each point in Markdown.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } } }
           };
           const result = await callGemini(apiKey, payload, model);
-          const data = JSON.parse(result.candidates[0].content.parts[0].text);
-          if (data.shortVersion && Array.isArray(data.shortVersion)) {
-            setEditData(prev => ({ ...prev, shortVersion: data.shortVersion.join('\n') }));
+          const resData = JSON.parse(result.candidates[0].content.parts[0].text);
+          if (resData.shortVersion && Array.isArray(resData.shortVersion)) {
+            setEditData(prev => ({ ...prev, [id]: { ...prev[id], shortVersion: resData.shortVersion.join('\n') } }));
           }
         } catch(err) {
           setError("Takeaway generation failed: " + err.message);
@@ -704,14 +711,15 @@
         }
       };
 
-      const handleGenerateTaxonomies = async () => {
+      const handleGenerateTaxonomies = async (id) => {
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
+          const data = editData[id];
           const prompt = `Analyze this note. Return strictly JSON matching this schema: {"categories": ["Category"], "tags": ["tag1", "tag2"]}.
           Rules: 1. Categories: Assign 1-2 SUPER BROAD domain categories. Review existing: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse if perfect match. Return in lowercase.
           2. Tags: Assign 3-5 highly specific concept keywords. Review existing: ${JSON.stringify(Array.from(allTags))}. ONLY reuse if highly relevant. Return in lowercase.
-          Title: ${editData.title}\nContent: ${editData.fullContent}`;
+          Title: ${data.title}\nContent: ${data.fullContent}`;
 
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -719,11 +727,14 @@
           };
           
           const result = await callGemini(apiKey, payload, model);
-          const data = JSON.parse(result.candidates[0].content.parts[0].text);
+          const resData = JSON.parse(result.candidates[0].content.parts[0].text);
           setEditData(prev => ({ 
             ...prev, 
-            categories: Array.isArray(data.categories) ? data.categories.map(c => c.toLowerCase()) : prev.categories, 
-            tags: Array.isArray(data.tags) ? data.tags.map(t => t.toLowerCase()) : prev.tags 
+            [id]: {
+              ...prev[id],
+              categories: Array.isArray(resData.categories) ? resData.categories.map(c => c.toLowerCase()) : prev[id].categories, 
+              tags: Array.isArray(resData.tags) ? resData.tags.map(t => t.toLowerCase()) : prev[id].tags 
+            }
           }));
         } catch(err) {
           setError("Taxonomy generation failed: " + err.message);
@@ -1057,10 +1068,13 @@ Documents:\n${contextText}` }] }
         }
       };
 
-      const removeReferenceFromEdit = (refIdToRemove) => {
+      const removeReferenceFromEdit = (id, refIdToRemove) => {
         setEditData(prev => ({
           ...prev,
-          references: prev.references.filter(id => id !== refIdToRemove)
+          [id]: {
+            ...prev[id],
+            references: prev[id].references.filter(r => r !== refIdToRemove)
+          }
         }));
       };
 
@@ -1490,7 +1504,13 @@ Documents:\n${contextText}` }] }
                 {!selectedEntryIds.length ? (
                   <div className="flex-1 flex items-center justify-center text-slate-400 flex-col w-full"><i className="fa-solid fa-file-lines text-5xl mb-4 opacity-20"></i><p>Select an entry</p></div>
                 ) : (
-                  entriesToDisplay.map((entry) => (
+                  entriesToDisplay.map((entry) => {
+                    const isEditing = editingEntries[entry.id];
+                    const data = editData[entry.id] || { title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] };
+                    const catInput = editCatInput[entry.id] || '';
+                    const tagInput = editTagInput[entry.id] || '';
+
+                    return (
                     <div 
                       key={entry.id} 
                       className={`flex-1 min-w-[500px] border-r border-slate-100 last:border-r-0 overflow-y-auto relative transition-colors ${dragOverEntryId === entry.id ? 'bg-indigo-50/50' : ''}`}
@@ -1498,51 +1518,51 @@ Documents:\n${contextText}` }] }
                       onDragLeave={() => setDragOverEntryId(null)}
                       onDrop={(e) => handleEntryDrop(e, entry.id)}
                     >
-                      {editingEntryId === entry.id ? (
+                      {isEditing ? (
                         <div className="max-w-3xl mx-auto p-8 pb-32">
                           <div className="space-y-6">
                             <div className="flex justify-between items-center mb-6">
                               <h2 className="text-2xl font-bold">Edit Note #{entry.numericId}</h2>
                               <div className="flex gap-2">
-                                <button onClick={() => setEditingEntryId(null)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-                                <button onClick={saveNote} className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Save Note</button>
+                                <button onClick={() => cancelEdit(entry.id)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button onClick={() => saveNote(entry.id)} className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Save Note</button>
                               </div>
                             </div>
                             
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">Title</label>
-                              <input type="text" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} className="w-full px-4 py-2 text-lg font-bold border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Note Title" />
+                              <input type="text" value={data.title} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], title: e.target.value}}))} className="w-full px-4 py-2 text-lg font-bold border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Note Title" />
                             </div>
 
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="block text-xs font-semibold text-slate-500">Summary</label>
-                                <button type="button" onClick={handleGenerateSummary} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                <button type="button" onClick={() => handleGenerateSummary(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
                                   <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate
                                 </button>
                               </div>
-                              <input type="text" value={editData.summary} onChange={e => setEditData({...editData, summary: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Brief summary..." />
+                              <input type="text" value={data.summary} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], summary: e.target.value}}))} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Brief summary..." />
                             </div>
 
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="block text-xs font-semibold text-slate-500">Key Takeaways (One per line)</label>
-                                <button type="button" onClick={handleGenerateTakeaways} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                <button type="button" onClick={() => handleGenerateTakeaways(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
                                   <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate
                                 </button>
                               </div>
-                              <textarea value={editData.shortVersion} onChange={e => setEditData({...editData, shortVersion: e.target.value})} className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" placeholder="Point 1&#10;Point 2..."></textarea>
+                              <textarea value={data.shortVersion} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], shortVersion: e.target.value}}))} className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed" placeholder="Point 1&#10;Point 2..."></textarea>
                             </div>
 
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">Source URL</label>
-                              <input type="text" value={editData.sourceUrl} onChange={e => setEditData({...editData, sourceUrl: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/source-url" />
+                              <input type="text" value={data.sourceUrl} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], sourceUrl: e.target.value}}))} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/source-url" />
                             </div>
 
                             <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
                               <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-sm font-bold text-indigo-900">Taxonomies</h3>
-                                <button type="button" onClick={handleGenerateTaxonomies} disabled={isAnalyzing} className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-50">
+                                <button type="button" onClick={() => handleGenerateTaxonomies(entry.id)} disabled={isAnalyzing} className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-50">
                                   {isAnalyzing ? <i className="fa-solid fa-spinner fa-spin mr-1"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-1"></i>} Generate
                                 </button>
                               </div>
@@ -1550,10 +1570,10 @@ Documents:\n${contextText}` }] }
                                 <div>
                                   <label className="block text-xs font-semibold text-indigo-500 mb-1">Categories</label>
                                   <div className="flex flex-wrap gap-1 mb-2">
-                                    {editData.categories.map(c => (
+                                    {data.categories.map(c => (
                                       <span key={c} className="group relative flex items-center px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-medium lowercase rounded-full shadow-sm">
                                         {c}
-                                        <button type="button" onClick={() => removeEditCategory(c)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
+                                        <button type="button" onClick={() => removeEditCategory(entry.id, c)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
                                           <i className="fa-solid fa-xmark"></i>
                                         </button>
                                       </span>
@@ -1562,9 +1582,9 @@ Documents:\n${contextText}` }] }
                                   <input 
                                     type="text"
                                     list="cat-suggestions"
-                                    value={editCatInput}
-                                    onChange={e => setEditCatInput(e.target.value)}
-                                    onKeyDown={handleAddEditCategory}
+                                    value={catInput}
+                                    onChange={e => setEditCatInput(prev => ({...prev, [entry.id]: e.target.value}))}
+                                    onKeyDown={(e) => handleAddEditCategory(entry.id, e)}
                                     placeholder="Add category (Enter or comma)"
                                     className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white lowercase"
                                   />
@@ -1575,10 +1595,10 @@ Documents:\n${contextText}` }] }
                                 <div>
                                   <label className="block text-xs font-semibold text-indigo-500 mb-1">Tags</label>
                                   <div className="flex flex-wrap gap-1 mb-2">
-                                    {editData.tags.map(t => (
+                                    {data.tags.map(t => (
                                       <span key={t} className="group relative flex items-center px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-medium lowercase rounded-full shadow-sm">
                                         {t}
-                                        <button type="button" onClick={() => removeEditTag(t)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
+                                        <button type="button" onClick={() => removeEditTag(entry.id, t)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
                                           <i className="fa-solid fa-xmark"></i>
                                         </button>
                                       </span>
@@ -1587,9 +1607,9 @@ Documents:\n${contextText}` }] }
                                   <input 
                                     type="text"
                                     list="tag-suggestions"
-                                    value={editTagInput}
-                                    onChange={e => setEditTagInput(e.target.value)}
-                                    onKeyDown={handleAddEditTag}
+                                    value={tagInput}
+                                    onChange={e => setEditTagInput(prev => ({...prev, [entry.id]: e.target.value}))}
+                                    onKeyDown={(e) => handleAddEditTag(entry.id, e)}
                                     placeholder="Add tag (Enter or comma)"
                                     className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white lowercase"
                                   />
@@ -1603,20 +1623,22 @@ Documents:\n${contextText}` }] }
                             <div>
                               <label className="block text-xs font-semibold text-slate-500 mb-1">Expanded Summary (Markdown)</label>
                               <textarea 
-                                value={editData.fullContent} 
-                                onChange={e => setEditData(prev => ({...prev, fullContent: e.target.value}))} 
+                                value={data.fullContent} 
+                                onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], fullContent: e.target.value}}))} 
                                 onDragOver={(e) => e.stopPropagation()}
                                 onDrop={(e) => {
-                                  e.stopPropagation(); // Stops parent from preventing native drop insertion
+                                  e.stopPropagation();
                                   const draggedId = e.dataTransfer.getData('kb-ref-id');
-                                  if (draggedId && draggedId !== editingEntryId) {
+                                  if (draggedId && draggedId !== entry.id) {
                                     const el = e.target;
-                                    // Defer React state update so browser can natively insert text exactly at the drop cursor first
                                     setTimeout(() => {
                                       setEditData(prev => ({
                                         ...prev,
-                                        fullContent: el.value,
-                                        references: prev.references.includes(draggedId) ? prev.references : [...prev.references, draggedId]
+                                        [entry.id]: {
+                                          ...prev[entry.id],
+                                          fullContent: el.value,
+                                          references: prev[entry.id].references.includes(draggedId) ? prev[entry.id].references : [...prev[entry.id].references, draggedId]
+                                        }
                                       }));
                                     }, 50);
                                   }
@@ -1626,18 +1648,18 @@ Documents:\n${contextText}` }] }
                               ></textarea>
                             </div>
 
-                            {editData.references && editData.references.length > 0 && (
+                            {data.references && data.references.length > 0 && (
                               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                                 <h3 className="text-sm font-bold text-slate-700 mb-3">Linked References</h3>
                                 <div className="space-y-2">
-                                  {editData.references.map(refId => {
+                                  {data.references.map(refId => {
                                     const refEnt = entries.find(e => e.id === refId);
                                     if (!refEnt) return null;
                                     const isMediaRef = isMediaSource(refEnt.sourceUrl);
                                     return (
                                       <div key={refId} className={`flex justify-between items-center text-sm p-3 rounded-lg border shadow-sm ${isMediaRef ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
                                         <span className={`font-medium truncate mr-4 ${isMediaRef ? 'text-red-900' : 'text-slate-700'}`}><span className={`font-normal mr-1 ${isMediaRef ? 'text-red-500' : 'text-slate-400'}`}>{refEnt.numericId}:</span>{refEnt.title}</span>
-                                        <button type="button" onClick={() => removeReferenceFromEdit(refId)} className="text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors text-xs font-semibold uppercase tracking-wide">Remove</button>
+                                        <button type="button" onClick={() => removeReferenceFromEdit(entry.id, refId)} className="text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors text-xs font-semibold uppercase tracking-wide">Remove</button>
                                       </div>
                                     );
                                   })}
@@ -1718,9 +1740,8 @@ Documents:\n${contextText}` }] }
               </div>
             </div>
 
-            {}
             {/* CHAT AREA */}
-            {editingEntryId === null && (
+            {Object.keys(editingEntries).length === 0 && (
               <div className="border-t min-[1500px]:border-t-0 min-[1500px]:border-l border-slate-200 bg-slate-100 min-[1500px]:w-[400px] flex flex-col flex-shrink-0 h-[40vh] min-[1500px]:h-full transition-all">
                  <div className="flex bg-slate-200/60 p-1 rounded-lg m-4 mt-5">
                     <button onClick={() => setChatScope('selected')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${chatScope === 'selected' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}>Selected ({selectedEntryIds.length})</button>
