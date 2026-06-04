@@ -53,7 +53,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.7.4";
+    const APP_VERSION = "v1.7.5";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -217,7 +217,44 @@
       const [fileHandle, setFileHandle] = useState(null);
       const [fileName, setFileName] = useState('');
       
-      const [entries, setEntries] = useState([]);
+      // Global Undo/History Manager
+      const [historyState, setHistoryState] = useState({ past: [], present: [] });
+      const entries = historyState.present;
+      
+      const setEntries = (action) => {
+          setHistoryState(h => {
+              const nextPresent = typeof action === 'function' ? action(h.present) : action;
+              if (nextPresent === h.present) return h;
+              return {
+                  past: [...h.past, h.present].slice(-30), // keep last 30 actions
+                  present: nextPresent
+              };
+          });
+      };
+
+      const undoEntries = () => {
+          setHistoryState(h => {
+              if (h.past.length === 0) return h;
+              const previous = h.past[h.past.length - 1];
+              const newPast = h.past.slice(0, h.past.length - 1);
+              return { past: newPast, present: previous };
+          });
+      };
+
+      // Keyboard Shortcut listener for Undo (Cmd/Ctrl+Z)
+      useEffect(() => {
+          const handleKeyDown = (e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+                  // Ignore undo global state if typing in an input (let native text undo work)
+                  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+                  e.preventDefault();
+                  undoEntries();
+              }
+          };
+          window.addEventListener('keydown', handleKeyDown);
+          return () => window.removeEventListener('keydown', handleKeyDown);
+      }, []);
+
       const [chats, setChats] = useState({});
       const [apiKey, setApiKey] = useState('');
       const [model, setModel] = useState('gemini-3.1-flash-lite');
@@ -312,10 +349,10 @@
           
           if (data.entries?.length > 0) {
             const migrated = processLoadedEntries(data.entries);
-            setEntries(migrated);
+            setHistoryState({ past: [], present: migrated });
             setSelectedEntryIds([migrated[0].id]);
           } else {
-            setEntries([INITIAL_ENTRY]);
+            setHistoryState({ past: [], present: [INITIAL_ENTRY] });
             setSelectedEntryIds([INITIAL_ENTRY.id]);
           }
           
@@ -357,7 +394,7 @@
           });
           setFileHandle(handle);
           setFileName(handle.name);
-          setEntries([INITIAL_ENTRY]);
+          setHistoryState({ past: [], present: [INITIAL_ENTRY] });
           setChats({});
           setApiKey('');
           setModel('gemini-3.1-flash-lite');
@@ -380,7 +417,7 @@
             const data = JSON.parse(event.target.result);
             if (data.entries) {
               const migrated = processLoadedEntries(data.entries);
-              setEntries(migrated);
+              setHistoryState({ past: [], present: migrated });
               if (migrated.length > 0) setSelectedEntryIds([migrated[0].id]);
             }
             if (data.chats) setChats(data.chats);
@@ -399,7 +436,7 @@
       const handleCloseWorkspace = () => {
         setAppState('landing');
         setFileHandle(null);
-        setEntries([]);
+        setHistoryState({ past: [], present: [] });
         setChats({});
         setApiKey('');
       };
@@ -671,21 +708,45 @@
         }));
       };
 
-      const handleGenerateSummary = async (id) => {
+      const handleSuggestTitle = async (id) => {
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
           const data = editData[id];
-          const prompt = `Analyze this note and write a 1-2 sentence summary. Return JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
+          const prompt = `Read this note and suggest a punchy, highly descriptive title (maximum 6 words). Return strictly JSON: {"title": "The Title"}.\n\nContent: ${data.fullContent || data.summary}`;
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { title: { type: "STRING" } } } }
+          };
+          const result = await callGemini(apiKey, payload, model);
+          const resData = JSON.parse(result.candidates[0].content.parts[0].text);
+          if (resData.title) {
+            setEditData(prev => ({ ...prev, [id]: { ...prev[id], title: resData.title } }));
+          }
+        } catch(err) {
+          setError("Title suggestion failed: " + err.message);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+
+      const handleGenerateTLDR = async (id) => {
+        if (!apiKey) return setError("Set your API key first.");
+        setIsAnalyzing(true);
+        try {
+          const data = editData[id];
+          const prompt = `Write a structured executive summary (TL;DR) of this note. Capture the core thesis, main context, and significant outcomes. Limit strictly to 2-3 sentences. Return JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
           };
           const result = await callGemini(apiKey, payload, model);
           const resData = JSON.parse(result.candidates[0].content.parts[0].text);
-          setEditData(prev => ({ ...prev, [id]: { ...prev[id], summary: resData.summary || prev[id].summary } }));
+          if (resData.summary) {
+            setEditData(prev => ({ ...prev, [id]: { ...prev[id], summary: resData.summary } }));
+          }
         } catch(err) {
-          setError("Summary generation failed: " + err.message);
+          setError("TL;DR generation failed: " + err.message);
         } finally {
           setIsAnalyzing(false);
         }
@@ -696,7 +757,7 @@
         setIsAnalyzing(true);
         try {
           const data = editData[id];
-          const prompt = `Analyze this note. Extract 3-5 key points. Return JSON: {"shortVersion": ["point 1", "point 2"]}. Format each point in Markdown.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
+          const prompt = `Analyze this note. Extract exactly 3-5 crucial key points. Return JSON: {"shortVersion": ["point 1", "point 2"]}. Format each point elegantly in Markdown.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } } }
@@ -707,7 +768,7 @@
             setEditData(prev => ({ ...prev, [id]: { ...prev[id], shortVersion: resData.shortVersion.join('\n') } }));
           }
         } catch(err) {
-          setError("Takeaway generation failed: " + err.message);
+          setError("Takeaway extraction failed: " + err.message);
         } finally {
           setIsAnalyzing(false);
         }
@@ -833,7 +894,7 @@
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
-            const entry = entries.find(e => e.id === id); 
+            const entry = entries.find(e => e.id === id); // Reading from entries as these run in view mode
             if (!entry) throw new Error("Note not found.");
             
             let prompt = "";
@@ -844,36 +905,15 @@
                 const otherEntries = entries.filter(e => e.id !== id && !e.isCombined);
                 const kbContext = otherEntries.map(e => ({ id: e.id, title: e.title, summary: e.summary, tags: e.tags }));
                 
-                prompt = `Analyze the 'Current Note' and find up to 3 highly relevant related notes from the 'Knowledge Base Index'. 
-                Rewrite the 'Current Note' content by inserting shortcodes for the related notes directly into the text where they are most contextually relevant (e.g. next to a related concept or at the end of a relevant paragraph). 
-                Use the format [[kb-ref:entry-id]]. Do not change the original meaning or remove existing information.
-                Return ONLY a JSON object matching this schema: {"linkedIds": ["entry-123"], "rewrittenContent": "updated markdown string"}.
-                If none are highly relevant, return {"linkedIds": [], "rewrittenContent": "original content"}.
-                
-                Current Note Title: ${entry.title}
-                Content: ${entry.fullContent}
-                
-                Knowledge Base Index: ${JSON.stringify(kbContext)}`;
+                prompt = `Analyze the 'Current Note' and find up to 3 EXTREMELY relevant related notes from the 'Knowledge Base Index'. \n\nCRITICAL INSTRUCTION: Be twice as strict as usual. Only link notes that share profound conceptual overlap or direct factual continuation. Do NOT link notes based on passing keyword mentions or loose thematic similarities. If there isn't a direct, undeniable connection, skip it.\n\nReturn ONLY a JSON array of the string IDs of the highly relevant notes. Example: ["entry-123", "entry-456"]. If none meet this strict criteria, return [].\n\nCurrent Note Title: ${entry.title}\nContent: ${entry.fullContent}\n\nKnowledge Base Index: ${JSON.stringify(kbContext)}`;
                 
                 const payload = {
                     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                    generationConfig: { 
-                        responseMimeType: "application/json", 
-                        responseSchema: { 
-                            type: "OBJECT", 
-                            properties: { 
-                                linkedIds: { type: "ARRAY", items: { type: "STRING" } },
-                                rewrittenContent: { type: "STRING" }
-                            },
-                            required: ["linkedIds", "rewrittenContent"]
-                        } 
-                    }
+                    generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "STRING" } } }
                 };
                 
                 const result = await callGemini(apiKey, payload, model);
-                const resultData = JSON.parse(result.candidates[0].content.parts[0].text);
-                const foundIds = resultData.linkedIds || [];
-                const rewrittenContent = resultData.rewrittenContent || entry.fullContent;
+                const foundIds = JSON.parse(result.candidates[0].content.parts[0].text);
                 
                 const currentRefs = entry.references || [];
                 const newValidIds = foundIds.filter(fid => 
@@ -881,29 +921,31 @@
                 ).slice(0, 3);
 
                 if (newValidIds.length === 0) {
-                    throw new Error("No highly relevant links found in the database.");
+                    throw new Error("No highly relevant links found in the database based on the strict criteria.");
                 }
 
+                const shortcodes = newValidIds.map(fid => `[[kb-ref:${fid}]]`).join('\n\n');
+                sectionHeader = "### ✨ AI Suggested Links";
+                text = shortcodes;
+
                 setEntries(prev => prev.map(e => {
-                    // Update the target entries to link back
                     if (newValidIds.includes(e.id)) {
                         const existingRefs = e.references || [];
                         if (!existingRefs.includes(id)) {
                             return { ...e, references: [...existingRefs, id] };
                         }
                     }
-                    // Update the current entry with new content and reference list
                     if (e.id === id) {
                         const existingRefs = e.references || [];
                         return {
                             ...e,
-                            fullContent: rewrittenContent,
+                            fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}`,
                             references: [...new Set([...existingRefs, ...newValidIds])]
                         };
                     }
                     return e;
                 }));
-                return; // Early return because we rewrote content instead of appending
+                return;
             } else if (toolType === 'eli5') {
                 prompt = `Explain this note as if I am 5 years old (ELI5). Keep it brief, fun, and use analogies if helpful. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Explain Like I'm 5";
@@ -1515,6 +1557,14 @@ Documents:\n${contextText}` }] }
             </div>
             <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-[10px] uppercase font-medium tracking-wider">
               <div className="flex items-center">
+                <button 
+                   onClick={undoEntries} 
+                   disabled={historyState.past.length === 0} 
+                   className="mr-3 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors" 
+                   title="Undo (Cmd/Ctrl+Z)"
+                >
+                   <i className="fa-solid fa-rotate-left text-sm"></i>
+                </button>
                 {fileHandle ? (
                   <><div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div> <span className="text-slate-400">Auto-saving</span> <span className="ml-2 text-[10px] text-slate-400 font-mono opacity-50">{APP_VERSION}</span></>
                 ) : (
@@ -1708,7 +1758,12 @@ Documents:\n${contextText}` }] }
                             </div>
                             
                             <div>
-                              <label className="block text-xs font-semibold text-slate-500 mb-1">Title</label>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="block text-xs font-semibold text-slate-500">Title</label>
+                                <button type="button" onClick={() => handleSuggestTitle(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                  <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Suggest Title
+                                </button>
+                              </div>
                               <input type="text" value={data.title} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], title: e.target.value}}))} className="w-full px-4 py-2 text-lg font-bold border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Note Title" />
                             </div>
 
