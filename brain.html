@@ -53,7 +53,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.7.5";
+    const APP_VERSION = "v1.7.6";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -241,11 +241,9 @@
           });
       };
 
-      // Keyboard Shortcut listener for Undo (Cmd/Ctrl+Z)
       useEffect(() => {
           const handleKeyDown = (e) => {
               if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
-                  // Ignore undo global state if typing in an input (let native text undo work)
                   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
                   e.preventDefault();
                   undoEntries();
@@ -258,9 +256,11 @@
       const [chats, setChats] = useState({});
       const [apiKey, setApiKey] = useState('');
       const [model, setModel] = useState('gemini-3.1-flash-lite');
+      const [apiUsage, setApiUsage] = useState({ requests: 0, tokensEstimated: 0, logs: [] });
       
       const [showKeyModal, setShowKeyModal] = useState(false);
       const [showManual, setShowManual] = useState(false);
+      const [showUsageModal, setShowUsageModal] = useState(false);
       const [tempKey, setTempKey] = useState('');
       const [tempModel, setTempModel] = useState('');
       
@@ -292,6 +292,44 @@
       const [editingTitleId, setEditingTitleId] = useState(null);
       const [tempTitle, setTempTitle] = useState('');
 
+      /* -------------------------------------------------------------
+         AI API Wrapper - Handles Key Rotation & Usage Tracking
+      -------------------------------------------------------------- */
+      const handleGeminiCall = async (payload, customModel) => {
+         const keys = apiKey.split(',').map(k => k.trim()).filter(Boolean);
+         if (keys.length === 0) throw new Error("Please set your Gemini API key in Settings.");
+         
+         // Rotate through available keys to distribute load
+         const keyIndex = apiUsage.requests % keys.length;
+         const selectedKey = keys[keyIndex];
+         const activeModel = customModel || model;
+         
+         const payloadStr = JSON.stringify(payload);
+         const estTokensIn = Math.ceil(payloadStr.length / 4);
+         
+         const result = await callGemini(selectedKey, payload, activeModel);
+         
+         const responseStr = JSON.stringify(result);
+         const estTokensOut = Math.ceil(responseStr.length / 4);
+         
+         setApiUsage(prev => {
+             const newLog = { 
+                time: new Date().toLocaleTimeString(), 
+                model: activeModel, 
+                tokensIn: estTokensIn, 
+                tokensOut: estTokensOut 
+             };
+             return {
+                 ...prev,
+                 requests: prev.requests + 1,
+                 tokensEstimated: prev.tokensEstimated + estTokensIn + estTokensOut,
+                 logs: [newLog, ...(prev.logs || [])].slice(0, 100) // retain last 100
+             };
+         });
+         
+         return result;
+      };
+
       useEffect(() => {
         if (typeof idbKeyval !== 'undefined') {
           idbKeyval.get('kb_file_handle').then(handle => {
@@ -313,14 +351,14 @@
             const hasPerm = await verifyPermission(fileHandle, true);
             if (!hasPerm) return;
             const writable = await fileHandle.createWritable();
-            await writable.write(JSON.stringify({ entries, chats, apiKey, model }, null, 2));
+            await writable.write(JSON.stringify({ entries, chats, apiKey, model, apiUsage }, null, 2));
             await writable.close();
           } catch (err) {
             console.error("Auto-save failed:", err);
           }
         }, 1000);
         return () => clearTimeout(timer);
-      }, [entries, chats, apiKey, model, appState, fileHandle]);
+      }, [entries, chats, apiKey, model, apiUsage, appState, fileHandle]);
 
       const ensureNumericIds = (loadedEntries) => {
         let maxId = loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0);
@@ -359,6 +397,7 @@
           if (data.chats) setChats(data.chats);
           if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
           if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
+          if (data.apiUsage) setApiUsage(data.apiUsage); else setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
           
           setFileHandle(handle);
           setFileName(file.name);
@@ -398,6 +437,7 @@
           setChats({});
           setApiKey('');
           setModel('gemini-3.1-flash-lite');
+          setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
           setSelectedEntryIds([INITIAL_ENTRY.id]);
           if (typeof idbKeyval !== 'undefined') {
             await idbKeyval.set('kb_file_handle', handle);
@@ -423,6 +463,7 @@
             if (data.chats) setChats(data.chats);
             if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
             if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
+            if (data.apiUsage) setApiUsage(data.apiUsage); else setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
             setFileName(file.name);
             setFileHandle(null);
             setAppState('workspace');
@@ -439,6 +480,7 @@
         setHistoryState({ past: [], present: [] });
         setChats({});
         setApiKey('');
+        setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
       };
 
       const categoryCounts = {};
@@ -562,7 +604,7 @@
           };
           if (useSearchTool) payload.tools = [{ google_search: {} }];
 
-          const result = await callGemini(apiKey, payload, model);
+          const result = await handleGeminiCall(payload, model);
           const parsedResult = JSON.parse(result.candidates[0].content.parts[0].text);
           
           parsedResult.categories = (parsedResult.categories || []).map(c => c.toLowerCase());
@@ -718,7 +760,7 @@
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { title: { type: "STRING" } } } }
           };
-          const result = await callGemini(apiKey, payload, model);
+          const result = await handleGeminiCall(payload, model);
           const resData = JSON.parse(result.candidates[0].content.parts[0].text);
           if (resData.title) {
             setEditData(prev => ({ ...prev, [id]: { ...prev[id], title: resData.title } }));
@@ -740,7 +782,7 @@
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
           };
-          const result = await callGemini(apiKey, payload, model);
+          const result = await handleGeminiCall(payload, model);
           const resData = JSON.parse(result.candidates[0].content.parts[0].text);
           if (resData.summary) {
             setEditData(prev => ({ ...prev, [id]: { ...prev[id], summary: resData.summary } }));
@@ -762,7 +804,7 @@
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } } }
           };
-          const result = await callGemini(apiKey, payload, model);
+          const result = await handleGeminiCall(payload, model);
           const resData = JSON.parse(result.candidates[0].content.parts[0].text);
           if (resData.shortVersion && Array.isArray(resData.shortVersion)) {
             setEditData(prev => ({ ...prev, [id]: { ...prev[id], shortVersion: resData.shortVersion.join('\n') } }));
@@ -789,7 +831,7 @@
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } } }
           };
           
-          const result = await callGemini(apiKey, payload, model);
+          const result = await handleGeminiCall(payload, model);
           const resData = JSON.parse(result.candidates[0].content.parts[0].text);
           setEditData(prev => ({ 
             ...prev, 
@@ -844,7 +886,7 @@
             generationConfig: { responseMimeType: "application/json", responseSchema: schema }
           };
           
-          const result = await callGemini(apiKey, payload, model);
+          const result = await handleGeminiCall(payload, model);
           const data = JSON.parse(result.candidates[0].content.parts[0].text);
 
           setEntries(prev => prev.map(entry => {
@@ -894,9 +936,7 @@
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
-            const entry = entries.find(e => e.id === id); // Reading from entries as these run in view mode
-            if (!entry) throw new Error("Note not found.");
-            
+            const entry = editData[id] || entries.find(e => e.id === id);
             let prompt = "";
             let sectionHeader = "";
             let text = "";
@@ -905,29 +945,41 @@
                 const otherEntries = entries.filter(e => e.id !== id && !e.isCombined);
                 const kbContext = otherEntries.map(e => ({ id: e.id, title: e.title, summary: e.summary, tags: e.tags }));
                 
-                prompt = `Analyze the 'Current Note' and find up to 3 EXTREMELY relevant related notes from the 'Knowledge Base Index'. \n\nCRITICAL INSTRUCTION: Be twice as strict as usual. Only link notes that share profound conceptual overlap or direct factual continuation. Do NOT link notes based on passing keyword mentions or loose thematic similarities. If there isn't a direct, undeniable connection, skip it.\n\nReturn ONLY a JSON array of the string IDs of the highly relevant notes. Example: ["entry-123", "entry-456"]. If none meet this strict criteria, return [].\n\nCurrent Note Title: ${entry.title}\nContent: ${entry.fullContent}\n\nKnowledge Base Index: ${JSON.stringify(kbContext)}`;
+                prompt = `You are a strict cross-referencing AI. Read the 'Current Note' and find up to 3 EXTREMELY relevant related notes from the 'Knowledge Base Index'. 
+                CRITERIA: Relevance must be undeniable. They must share profound conceptual overlap.
+                Return ONLY a JSON array of the string IDs of the relevant notes. Example: ["entry-123", "entry-456"]. If none are highly relevant, return [].\n\nCurrent Note Title: ${entry.title}\nContent: ${entry.fullContent}\n\nKnowledge Base Index: ${JSON.stringify(kbContext)}`;
                 
                 const payload = {
                     contents: [{ role: 'user', parts: [{ text: prompt }] }],
                     generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "STRING" } } }
                 };
                 
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 const foundIds = JSON.parse(result.candidates[0].content.parts[0].text);
                 
-                const currentRefs = entry.references || [];
+                const currentRefs = editData[id]?.references || [];
                 const newValidIds = foundIds.filter(fid => 
                     otherEntries.some(oe => oe.id === fid) && !currentRefs.includes(fid)
                 ).slice(0, 3);
 
                 if (newValidIds.length === 0) {
-                    throw new Error("No highly relevant links found in the database based on the strict criteria.");
+                    throw new Error("No highly relevant links found in the database based on strict criteria.");
                 }
 
-                const shortcodes = newValidIds.map(fid => `[[kb-ref:${fid}]]`).join('\n\n');
-                sectionHeader = "### ✨ AI Suggested Links";
-                text = shortcodes;
+                // Rewrite the content to embed the shortcodes in context
+                const rewritePrompt = `Rewrite the 'Current Note' content slightly to seamlessly embed these reference shortcodes directly next to the relevant concepts or sentences where they naturally fit. Do not just append them to the end.
+                Shortcodes to embed: ${newValidIds.map(fid => `[[kb-ref:${fid}]]`).join(', ')}
+                
+                Current Note Content:
+                ${entry.fullContent}
+                
+                Return ONLY the rewritten Markdown text. Do not add any conversational filler.`;
+                
+                const rewritePayload = { contents: [{ role: 'user', parts: [{ text: rewritePrompt }] }] };
+                const rewriteResult = await handleGeminiCall(rewritePayload, model);
+                const rewrittenContent = rewriteResult.candidates[0].content.parts[0].text;
 
+                // Reciprocally update the target entries in the main entries state so the links are 2-way
                 setEntries(prev => prev.map(e => {
                     if (newValidIds.includes(e.id)) {
                         const existingRefs = e.references || [];
@@ -935,89 +987,103 @@
                             return { ...e, references: [...existingRefs, id] };
                         }
                     }
-                    if (e.id === id) {
-                        const existingRefs = e.references || [];
-                        return {
-                            ...e,
-                            fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}`,
-                            references: [...new Set([...existingRefs, ...newValidIds])]
-                        };
+                    if (e.id === id && !editData[id]) {
+                        return { ...e, fullContent: rewrittenContent, references: [...new Set([...(e.references || []), ...newValidIds])] };
                     }
                     return e;
                 }));
-                return;
+                
+                // If we are currently editing it, update the edit view directly
+                if (editData[id]) {
+                    setEditData(prev => ({
+                        ...prev,
+                        [id]: {
+                            ...prev[id],
+                            fullContent: rewrittenContent,
+                            references: [...(prev[id].references || []), ...newValidIds]
+                        }
+                    }));
+                }
+                return; // exit early since 'link' rewrites entirely rather than appending
             } else if (toolType === 'eli5') {
                 prompt = `Explain this note as if I am 5 years old (ELI5). Keep it brief, fun, and use analogies if helpful. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Explain Like I'm 5";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'gaps') {
                 prompt = `Analyze this note and identify 3 critical missing pieces of information, logical gaps, or obvious follow-up questions for further research. Return ONLY a Markdown formatted list of the gaps/questions.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Research Gaps";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'quiz') {
                 prompt = `Create a 3-question multiple choice quiz based strictly on this note to test reading comprehension. Format beautifully in Markdown. Include an 'Answer Key' at the bottom. Return ONLY the Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Study Quiz";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'bias') {
                 prompt = `Analyze this note critically to identify potential author bias, underlying emotional tone, and unverified or sweeping claims. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Bias & Tone Analysis";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'citations') {
                 prompt = `Extract any references, studies, or claims needing sources from this note and suggest how they should be cited (or format them as APA citations if sufficient info exists). Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Extracted Citations";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'counter') {
                 prompt = `Act as a devil's advocate. Generate the 3 strongest counter-arguments or opposing perspectives to the main points made in this note. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Counter-Arguments";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'actions') {
                 prompt = `Extract any explicit or heavily implied tasks, instructions, or logical next steps from this note and format them strictly as a checklist. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Action Items";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'brainstorm') {
                 prompt = `Suggest 3-5 entirely different disciplines, domains, or topics that this information could creatively connect to, with a brief explanation of the synthesis for each. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Brainstormed Connections";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'rewrite') {
                 prompt = `Rewrite this entire note to be highly concise, structured, and grammatically perfect without changing the core meaning or losing any factual detail. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Rewritten Version";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             } else if (toolType === 'essay') {
                 prompt = `Draft a structured outline for a standard 5-paragraph essay based on this material, ensuring a clear thesis, three body arguments, and a conclusion. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Essay Outline";
                 const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }] };
-                const result = await callGemini(apiKey, payload, model);
+                const result = await handleGeminiCall(payload, model);
                 text = result.candidates[0].content.parts[0].text;
             }
             
-            // Append the returned text into the main entries state directly
-            setEntries(prev => prev.map(e => {
-                if (e.id === id) {
-                    return {
-                        ...e,
-                        fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}`
-                    };
-                }
-                return e;
-            }));
+            // Append the returned text into the editData fullContent box or main view
+            if (editData[id]) {
+                setEditData(prev => ({
+                    ...prev,
+                    [id]: {
+                        ...prev[id],
+                        fullContent: (prev[id].fullContent || '') + `\n\n${sectionHeader}\n${text}`
+                    }
+                }));
+            } else {
+                setEntries(prev => prev.map(e => {
+                    if (e.id === id) {
+                        return { ...e, fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}` };
+                    }
+                    return e;
+                }));
+            }
         } catch(err) {
             setError(`Failed to run AI tool: ${err.message}`);
         } finally {
@@ -1149,7 +1215,7 @@ Documents:\n${contextText}` }] }
               payload.systemInstruction.parts[0].text += `\n\nNote: If a document has a Source URL (especially YouTube), use the Google Search tool to look up the specific URL to find additional exact details, transcripts, or context to answer the query comprehensively.`;
           }
 
-          const result = await callGemini(apiKey, payload, model);
+          const result = await handleGeminiCall(payload, model);
           let responseText = result.candidates[0].content.parts[0].text;
           
           if (!responseText.includes(APP_VERSION)) {
@@ -1383,8 +1449,8 @@ Documents:\n${contextText}` }] }
                   <h3 className="text-lg font-bold text-slate-800">Workspace Settings</h3>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">API Key</label>
-                  <input type="password" value={tempKey} onChange={e => setTempKey(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIzaSy..." />
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">API Key(s) <span className="font-normal text-slate-400">- Comma separate for rotation</span></label>
+                  <input type="password" value={tempKey} onChange={e => setTempKey(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIzaSy..., AIzaSy..." />
                 </div>
                 <div className="mb-6">
                   <label className="block text-xs font-semibold text-slate-500 mb-1">AI Model</label>
@@ -1403,6 +1469,11 @@ Documents:\n${contextText}` }] }
                   </select>
                   <p className="text-[10px] text-slate-400 mt-1">Select a "Pro" or "Thinking" model for complex tasks and deep analysis.</p>
                 </div>
+                <div className="mb-4">
+                  <button type="button" onClick={() => { setShowKeyModal(false); setShowUsageModal(true); }} className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                    <i className="fa-solid fa-chart-line mr-2"></i> View Local Usage & Limits
+                  </button>
+                </div>
                 <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100">
                   <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-base font-medium text-indigo-600 hover:text-indigo-800 flex items-center transition-colors">
                     <i className="fa-solid fa-book mr-1.5"></i> Read Manual
@@ -1411,6 +1482,65 @@ Documents:\n${contextText}` }] }
                     <button onClick={() => setShowKeyModal(false)} className="px-4 py-2 text-base font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
                     <button onClick={saveSettings} className="px-4 py-2 text-base font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Save</button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showUsageModal && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+              <div className="bg-white rounded-2xl shadow-xl w-[90vw] h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+                <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-slate-50 shrink-0">
+                  <h2 className="text-xl font-bold text-slate-800"><i className="fa-solid fa-chart-line text-indigo-600 mr-2"></i> Local API Usage Logs</h2>
+                  <button onClick={() => setShowUsageModal(false)} className="text-slate-400 hover:text-slate-700 p-1 transition-colors"><i className="fa-solid fa-xmark text-2xl"></i></button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-8 flex flex-col md:flex-row gap-8 bg-slate-50/50">
+                   {/* Left Side: Facts */}
+                   <div className="w-full md:w-1/3 space-y-6">
+                      <div className="bg-blue-50 border border-blue-200 p-5 rounded-xl">
+                         <h3 className="font-bold text-blue-900 mb-2">Gemini Free Tier Limits (2026)</h3>
+                         <p className="text-xs text-blue-800 mb-3">Google does not provide a live API endpoint for free-tier stats. Adding a billing card voids the free tier immediately.</p>
+                         <ul className="text-sm space-y-2 text-blue-900">
+                           <li><strong>Flash / Flash-Lite:</strong><br/>15 Req/Min • 1M Tokens/Min • 1,500 Req/Day</li>
+                           <li><strong>Pro / Thinking:</strong><br/>2 Req/Min • 32K Tokens/Min • 50 Req/Day</li>
+                         </ul>
+                      </div>
+                      <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
+                         <h3 className="font-bold text-slate-800 mb-2">How to Multi-Key (Key Rotation)</h3>
+                         <p className="text-sm text-slate-600">To double or triple your rate limits, go to Google AI Studio and create multiple distinct "Projects". Generate one API key per project. Paste them all into the API Key settings field, separated by commas. This app will automatically rotate through them to balance the load.</p>
+                      </div>
+                      <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
+                         <h3 className="font-bold text-slate-800 mb-2">Local App Stats</h3>
+                         <div className="flex justify-between items-center mb-2">
+                           <span className="text-sm text-slate-500">Total Requests</span>
+                           <span className="font-mono font-bold">{apiUsage.requests}</span>
+                         </div>
+                         <div className="flex justify-between items-center mb-2">
+                           <span className="text-sm text-slate-500">Est. Tokens Processed</span>
+                           <span className="font-mono font-bold">~{apiUsage.tokensEstimated.toLocaleString()}</span>
+                         </div>
+                         <button onClick={() => setApiUsage({requests:0, tokensEstimated:0, logs:[]})} className="w-full mt-2 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded border border-red-100 transition-colors">Clear Local Logs</button>
+                      </div>
+                   </div>
+                   {/* Right Side: Logs */}
+                   <div className="w-full md:w-2/3 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                       <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 grid grid-cols-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          <div>Time</div>
+                          <div>Model</div>
+                          <div className="text-right">Est. Tokens In</div>
+                          <div className="text-right">Est. Tokens Out</div>
+                       </div>
+                       <div className="flex-1 overflow-y-auto p-2">
+                          {apiUsage.logs && apiUsage.logs.length > 0 ? apiUsage.logs.map((log, i) => (
+                              <div key={i} className="grid grid-cols-4 text-sm px-2 py-2 border-b border-slate-50 hover:bg-slate-50 text-slate-700">
+                                 <div className="font-mono text-xs text-slate-400 mt-0.5">{log.time}</div>
+                                 <div className="truncate pr-2 font-medium" title={log.model}>{log.model.replace('gemini-', '')}</div>
+                                 <div className="text-right font-mono text-slate-500">{log.tokensIn}</div>
+                                 <div className="text-right font-mono text-indigo-500">+{log.tokensOut}</div>
+                              </div>
+                          )) : <div className="text-center text-slate-400 p-8 text-sm">No requests logged yet.</div>}
+                       </div>
+                   </div>
                 </div>
               </div>
             </div>
@@ -1570,7 +1700,7 @@ Documents:\n${contextText}` }] }
                 ) : (
                   <button 
                     onClick={() => {
-                      const dataStr = JSON.stringify({ entries, chats, apiKey, model }, null, 2);
+                      const dataStr = JSON.stringify({ entries, chats, apiKey, model, apiUsage }, null, 2);
                       const blob = new Blob([dataStr], { type: "application/json" });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
