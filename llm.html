@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -446,6 +448,7 @@
       }
     }
 
+    // Save configuration settings
     function saveSyncSettings() {
       localStorage.setItem('gemini_studio_sync_settings', JSON.stringify(syncSettings));
       refreshSyncStatusUI();
@@ -897,12 +900,12 @@
         container.innerHTML = '<iframe id="canvasHtmlSandbox" class="w-full h-full border-0 bg-white" sandbox="allow-scripts"></iframe>';
         const iframe = document.getElementById('canvasHtmlSandbox');
         
-        // Inject Tailwind CDN automatically into HTML sandbox so user designs render natively
+        // Inject Tailwind CDN automatically into HTML sandbox so user designs render beautifully natively
         const processedContent = content.includes('tailwindcss') ? content : 
           '<!DOCTYPE html>\n' +
           '<html>\n' +
           '<head>\n' +
-          '  <script src="https://cdn.tailwindcss.com"></script>\n' +
+          '  <script src="https://cdn.tailwindcss.com"></scr' + 'ipt>\n' +
           '</head>\n' +
           '<body class="p-6 bg-white text-slate-800 font-sans">\n' +
           content + '\n' +
@@ -1309,7 +1312,7 @@
               <div class="relative flex items-end bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-2 transition">
                 <textarea id="chatInput" onkeydown="handleChatInputKeyDown(event)" oninput="autoGrowTextArea()" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
                 <div class="absolute right-3 bottom-2.5 flex items-center space-x-2">
-                  <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
+                  <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
                     <i class="fa-solid fa-paperclip"></i>
                     <input type="file" id="tempFileInput" class="hidden" onchange="handleTempFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
                   </label>
@@ -1519,6 +1522,76 @@
       if (el) {
         el.style.height = 'auto';
         el.style.height = el.scrollHeight + 'px';
+      }
+    }
+
+    // Dynamic API Model list Fetching
+    async function fetchModelsFromAPI() {
+      const apiKeyVal = state.apiKey || (document.getElementById('apiKeyInput') ? document.getElementById('apiKeyInput').value.trim() : '');
+      if (!apiKeyVal) {
+        alert("Please specify and save your Gemini developer key inside the config pane first.");
+        return;
+      }
+
+      const statusSpan = document.getElementById('fetchModelsStatusSpan');
+      if (statusSpan) {
+        statusSpan.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-1"></i> Listing...';
+      }
+
+      try {
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + apiKeyVal);
+        if (!response.ok) {
+          throw new Error('Endpoint model query failed with status code ' + response.status);
+        }
+        const data = await response.json();
+
+        if (data && data.models) {
+          const contentGenerationCapable = data.models.filter(m => 
+            m.supportedGenerationMethods && 
+            m.supportedGenerationMethods.includes('generateContent') &&
+            (m.name.startsWith('models/gemini') || m.name.includes('gemma'))
+          );
+
+          fetchedModels = contentGenerationCapable.map(m => {
+            const id = m.name.replace('models/', '');
+            const displayName = m.displayName || id;
+
+            // Apply pricing mapping heuristics to programmatically identify costs
+            let inputCost = 0.075 / 1000000;
+            let outputCost = 0.30 / 1000000;
+
+            const lowerId = id.toLowerCase();
+            if (lowerId.includes('3.5-flash')) {
+              inputCost = 1.50 / 1000000;
+              outputCost = 9.00 / 1000000;
+            } else if (lowerId.includes('3.1-pro')) {
+              inputCost = 2.00 / 1000000;
+              outputCost = 12.00 / 1000000;
+            } else if (lowerId.includes('3.1-flash-lite')) {
+              inputCost = 0.25 / 1000000;
+              outputCost = 1.50 / 1000000;
+            } else if (lowerId.includes('3-flash')) {
+              inputCost = 0.50 / 1000000;
+              outputCost = 3.00 / 1000000;
+            } else if (lowerId.includes('pro')) {
+              inputCost = 1.25 / 1000000;
+              outputCost = 5.00 / 1000000;
+            }
+
+            return { id, name: displayName, inputCost, outputCost };
+          });
+
+          saveFetchedModels();
+          alert('Successfully mapped and saved ' + fetchedModels.length + ' compatible models directly from Google\'s active developer channels!');
+          renderActiveChat();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to query model listing: ' + err.message);
+      } finally {
+        if (statusSpan) {
+          statusSpan.innerText = "Fetch Live API Models";
+        }
       }
     }
 
@@ -1867,6 +1940,309 @@
         saveState();
         selectSourceForEditing(id);
       }
+    }
+
+    function deleteSource(id) {
+      if (!confirm("Are you sure you want to delete this source? This removes its reference context from all conversations.")) return;
+      state.sources = state.sources.filter(s => s.id !== id);
+      state.chats.forEach(c => {
+        if (c.attachedSourceIds) c.attachedSourceIds = c.attachedSourceIds.filter(sid => sid !== id);
+      });
+      state.gems.forEach(g => {
+        if (g.baseSourceIds) g.baseSourceIds = g.baseSourceIds.filter(sid => sid !== id);
+      });
+      saveState();
+      openManageSourcesModal();
+    }
+
+    function handleSourceFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('editSourceName').value = file.name;
+        document.getElementById('editSourceContent').value = evt.target.result;
+      }
+      reader.readAsText(file);
+    }
+
+    // Temporary inline files uploader
+    function handleTempFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const newSrc = { id: 's_' + Date.now(), name: file.name, content: evt.target.result };
+        state.sources.push(newSrc);
+        const chat = state.chats.find(c => c.id === state.activeChatId);
+        if (chat) {
+          if (!chat.attachedSourceIds) chat.attachedSourceIds = [];
+          chat.attachedSourceIds.push(newSrc.id);
+        }
+        saveState();
+        renderActiveChat();
+        renderSources();
+        alert(`Document file "${file.name}" imported and attached to conversation active grounding context!`);
+      }
+      reader.readAsText(file);
+    }
+
+    // Chat Grounding checklists
+    function openChatSourcesModal() {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (!chat) return;
+
+      const container = document.getElementById('sourcesChecklist');
+      container.innerHTML = '';
+
+      if (state.sources.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-6 text-slate-500">
+            <p class="text-xs italic mb-3">No sources are currently defined in the workspace database.</p>
+          </div>
+        `;
+      } else {
+        state.sources.forEach(s => {
+          const isChecked = chat.attachedSourceIds && chat.attachedSourceIds.includes(s.id);
+          const div = document.createElement('label');
+          div.className = "flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer transition";
+          div.innerHTML = `
+            <div class="flex items-center space-x-3 truncate">
+              <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="chat-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-100 dark:focus:ring-offset-slate-900" />
+              <div class="flex flex-col truncate">
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-200">${escapeHTML(s.name)}</span>
+                <span class="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${escapeHTML(s.content.substring(0, 90))}...</span>
+              </div>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      }
+      document.getElementById('chatSourcesModal').classList.remove('hidden');
+    }
+
+    function closeChatSourcesModal() {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        const checked = [];
+        document.querySelectorAll('.chat-source-checkbox').forEach(box => {
+          if (box.checked) checked.push(box.value);
+        });
+        chat.attachedSourceIds = checked;
+        saveState();
+        renderActiveChat();
+      }
+      document.getElementById('chatSourcesModal').classList.add('hidden');
+    }
+
+    // Gems Controls logic
+    function openGemModal(selectedId = null) {
+      state.editingGemId = selectedId || (state.gems.length > 0 ? state.gems[0].id : null);
+      document.getElementById('gemModal').classList.remove('hidden');
+      renderGemModalList();
+      if (state.editingGemId) {
+        selectGemForEditing(state.editingGemId);
+      } else {
+        createNewGemForm();
+      }
+    }
+
+    function closeGemModal() {
+      document.getElementById('gemModal').classList.add('hidden');
+      renderGems();
+      renderActiveChat();
+    }
+
+    function renderGemModalList() {
+      const container = document.getElementById('gemModalList');
+      container.innerHTML = '';
+      state.gems.forEach(g => {
+        const btn = document.createElement('button');
+        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
+        btn.innerHTML = `<i class="fa-solid fa-gem mr-1.5 text-indigo-500 dark:text-indigo-400"></i>${escapeHTML(g.name)}`;
+        btn.onclick = () => selectGemForEditing(g.id);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectGemForEditing(id) {
+      state.editingGemId = id;
+      renderGemModalList();
+      const gem = state.gems.find(g => g.id === id);
+      const container = document.getElementById('gemFormContainer');
+      if (!gem) return;
+
+      let sourceHTML = "";
+      state.sources.forEach(s => {
+        const isChecked = gem.baseSourceIds && gem.baseSourceIds.includes(s.id);
+        sourceHTML += `
+          <label class="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
+            <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="gem-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
+          </label>
+        `;
+      });
+
+      if (state.sources.length === 0) {
+        sourceHTML = `<div class="text-[11px] text-slate-500 italic">No workspace sources. Link custom sources to associate context files with this Gem.</div>`;
+      }
+
+      container.innerHTML = `
+        <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <input type="text" id="editGemName" value="${escapeHTML(gem.name)}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Mission Profile Description</label>
+            <input type="text" id="editGemDesc" value="${escapeHTML(gem.description || '')}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behaviors</label>
+            <textarea id="editGemInstruction" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans">${escapeHTML(gem.systemInstruction)}</textarea>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 max-h-28 overflow-y-auto">
+              ${sourceHTML}
+            </div>
+          </div>
+          <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-3">
+            <button onclick="deleteGem('${gem.id}')" class="text-red-500 dark:text-red-400 hover:text-red-400 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete Gem</button>
+            <button onclick="saveGemChanges('${gem.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Save Gem</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function createNewGemForm() {
+      state.editingGemId = 'new';
+      renderGemModalList();
+      const container = document.getElementById('gemFormContainer');
+
+      let sourceHTML = "";
+      state.sources.forEach(s => {
+        sourceHTML += `
+          <label class="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
+            <input type="checkbox" value="${s.id}" class="gem-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
+          </label>
+        `;
+      });
+
+      if (state.sources.length === 0) {
+        sourceHTML = `<div class="text-[11px] text-slate-500 italic">No workspace sources defined.</div>`;
+      }
+
+      container.innerHTML = `
+        <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <input type="text" id="editGemName" placeholder="e.g. Copywriter, Code Optimizer" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Mission Profile Description</label>
+            <input type="text" id="editGemDesc" placeholder="Helpful summary statement..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behavior Profile</label>
+            <textarea id="editGemInstruction" placeholder="You are an elegant assistant..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans"></textarea>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 max-h-28 overflow-y-auto">
+              ${sourceHTML}
+            </div>
+          </div>
+          <div class="flex justify-end border-t border-slate-200 dark:border-slate-800 pt-3">
+            <button onclick="saveNewGem()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Build Gem</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function saveNewGem() {
+      const name = document.getElementById('editGemName').value.trim();
+      const description = document.getElementById('editGemDesc').value.trim();
+      const systemInstruction = document.getElementById('editGemInstruction').value.trim();
+      if (!name) {
+        alert("Please set a name for your Gem.");
+        return;
+      }
+      const boxes = document.querySelectorAll('.gem-source-checkbox');
+      const baseSourceIds = [];
+      boxes.forEach(b => {
+        if (b.checked) baseSourceIds.push(b.value);
+      });
+
+      const newGem = {
+        id: 'gem_' + Date.now(),
+        name,
+        description,
+        systemInstruction: systemInstruction || "You are a helpful assistant.",
+        baseSourceIds
+      };
+      state.gems.push(newGem);
+      saveState();
+      openGemModal(newGem.id);
+    }
+
+    function saveGemChanges(id) {
+      const name = document.getElementById('editGemName').value.trim();
+      const description = document.getElementById('editGemDesc').value.trim();
+      const systemInstruction = document.getElementById('editGemInstruction').value.trim();
+      const gem = state.gems.find(g => g.id === id);
+      if (gem && name) {
+        gem.name = name;
+        gem.description = description;
+        gem.systemInstruction = systemInstruction || "You are a helpful assistant.";
+        gem.baseSourceIds = [];
+        const boxes = document.querySelectorAll('.gem-source-checkbox');
+        boxes.forEach(b => {
+          if (b.checked) gem.baseSourceIds.push(b.value);
+        });
+        saveState();
+        selectGemForEditing(id);
+      }
+    }
+
+    function deleteGem(id) {
+      if (!confirm("Are you sure you want to delete this custom Gem?")) return;
+      state.gems = state.gems.filter(g => g.id !== id);
+      state.chats.forEach(c => {
+        if (c.gemId === id) c.gemId = null;
+      });
+      saveState();
+      openGemModal();
+    }
+
+    function startChatWithGem(e, id) {
+      e.stopPropagation();
+      const gem = state.gems.find(g => g.id === id);
+      if (!gem) return;
+
+      const newChat = {
+        id: 'c_' + Date.now(),
+        title: `${gem.name} Workspace 💎`,
+        folderId: state.activeFolderId !== 'all' ? state.activeFolderId : null,
+        tags: [],
+        messages: [{ role: 'model', content: `Greetings! I am executing as the custom Gem **${gem.name}**. Feel free to query.`, timestamp: Date.now() }],
+        gemId: id,
+        attachedSourceIds: [],
+        model: 'gemini-3.1-flash-lite',
+        createdAt: Date.now(),
+        enableSearch: false,
+        canvasOpen: false,
+        canvasContent: "",
+        canvasLanguage: "markdown",
+        canvasTab: "preview"
+      };
+
+      state.chats.push(newChat);
+      state.activeChatId = newChat.id;
+      saveState();
+      renderChatsList();
+      renderActiveChat();
     }
 
     // Folders control actions
