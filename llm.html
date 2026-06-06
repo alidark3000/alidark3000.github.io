@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Studio Workspace</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Marked Markdown Parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <style>
+    /* Custom Scrollbar Styles */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    /* Markdown Styling Container */
+    .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #334155; padding-bottom: 0.25rem; }
+    .markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin-top: 0.875rem; margin-bottom: 0.5rem; }
+    .markdown-body h3 { font-size: 1.125rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; }
+    .markdown-body p { margin-bottom: 0.75rem; line-height: 1.625; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .markdown-body li { margin-bottom: 0.25rem; }
+    .markdown-body code { background-color: #1e293b; color: #fbbf24; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; }
+    .markdown-body pre { background-color: #020617; padding: 1rem; border-radius: 0.5rem; margin-top: 0.75rem; margin-bottom: 0.75rem; overflow-x: auto; border: 1px solid #1e293b; }
+    .markdown-body pre code { background-color: transparent; color: #f1f5f9; padding: 0; border-radius: 0; font-size: 0.875rem; display: block; }
+    .markdown-body blockquote { border-left: 4px solid #6366f1; padding-left: 1rem; font-style: italic; margin-top: 0.75rem; margin-bottom: 0.75rem; color: #94a3b8; }
+    .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; font-size: 0.875rem; }
+    .markdown-body th { background-color: #1e293b; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #e2e8f0; }
+    .markdown-body td { padding: 0.5rem 0.75rem; border-top: 1px solid #1e293b; color: #cbd5e1; }
+    .markdown-body a { color: #818cf8; text-decoration: underline; }
+    .markdown-body a:hover { color: #a5b4fc; }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans antialiased overflow-hidden select-none">
+
+  <!-- Main Container -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Sidebar 1: Global Notes Layout (Folders, Tags, Gems, Sources) -->
+    <div class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col flex-shrink-0">
+      <!-- App Identity -->
+      <div class="p-4 border-b border-slate-800/80 flex items-center justify-between">
+        <span class="flex items-center space-x-2 font-bold text-sm tracking-wide text-slate-100">
+          <i class="fa-solid fa-brain text-indigo-500 text-base"></i>
+          <span>GEMINI STUDIO</span>
+        </span>
+        <div id="apiKeyBadge"></div>
+      </div>
+
+      <!-- Navigation Lists (Scrollable) -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-6">
+        
+        <!-- Folders Section -->
+        <div>
+          <div class="flex items-center justify-between px-2 mb-2">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Folders</span>
+            <button onclick="promptAddFolder()" class="text-slate-500 hover:text-indigo-400 transition" title="Add Folder">
+              <i class="fa-solid fa-plus-circle text-xs"></i>
+            </button>
+          </div>
+          <div id="foldersList" class="space-y-0.5"></div>
+        </div>
+
+        <!-- Tags Section -->
+        <div>
+          <div class="flex items-center justify-between px-2 mb-2">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tags</span>
+          </div>
+          <div id="tagsList" class="space-y-0.5"></div>
+        </div>
+
+        <!-- Gems Section -->
+        <div>
+          <div class="flex items-center justify-between px-2 mb-2">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">My Gems</span>
+            <button onclick="openGemModal()" class="text-slate-500 hover:text-indigo-400 transition" title="Create Gem">
+              <i class="fa-solid fa-plus-circle text-xs"></i>
+            </button>
+          </div>
+          <div id="gemsList" class="space-y-0.5"></div>
+        </div>
+
+        <!-- Sources Section -->
+        <div>
+          <div class="flex items-center justify-between px-2 mb-2">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Knowledge Sources</span>
+            <button onclick="openManageSourcesModal()" class="text-slate-500 hover:text-indigo-400 transition" title="Manage Sources">
+              <i class="fa-solid fa-plus-circle text-xs"></i>
+            </button>
+          </div>
+          <div id="sourcesList" class="space-y-0.5"></div>
+        </div>
+
+      </div>
+
+      <!-- API Control footer -->
+      <div class="p-3 border-t border-slate-800 bg-slate-950/50">
+        <button onclick="openModal('apiKey')" class="w-full py-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs font-semibold text-slate-300 rounded-lg transition flex items-center justify-center space-x-1.5">
+          <i class="fa-solid fa-key text-amber-500"></i>
+          <span>Configure API Key</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sidebar 2: Chats/Notes List -->
+    <div class="w-72 bg-slate-900/60 border-r border-slate-800/80 flex flex-col flex-shrink-0">
+      <!-- Search and Quick Add -->
+      <div class="p-4 border-b border-slate-800/80 space-y-3">
+        <div class="relative">
+          <input type="text" id="chatSearchInput" oninput="renderChatsList()" placeholder="Search chats..." class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs focus:outline-none text-slate-200 transition" />
+        </div>
+        <button onclick="createNewChat()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-950/20 transition flex items-center justify-center space-x-1.5">
+          <i class="fa-solid fa-plus"></i>
+          <span>New Chat Note</span>
+        </button>
+      </div>
+
+      <!-- Chats Container (Scrollable) -->
+      <div id="chatsList" class="flex-1 overflow-y-auto py-2"></div>
+    </div>
+
+    <!-- Main Active Workspace Panel -->
+    <div id="chatWorkspace" class="flex-1 flex flex-col bg-slate-900 overflow-hidden">
+      <!-- Loaded dynamically via JS -->
+    </div>
+
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Modal 1: API Configuration -->
+  <div id="apiKeyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-key text-teal-400 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-100">Set Gemini API Key</h3>
+        </div>
+        <button onclick="closeModal('apiKey')" class="text-slate-400 hover:text-slate-200 transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Your key is saved locally inside your browser's private local storage, communicating securely directly with Google's API endpoints.
+        </p>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">Gemini Developer Key</label>
+          <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono" />
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button onclick="closeModal('apiKey')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
+          <button onclick="saveApiKey()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-semibold rounded-lg text-xs transition">Save Keys</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Source Management (Local Knowledge Documents) -->
+  <div id="manageSourcesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl p-6 flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-file-invoice text-indigo-500 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-100">Knowledge Base Sources</h3>
+        </div>
+        <button onclick="closeManageSourcesModal()" class="text-slate-400 hover:text-slate-200 transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="flex flex-1 overflow-hidden space-x-4 min-h-0">
+        <!-- Sources Directory Side -->
+        <div class="w-1/3 border-r border-slate-800 pr-4 flex flex-col min-h-0">
+          <button onclick="createNewSourceForm()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-bold rounded-lg text-xs mb-3 transition flex items-center justify-center space-x-1">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Source</span>
+          </button>
+          <div id="sourcesModalList" class="flex-1 overflow-y-auto space-y-2"></div>
+        </div>
+        <!-- Source Form Editor -->
+        <div id="sourceFormContainer" class="flex-1 flex flex-col min-h-0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Gems Management -->
+  <div id="gemModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl p-6 flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-gem text-indigo-500 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-100">Custom Gems Manager</h3>
+        </div>
+        <button onclick="closeGemModal()" class="text-slate-400 hover:text-slate-200 transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="flex flex-1 overflow-hidden space-x-4 min-h-0">
+        <!-- Gems Directory Side -->
+        <div class="w-1/3 border-r border-slate-800 pr-4 flex flex-col min-h-0">
+          <button onclick="createNewGemForm()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-bold rounded-lg text-xs mb-3 transition flex items-center justify-center space-x-1">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Gem</span>
+          </button>
+          <div id="gemModalList" class="flex-1 overflow-y-auto space-y-2"></div>
+        </div>
+        <!-- Gems Form Editor -->
+        <div id="gemFormContainer" class="flex-1 flex flex-col min-h-0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Chat Sources Checklist selector -->
+  <div id="chatSourcesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col max-h-[75vh]">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-file-circle-plus text-indigo-500 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-100">Attach Sources to Chat</h3>
+        </div>
+        <button onclick="closeChatSourcesModal()" class="text-slate-400 hover:text-slate-200 transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+        Select source documents to inject directly into the dynamic context queries of this conversation session.
+      </p>
+      <div id="sourcesChecklist" class="flex-1 overflow-y-auto space-y-2 mb-4"></div>
+      <div class="flex items-center justify-between border-t border-slate-800 pt-4">
+        <button onclick="closeChatSourcesModal(); openManageSourcesModal()" class="text-indigo-400 hover:text-indigo-300 text-xs font-semibold">
+          <i class="fa-solid fa-sliders mr-1"></i> Manage Sources
+        </button>
+        <button onclick="closeChatSourcesModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-semibold rounded-lg text-xs transition">
+          Apply Context
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS LOGIC SYSTEM -->
+  <script>
+    // Price breakdown per million tokens
+    const MODEL_PRICING = {
+      'gemini-1.5-flash': { name: 'Gemini 1.5 Flash', inputCost: 0.075 / 1000000, outputCost: 0.30 / 1000000 },
+      'gemini-1.5-pro': { name: 'Gemini 1.5 Pro', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 },
+      'gemini-2.0-flash': { name: 'Gemini 2.0 Flash', inputCost: 0.10 / 1000000, outputCost: 0.40 / 1000000 },
+      'gemini-2.5-flash': { name: 'Gemini 2.5 Flash', inputCost: 0.10 / 1000000, outputCost: 0.40 / 1000000 },
+      'gemini-2.5-pro': { name: 'Gemini 2.5 Pro', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 }
+    };
+
+    const DEFAULT_STATE = {
+      apiKey: '',
+      folders: [
+        { id: 'f1', name: 'Academic' },
+        { id: 'f2', name: 'Software Development' },
+        { id: 'f3', name: 'Guides' }
+      ],
+      gems: [
+        {
+          id: 'g1',
+          name: 'Academic Researcher',
+          description: 'Constructs responses strictly anchored back to attached sources.',
+          systemInstruction: 'You are Academic Researcher. Read all supplied source documents carefully. Provide complete analytical evaluations citing the exact content of materials. If materials do not specify answers, respond clarifying data boundaries.',
+          baseSourceIds: []
+        },
+        {
+          id: 'g2',
+          name: 'Optimizing Architect',
+          description: 'A programmer that audits, refactors, and clarifies codebase designs.',
+          systemInstruction: 'You are Optimizing Architect. Read user patterns or source scripts. Provide refactored, production-ready improvements annotating algorithmic logic adjustments step-by-step.',
+          baseSourceIds: []
+        }
+      ],
+      sources: [
+        {
+          id: 's1',
+          name: 'Markdown Writing Best-Practices',
+          content: 'Guidelines for writing:\n1. Organize topics structured with standard semantic Header depths (H1-H4).\n2. Format numeric procedures inside neat lists.\n3. Implement explicit syntax designations on all codeblocks.\n4. Avoid raw URLs; format custom text inline anchors.'
+        }
+      ],
+      chats: [
+        {
+          id: 'c1',
+          title: 'Welcome to Gemini Studio 🚀',
+          folderId: 'f3',
+          tags: ['tutorial', 'onboarding'],
+          messages: [
+            { role: 'user', content: 'What is this system workspace and how do I configure it?' },
+            { role: 'model', content: '### Welcome to Gemini Studio!\n\nThis application is a self-contained, notes-app style interface interfacing directly with Google AI Studio API services.\n\n**To set up your environment**:\n1. Open **Configure API Key** in the sidebar. Add your developer key.\n2. Organize discussions using **Folders** and custom **Tags** inside chats.\n3. **Query Documents**: Go to **Knowledge Sources** to upload reference documents. Attach them to any session for instant grounded querying.\n4. **Gems Presets**: Link system rules + baseline files together to launch specialized workflow chat presets instantly.\n\nAll costs are estimated dynamically! Let me know if you would like to run some prompts.' }
+          ],
+          gemId: null,
+          attachedSourceIds: ['s1'],
+          model: 'gemini-1.5-flash',
+          createdAt: Date.now()
+        }
+      ],
+      activeChatId: 'c1',
+      activeFolderId: 'all',
+      activeTag: 'all',
+      editingSourceId: null,
+      editingGemId: null,
+      isGenerating: false
+    };
+
+    let state = null;
+    let currentAbortController = null;
+
+    function initializeState() {
+      const saved = localStorage.getItem('gemini_studio_state');
+      if (saved) {
+        try {
+          state = JSON.parse(saved);
+          if (!state.folders) state.folders = [];
+          if (!state.gems) state.gems = [];
+          if (!state.sources) state.sources = [];
+          if (!state.chats) state.chats = [];
+          if (!state.activeFolderId) state.activeFolderId = 'all';
+          if (!state.activeTag) state.activeTag = 'all';
+          state.isGenerating = false;
+        } catch (e) {
+          state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        }
+      } else {
+        state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem('gemini_studio_state', JSON.stringify(state));
+    }
+
+    // Heuristic estimation: ~4 chars per token average
+    function estimateTokens(text) {
+      if (!text) return 0;
+      return Math.ceil(text.length / 4);
+    }
+
+    function calculateMessageCost(msg, model) {
+      const rate = MODEL_PRICING[model] || MODEL_PRICING['gemini-1.5-flash'];
+      const tokens = estimateTokens(msg.content);
+      return msg.role === 'user' ? tokens * rate.inputCost : tokens * rate.outputCost;
+    }
+
+    function calculateChatTotalCost(chat) {
+      if (!chat || !chat.messages) return 0;
+      const rate = MODEL_PRICING[chat.model || 'gemini-1.5-flash'] || MODEL_PRICING['gemini-1.5-flash'];
+      let total = 0;
+
+      // Extract system text
+      let systemText = "";
+      if (chat.gemId) {
+        const gem = state.gems.find(g => g.id === chat.gemId);
+        if (gem) systemText += gem.systemInstruction;
+      }
+      const sourceIds = [...(chat.attachedSourceIds || [])];
+      if (chat.gemId) {
+        const gem = state.gems.find(g => g.id === chat.gemId);
+        if (gem && gem.baseSourceIds) {
+          gem.baseSourceIds.forEach(id => {
+            if (!sourceIds.includes(id)) sourceIds.push(id);
+          });
+        }
+      }
+      sourceIds.forEach(id => {
+        const s = state.sources.find(src => src.id === id);
+        if (s) systemText += `\n${s.name}\n${s.content}`;
+      });
+
+      const baseSystemTokens = estimateTokens(systemText);
+
+      chat.messages.forEach(m => {
+        if (m.role === 'user') {
+          total += (estimateTokens(m.content) + baseSystemTokens) * rate.inputCost;
+        } else {
+          total += estimateTokens(m.content) * rate.outputCost;
+        }
+      });
+      return total;
+    }
+
+    // DOM Rendering Engine
+    function renderFolders() {
+      const container = document.getElementById('foldersList');
+      container.innerHTML = '';
+
+      // All item
+      const allBtn = document.createElement('button');
+      allBtn.className = `w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${state.activeFolderId === 'all' && state.activeTag === 'all' ? 'bg-indigo-600/10 text-indigo-400 font-bold border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`;
+      allBtn.innerHTML = `
+        <span class="flex items-center space-x-2">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>All Chats</span>
+        </span>
+        <span class="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${state.chats.length}</span>
+      `;
+      allBtn.onclick = () => {
+        state.activeFolderId = 'all';
+        state.activeTag = 'all';
+        renderFolders();
+        renderTags();
+        renderChatsList();
+      };
+      container.appendChild(allBtn);
+
+      // Folders
+      state.folders.forEach(f => {
+        const count = state.chats.filter(c => c.folderId === f.id).length;
+        const div = document.createElement('div');
+        div.className = 'group relative w-full';
+        const isSelected = state.activeFolderId === f.id;
+        div.innerHTML = `
+          <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-400 font-bold border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}">
+            <span class="flex items-center space-x-2 truncate">
+              <i class="fa-solid fa-folder text-yellow-500/80"></i>
+              <span class="truncate">${escapeHTML(f.name)}</span>
+            </span>
+            <div class="flex items-center space-x-1.5">
+              <span class="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${count}</span>
+              <span class="opacity-0 group-hover:opacity-100 transition hover:text-red-400 px-0.5" onclick="deleteFolder(event, '${f.id}')" title="Delete Folder">
+                <i class="fa-solid fa-trash"></i>
+              </span>
+            </div>
+          </button>
+        `;
+        div.querySelector('button').onclick = (e) => {
+          if (e.target.closest('[onclick*="deleteFolder"]')) return;
+          state.activeFolderId = f.id;
+          state.activeTag = 'all';
+          renderFolders();
+          renderTags();
+          renderChatsList();
+        };
+        container.appendChild(div);
+      });
+    }
+
+    function renderTags() {
+      const container = document.getElementById('tagsList');
+      container.innerHTML = '';
+
+      const tagsMap = {};
+      state.chats.forEach(c => {
+        if (c.tags) {
+          c.tags.forEach(t => {
+            const clean = t.toLowerCase().trim();
+            if (clean) tagsMap[clean] = (tagsMap[clean] || 0) + 1;
+          });
+        }
+      });
+
+      const tags = Object.keys(tagsMap).sort();
+      if (tags.length === 0) {
+        container.innerHTML = `<div class="text-[10px] text-slate-500 italic px-3 py-1">No tags active.</div>`;
+        return;
+      }
+
+      tags.forEach(tag => {
+        const isSelected = state.activeTag === tag;
+        const btn = document.createElement('button');
+        btn.className = `w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-400 font-bold border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`;
+        btn.innerHTML = `
+          <span class="flex items-center space-x-2 truncate">
+            <i class="fa-solid fa-hashtag text-teal-400"></i>
+            <span class="truncate">${escapeHTML(tag)}</span>
+          </span>
+          <span class="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${tagsMap[tag]}</span>
+        `;
+        btn.onclick = () => {
+          state.activeTag = tag;
+          state.activeFolderId = 'all';
+          renderFolders();
+          renderTags();
+          renderChatsList();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function renderGems() {
+      const container = document.getElementById('gemsList');
+      container.innerHTML = '';
+
+      state.gems.forEach(gem => {
+        const div = document.createElement('div');
+        div.className = 'group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition';
+        div.innerHTML = `
+          <button class="flex items-center space-x-2 truncate text-left flex-1" title="${escapeHTML(gem.description || '')}">
+            <i class="fa-solid fa-gem text-indigo-400"></i>
+            <span class="truncate">${escapeHTML(gem.name)}</span>
+          </button>
+          <div class="flex items-center space-x-1">
+            <button onclick="startChatWithGem(event, '${gem.id}')" title="Start Chat with Gem" class="opacity-0 group-hover:opacity-100 hover:text-emerald-400 px-1 transition">
+              <i class="fa-solid fa-play"></i>
+            </button>
+            <button onclick="openGemModal('${gem.id}')" title="Edit Gem" class="opacity-0 group-hover:opacity-100 hover:text-indigo-400 px-1 transition">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+        `;
+        div.querySelector('button').onclick = () => openGemModal(gem.id);
+        container.appendChild(div);
+      });
+
+      if (state.gems.length === 0) {
+        container.innerHTML = `<div class="text-[10px] text-slate-500 italic px-3 py-1">No custom Gems.</div>`;
+      }
+    }
+
+    function renderSources() {
+      const container = document.getElementById('sourcesList');
+      container.innerHTML = '';
+
+      state.sources.forEach(src => {
+        const div = document.createElement('div');
+        div.className = 'group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition';
+        div.innerHTML = `
+          <button class="flex items-center space-x-2 truncate text-left flex-1">
+            <i class="fa-solid fa-file-invoice text-amber-500/85"></i>
+            <span class="truncate">${escapeHTML(src.name)}</span>
+          </button>
+          <button onclick="openManageSourcesModal('${src.id}')" title="Edit Source" class="opacity-0 group-hover:opacity-100 hover:text-indigo-400 px-1 transition">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+        `;
+        div.querySelector('button').onclick = () => openManageSourcesModal(src.id);
+        container.appendChild(div);
+      });
+
+      if (state.sources.length === 0) {
+        container.innerHTML = `<div class="text-[10px] text-slate-500 italic px-3 py-1">No reference sources.</div>`;
+      }
+    }
+
+    function renderChatsList() {
+      const container = document.getElementById('chatsList');
+      container.innerHTML = '';
+
+      const query = document.getElementById('chatSearchInput').value.toLowerCase().trim();
+      let chats = [...state.chats];
+
+      if (query) {
+        chats = chats.filter(c => c.title.toLowerCase().includes(query) || 
+          c.messages.some(m => m.content.toLowerCase().includes(query)));
+      }
+      if (state.activeFolderId !== 'all') {
+        chats = chats.filter(c => c.folderId === state.activeFolderId);
+      }
+      if (state.activeTag !== 'all') {
+        chats = chats.filter(c => c.tags && c.tags.includes(state.activeTag));
+      }
+
+      chats.sort((a, b) => b.createdAt - a.createdAt);
+
+      if (chats.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center h-48 text-center px-4">
+            <i class="fa-solid fa-magnifying-glass text-slate-700 text-2xl mb-2"></i>
+            <p class="text-xs text-slate-500">No matching conversations found.</p>
+          </div>
+        `;
+        return;
+      }
+
+      chats.forEach(chat => {
+        const isSelected = state.activeChatId === chat.id;
+        const lastMsg = chat.messages.length > 0 ? chat.messages[chat.messages.length - 1].content : '';
+        const dateStr = new Date(chat.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+        let folderBadge = "";
+        if (chat.folderId) {
+          const folder = state.folders.find(f => f.id === chat.folderId);
+          if (folder) {
+            folderBadge = `<span class="bg-yellow-500/10 border border-yellow-500/10 text-yellow-500 text-[9px] px-1.5 py-0.5 rounded font-medium"><i class="fa-solid fa-folder text-[8px] mr-1"></i>${escapeHTML(folder.name)}</span>`;
+          }
+        }
+
+        let tagsHTML = "";
+        if (chat.tags) {
+          chat.tags.forEach(t => {
+            tagsHTML += `<span class="bg-slate-800 text-teal-400 text-[9px] px-1.5 py-0.5 rounded font-medium border border-teal-500/10">#${escapeHTML(t)}</span>`;
+          });
+        }
+
+        const div = document.createElement('div');
+        div.className = `group relative p-3 mx-2 my-1.5 rounded-xl border transition cursor-pointer flex flex-col space-y-1.5 ${isSelected ? 'bg-slate-800/80 border-indigo-500/50 shadow-lg' : 'bg-slate-900/30 border-slate-900 hover:bg-slate-850/40'}`;
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <h4 class="font-bold text-xs text-slate-200 truncate flex-1 group-hover:text-indigo-400 transition pr-2">${escapeHTML(chat.title || 'Untitled Note')}</h4>
+            <span class="text-[9px] text-slate-500 font-mono flex-shrink-0">${dateStr}</span>
+          </div>
+          <p class="text-[11px] text-slate-400 line-clamp-2 h-8 leading-relaxed">${escapeHTML(lastMsg) || '<span class="italic text-slate-600">Blank note discussion</span>'}</p>
+          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 min-h-[22px]">
+            <div class="flex flex-wrap gap-1 items-center">
+              ${folderBadge}
+              ${tagsHTML}
+            </div>
+            <button onclick="deleteChat(event, '${chat.id}')" title="Delete Note" class="opacity-0 group-hover:opacity-100 hover:text-red-400 text-xs px-1 py-0.5 rounded transition">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+        div.onclick = (e) => {
+          if (e.target.closest('button')) return;
+          state.activeChatId = chat.id;
+          renderActiveChat();
+          renderChatsList();
+        };
+        container.appendChild(div);
+      });
+    }
+
+    function renderActiveChat() {
+      const container = document.getElementById('chatWorkspace');
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+
+      if (!chat) {
+        container.innerHTML = getEmptyWorkspaceHTML();
+        return;
+      }
+
+      container.innerHTML = getChatWorkspaceHTML(chat);
+      renderMessages(chat);
+      updateCostMeter(chat);
+    }
+
+    function getEmptyWorkspaceHTML() {
+      return `
+        <div class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-950/20 select-none">
+          <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/10 flex items-center justify-center mb-6 shadow-xl shadow-indigo-950/20">
+            <i class="fa-solid fa-book-open text-2xl text-indigo-400"></i>
+          </div>
+          <h2 class="text-lg font-bold text-slate-200 mb-1.5">No Conversation Loaded</h2>
+          <p class="text-slate-400 text-xs max-w-sm mb-6 leading-relaxed">
+            Select a notes chat session from the list, or launch a new workspace to start configuring models and querying documents.
+          </p>
+          <button onclick="createNewChat()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition">
+            Create New Note Chat
+          </button>
+        </div>
+      `;
+    }
+
+    function getChatWorkspaceHTML(chat) {
+      let folderOptions = `<option value="">No Folder</option>`;
+      state.folders.forEach(f => {
+        folderOptions += `<option value="${f.id}" ${chat.folderId === f.id ? 'selected' : ''}>${escapeHTML(f.name)}</option>`;
+      });
+
+      let modelOptions = "";
+      Object.keys(MODEL_PRICING).forEach(m => {
+        modelOptions += `<option value="${m}" ${chat.model === m ? 'selected' : ''}>${MODEL_PRICING[m].name}</option>`;
+      });
+
+      let gemOptions = `<option value="">No Gem (Standard assistant)</option>`;
+      state.gems.forEach(g => {
+        gemOptions += `<option value="${g.id}" ${chat.gemId === g.id ? 'selected' : ''}>${escapeHTML(g.name)}</option>`;
+      });
+
+      let tagsHTML = "";
+      if (chat.tags) {
+        chat.tags.forEach(t => {
+          tagsHTML += `
+            <span class="flex items-center bg-slate-800/80 text-teal-400 text-[10px] px-2 py-0.5 rounded-full border border-teal-500/15 space-x-1">
+              <span>#${escapeHTML(t)}</span>
+              <button onclick="removeTagFromChat('${t}')" class="text-slate-500 hover:text-slate-300 ml-1">
+                <i class="fa-solid fa-times-circle"></i>
+              </button>
+            </span>
+          `;
+        });
+      }
+
+      return `
+        <div class="flex flex-col h-full overflow-hidden">
+          <!-- Chat Header metadata controls -->
+          <div class="bg-slate-900 border-b border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <input type="text" id="chatTitleInput" value="${escapeHTML(chat.title || '')}" onblur="saveChatTitle()" onkeydown="handleChatTitleKeyDown(event)" class="flex-1 bg-transparent text-slate-100 font-extrabold text-base focus:outline-none focus:bg-slate-800/40 px-2 py-1 rounded border border-transparent focus:border-indigo-500/40 transition truncate mr-4" />
+              
+              <div class="flex items-center space-x-3 flex-shrink-0">
+                <button onclick="openChatSourcesModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-slate-750 text-xs font-semibold text-slate-300 rounded-lg transition" title="Attach knowledge sources to this chat note">
+                  <i class="fa-solid fa-file-invoice text-indigo-400"></i>
+                  <span>Sources (${chat.attachedSourceIds ? chat.attachedSourceIds.length : 0})</span>
+                </button>
+                <div class="flex flex-col items-end" title="Accumulated approximate cost of input context queries and generated outputs. Rates estimated per character counts.">
+                  <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Estimated Cost</span>
+                  <span id="chatTotalCostSpan" class="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">$0.000000</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Parameters Grid line -->
+            <div class="flex flex-wrap gap-2 items-center justify-between text-xs pt-1">
+              <div class="flex flex-wrap gap-2 items-center">
+                <!-- Dropdown Model -->
+                <div class="flex items-center space-x-1 bg-slate-950/60 border border-slate-800 px-2.5 py-1 rounded-lg">
+                  <span class="text-[9px] text-slate-500 font-bold">MODEL:</span>
+                  <select onchange="updateChatModel(this.value)" class="bg-transparent text-slate-300 font-bold focus:outline-none cursor-pointer">
+                    ${modelOptions}
+                  </select>
+                </div>
+                <!-- Dropdown Gem -->
+                <div class="flex items-center space-x-1 bg-slate-950/60 border border-slate-800 px-2.5 py-1 rounded-lg">
+                  <span class="text-[9px] text-indigo-400 font-bold"><i class="fa-solid fa-gem mr-1"></i>GEM:</span>
+                  <select onchange="updateChatGem(this.value)" class="bg-transparent text-slate-300 font-bold focus:outline-none cursor-pointer">
+                    ${gemOptions}
+                  </select>
+                </div>
+                <!-- Dropdown Folder -->
+                <div class="flex items-center space-x-1 bg-slate-950/60 border border-slate-800 px-2.5 py-1 rounded-lg">
+                  <span class="text-[9px] text-yellow-500 font-bold"><i class="fa-solid fa-folder mr-1"></i>FOLDER:</span>
+                  <select onchange="updateChatFolder(this.value)" class="bg-transparent text-slate-300 font-bold focus:outline-none cursor-pointer">
+                    ${folderOptions}
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tags container list -->
+              <div class="flex items-center space-x-1.5">
+                <div id="chatTagsContainer" class="flex flex-wrap gap-1">${tagsHTML}</div>
+                <button onclick="promptAddTagToChat()" class="px-2 py-1 bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-full text-[10px] transition"><i class="fa-solid fa-plus text-[8px] mr-1"></i>Tag</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Messages scroll section -->
+          <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-5"></div>
+
+          <!-- Bottom Prompt Input -->
+          <div class="p-4 bg-slate-900 border-t border-slate-800 space-y-2">
+            <div class="relative flex items-end bg-slate-950/50 border border-slate-800 focus-within:border-indigo-500 hover:border-slate-700 rounded-2xl p-2 transition">
+              <textarea id="chatInput" onkeydown="handleChatInputKeyDown(event)" oninput="autoGrowTextArea()" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-200 placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
+              <div class="absolute right-3 bottom-2.5 flex items-center space-x-2">
+                <label class="p-2 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
+                  <i class="fa-solid fa-paperclip"></i>
+                  <input type="file" id="tempFileInput" class="hidden" onchange="handleTempFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
+                </label>
+                <button id="sendBtn" onclick="sendQuery()" class="p-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition">
+                  <i class="fa-solid fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+            <!-- Dynamic context visual helper line -->
+            <div id="activeAttachedSourcesBar" class="flex flex-wrap gap-1.5 text-[10px] items-center"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMessages(chat) {
+      const container = document.getElementById('messagesContainer');
+      container.innerHTML = '';
+
+      if (chat.messages.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center h-full text-slate-500 space-y-2 py-16">
+            <i class="fa-solid fa-comments text-3xl opacity-40"></i>
+            <p class="text-xs">Discussion empty. Send a prompt to query models.</p>
+          </div>
+        `;
+        return;
+      }
+
+      chat.messages.forEach((msg) => {
+        const isUser = msg.role === 'user';
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `flex flex-col mb-4 ${isUser ? 'items-end' : 'items-start'}`;
+
+        const cost = calculateMessageCost(msg, chat.model || 'gemini-1.5-flash');
+        const costStr = cost > 0 ? `• Est. $${cost.toFixed(6)}` : '';
+        const roleLabel = isUser ? 'You' : getSenderName(chat);
+
+        const renderedText = isUser ? escapeHTML(msg.content) : marked.parse(msg.content);
+
+        msgDiv.innerHTML = `
+          <div class="max-w-[85%] flex flex-col">
+            <div class="flex items-center space-x-2 text-[10px] text-slate-500 mb-1 px-1.5 ${isUser ? 'justify-end' : 'justify-start'}">
+              <span class="font-bold text-slate-300">${roleLabel}</span>
+              <span>•</span>
+              <span>${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              ${costStr ? `<span>•</span><span class="text-indigo-400 font-semibold">${costStr}</span>` : ''}
+            </div>
+            <div class="p-4 rounded-2xl ${isUser ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg' : 'bg-slate-800 border border-slate-700/80 text-slate-100 rounded-tl-none'}">
+              <div class="markdown-body text-sm leading-relaxed">${renderedText}</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(msgDiv);
+      });
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updateCostMeter(chat) {
+      const span = document.getElementById('chatTotalCostSpan');
+      if (span) {
+        span.innerText = `$${calculateChatTotalCost(chat).toFixed(6)}`;
+      }
+
+      // Render bottom context bar
+      const sourcesBar = document.getElementById('activeAttachedSourcesBar');
+      if (sourcesBar) {
+        sourcesBar.innerHTML = '';
+        const activeIds = new Set(chat.attachedSourceIds || []);
+        if (chat.gemId) {
+          const gem = state.gems.find(g => g.id === chat.gemId);
+          if (gem && gem.baseSourceIds) {
+            gem.baseSourceIds.forEach(id => activeIds.add(id));
+          }
+        }
+
+        if (activeIds.size > 0) {
+          sourcesBar.innerHTML = `<span class="font-bold text-slate-500 text-[9px] uppercase tracking-wider mr-1">Active Sources context:</span>`;
+          activeIds.forEach(id => {
+            const s = state.sources.find(src => src.id === id);
+            if (s) {
+              sourcesBar.innerHTML += `
+                <span class="bg-slate-950 border border-slate-800 text-slate-300 px-2 py-0.5 rounded-lg flex items-center space-x-1">
+                  <i class="fa-solid fa-file-invoice text-amber-500/80 text-[8px]"></i>
+                  <span>${escapeHTML(s.name)}</span>
+                </span>
+              `;
+            }
+          });
+        }
+      }
+    }
+
+    // Input handlers
+    function autoGrowTextArea() {
+      const el = document.getElementById('chatInput');
+      if (el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      }
+    }
+
+    function handleChatInputKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendQuery();
+      }
+    }
+
+    // API query Execution
+    async function sendQuery() {
+      const input = document.getElementById('chatInput');
+      if (!input) return;
+      const text = input.value.trim();
+
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (!chat) return;
+
+      if (state.isGenerating) {
+        if (currentAbortController) {
+          currentAbortController.abort();
+        }
+        state.isGenerating = false;
+        updateSendButtonState();
+        return;
+      }
+
+      if (!text) return;
+
+      if (!state.apiKey) {
+        alert("Please set up your Google AI Studio API key to begin query processing.");
+        openModal('apiKey');
+        return;
+      }
+
+      // Add user log
+      const userMsg = { role: 'user', content: text, timestamp: Date.now() };
+      chat.messages.push(userMsg);
+
+      // Clean inputs
+      input.value = '';
+      input.style.height = 'auto';
+
+      // Temporary assistant stream container
+      const assistantMsg = { role: 'model', content: '', timestamp: Date.now() };
+      chat.messages.push(assistantMsg);
+
+      state.isGenerating = true;
+      saveState();
+      renderActiveChat();
+      updateSendButtonState();
+
+      const container = document.getElementById('messagesContainer');
+      const activeBubble = container.lastElementChild.querySelector('.markdown-body');
+
+      // System Instruction Setup
+      let systemPrompt = "You are a highly analytical, objective and helpful assistant.";
+      if (chat.gemId) {
+        const gem = state.gems.find(g => g.id === chat.gemId);
+        if (gem) systemPrompt = gem.systemInstruction;
+      }
+
+      // Grounding context assemblies
+      const mergedSourceIds = new Set(chat.attachedSourceIds || []);
+      if (chat.gemId) {
+        const gem = state.gems.find(g => g.id === chat.gemId);
+        if (gem && gem.baseSourceIds) {
+          gem.baseSourceIds.forEach(id => mergedSourceIds.add(id));
+        }
+      }
+
+      if (mergedSourceIds.size > 0) {
+        systemPrompt += "\n\n=== GROUNDING REFERENCE DOCUMENTS ===\n";
+        mergedSourceIds.forEach(id => {
+          const s = state.sources.find(src => src.id === id);
+          if (s) {
+            systemPrompt += `\nDOCUMENT NAME: ${s.name}\nCONTENT:\n${s.content}\n--- END ---\n`;
+          }
+        });
+        systemPrompt += "\nUse historical references explicitly. Anchor answers securely back to provided contexts. Avoid assumptions.";
+      }
+
+      // History mapping
+      const history = [];
+      chat.messages.slice(0, -1).forEach(m => {
+        history.push({
+          role: m.role,
+          parts: [{ text: m.content }]
+        });
+      });
+
+      const payload = {
+        contents: history,
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        generationConfig: {
+          temperature: 0.35,
+          maxOutputTokens: 2500
+        }
+      };
+
+      const modelName = chat.model || 'gemini-1.5-flash';
+      // streamGenerateContent alt=sse is native stream for Google endpoints
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${state.apiKey}`;
+
+      try {
+        currentAbortController = new AbortController();
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: currentAbortController.signal
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || 'Network endpoint response error.');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (state.isGenerating) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Hold incomplete chunk
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+
+            if (trimmed.startsWith('data:')) {
+              const dataStr = trimmed.substring(5).trim();
+              try {
+                const json = JSON.parse(dataStr);
+                const chunkText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (chunkText) {
+                  assistantMsg.content += chunkText;
+                  activeBubble.innerHTML = marked.parse(assistantMsg.content);
+                  container.scrollTop = container.scrollHeight;
+                }
+              } catch (e) {
+                // Buffer JSON parsing failed; wait for incoming parts
+              }
+            }
+          }
+        }
+
+        state.isGenerating = false;
+        saveState();
+        renderActiveChat();
+        renderChatsList();
+        updateSendButtonState();
+
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('Stream request terminated.');
+        } else {
+          console.error(err);
+          assistantMsg.content = `\n\n*Connection Error: Failed to complete query processing. details: ${err.message}*`;
+          renderActiveChat();
+        }
+        state.isGenerating = false;
+        saveState();
+        updateSendButtonState();
+      }
+    }
+
+    function updateSendButtonState() {
+      const sendBtn = document.getElementById('sendBtn');
+      if (!sendBtn) return;
+      if (state.isGenerating) {
+        sendBtn.innerHTML = `<i class="fa-solid fa-stop text-red-400"></i>`;
+        sendBtn.title = "Stop Generating";
+        sendBtn.className = "p-2 bg-red-950/40 border border-red-500/20 text-white rounded-lg hover:bg-red-900/40 transition font-semibold text-xs flex items-center justify-center";
+      } else {
+        sendBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`;
+        sendBtn.title = "Send Query";
+        sendBtn.className = "p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition font-semibold text-xs flex items-center justify-center";
+      }
+    }
+
+    // Modal Control wrappers
+    function openModal(id) {
+      document.getElementById(id + 'Modal').classList.remove('hidden');
+      if (id === 'apiKey') {
+        document.getElementById('apiKeyInput').value = state.apiKey || '';
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id + 'Modal').classList.add('hidden');
+    }
+
+    function saveApiKey() {
+      state.apiKey = document.getElementById('apiKeyInput').value.trim();
+      saveState();
+      closeModal('apiKey');
+      updateApiKeyStatus();
+    }
+
+    function updateApiKeyStatus() {
+      const el = document.getElementById('apiKeyBadge');
+      if (!el) return;
+      if (state.apiKey) {
+        el.innerHTML = `<span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-400 rounded-full flex items-center space-x-1 cursor-pointer" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Active</span></span>`;
+      } else {
+        el.innerHTML = `<span class="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-[9px] font-bold text-rose-400 rounded-full flex items-center space-x-1 cursor-pointer hover:bg-rose-500/25 transition" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span><span>Key Missing</span></span>`;
+      }
+    }
+
+    // Sources Local Document Logic
+    function openManageSourcesModal(selectedId = null) {
+      state.editingSourceId = selectedId || (state.sources.length > 0 ? state.sources[0].id : null);
+      document.getElementById('manageSourcesModal').classList.remove('hidden');
+      renderManageSourcesModalList();
+      if (state.editingSourceId) {
+        selectSourceForEditing(state.editingSourceId);
+      } else {
+        createNewSourceForm();
+      }
+    }
+
+    function closeManageSourcesModal() {
+      document.getElementById('manageSourcesModal').classList.add('hidden');
+      renderSources();
+      renderActiveChat();
+    }
+
+    function renderManageSourcesModalList() {
+      const container = document.getElementById('sourcesModalList');
+      container.innerHTML = '';
+      state.sources.forEach(s => {
+        const btn = document.createElement('button');
+        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingSourceId === s.id ? 'bg-indigo-950/40 border-indigo-500 text-indigo-300' : 'bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800'}`;
+        btn.innerHTML = `<i class="fa-solid fa-file-lines mr-1.5 text-amber-500/80"></i>${escapeHTML(s.name)}`;
+        btn.onclick = () => selectSourceForEditing(s.id);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectSourceForEditing(id) {
+      state.editingSourceId = id;
+      renderManageSourcesModalList();
+      const s = state.sources.find(src => src.id === id);
+      const container = document.getElementById('sourceFormContainer');
+      if (!s) return;
+
+      container.innerHTML = `
+        <div class="flex-1 flex flex-col space-y-3 min-h-0">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Source Name</label>
+            <input type="text" id="editSourceName" value="${escapeHTML(s.name)}" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+          </div>
+          <div class="flex-1 flex flex-col min-h-0">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
+            <textarea id="editSourceContent" class="flex-1 w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto">${escapeHTML(s.content)}</textarea>
+          </div>
+          <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+            <button onclick="deleteSource('${s.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete</button>
+            <div class="flex space-x-2">
+              <label class="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 font-bold rounded-lg text-xs cursor-pointer flex items-center space-x-1">
+                <i class="fa-solid fa-upload"></i> <span>Import File</span>
+                <input type="file" id="sourceFileInput" class="hidden" onchange="handleSourceFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
+              </label>
+              <button onclick="saveSourceChanges('${s.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Save Document</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function createNewSourceForm() {
+      state.editingSourceId = 'new';
+      renderManageSourcesModalList();
+      const container = document.getElementById('sourceFormContainer');
+      container.innerHTML = `
+        <div class="flex-1 flex flex-col space-y-3 min-h-0">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Source Title</label>
+            <input type="text" id="editSourceName" placeholder="e.g. Project Specifications" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+          </div>
+          <div class="flex-1 flex flex-col min-h-0">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
+            <textarea id="editSourceContent" placeholder="Paste guidelines or material logs..." class="flex-1 w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto"></textarea>
+          </div>
+          <div class="flex justify-end pt-3 border-t border-slate-800">
+            <button onclick="saveNewSource()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Create Source</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function saveNewSource() {
+      const name = document.getElementById('editSourceName').value.trim();
+      const content = document.getElementById('editSourceContent').value.trim();
+      if (!name || !content) {
+        alert("Please specify a document title and context block.");
+        return;
+      }
+      const newSrc = { id: 's_' + Date.now(), name, content };
+      state.sources.push(newSrc);
+      saveState();
+      openManageSourcesModal(newSrc.id);
+    }
+
+    function saveSourceChanges(id) {
+      const name = document.getElementById('editSourceName').value.trim();
+      const content = document.getElementById('editSourceContent').value.trim();
+      const src = state.sources.find(s => s.id === id);
+      if (src && name && content) {
+        src.name = name;
+        src.content = content;
+        saveState();
+        selectSourceForEditing(id);
+      }
+    }
+
+    function deleteSource(id) {
+      if (!confirm("Are you sure you want to delete this source? This removes its reference context from all conversations.")) return;
+      state.sources = state.sources.filter(s => s.id !== id);
+      state.chats.forEach(c => {
+        if (c.attachedSourceIds) c.attachedSourceIds = c.attachedSourceIds.filter(sid => sid !== id);
+      });
+      state.gems.forEach(g => {
+        if (g.baseSourceIds) g.baseSourceIds = g.baseSourceIds.filter(sid => sid !== id);
+      });
+      saveState();
+      openManageSourcesModal();
+    }
+
+    function handleSourceFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('editSourceName').value = file.name;
+        document.getElementById('editSourceContent').value = evt.target.result;
+      }
+      reader.readAsText(file);
+    }
+
+    // Temporary inline files uploader
+    function handleTempFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const newSrc = { id: 's_' + Date.now(), name: file.name, content: evt.target.result };
+        state.sources.push(newSrc);
+        const chat = state.chats.find(c => c.id === state.activeChatId);
+        if (chat) {
+          if (!chat.attachedSourceIds) chat.attachedSourceIds = [];
+          chat.attachedSourceIds.push(newSrc.id);
+        }
+        saveState();
+        renderActiveChat();
+        renderSources();
+        alert(`Grounded Document "${file.name}" imported and linked directly to this workspace context!`);
+      }
+      reader.readAsText(file);
+    }
+
+    // Chat Grounding checklists
+    function openChatSourcesModal() {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (!chat) return;
+
+      const container = document.getElementById('sourcesChecklist');
+      container.innerHTML = '';
+
+      if (state.sources.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-6 text-slate-500">
+            <p class="text-xs italic mb-3">No sources are currently defined in the workspace database.</p>
+          </div>
+        `;
+      } else {
+        state.sources.forEach(s => {
+          const isChecked = chat.attachedSourceIds && chat.attachedSourceIds.includes(s.id);
+          const div = document.createElement('label');
+          div.className = "flex items-center justify-between p-3 bg-slate-800/40 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition";
+          div.innerHTML = `
+            <div class="flex items-center space-x-3 truncate">
+              <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="chat-source-checkbox rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900" />
+              <div class="flex flex-col truncate">
+                <span class="text-xs font-bold text-slate-200">${escapeHTML(s.name)}</span>
+                <span class="text-[9px] text-slate-400 truncate mt-0.5">${escapeHTML(s.content.substring(0, 90))}...</span>
+              </div>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      }
+      document.getElementById('chatSourcesModal').classList.remove('hidden');
+    }
+
+    function closeChatSourcesModal() {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        const checked = [];
+        document.querySelectorAll('.chat-source-checkbox').forEach(box => {
+          if (box.checked) checked.push(box.value);
+        });
+        chat.attachedSourceIds = checked;
+        saveState();
+        renderActiveChat();
+      }
+      document.getElementById('chatSourcesModal').classList.add('hidden');
+    }
+
+    // Gems Controls logic
+    function openGemModal(selectedId = null) {
+      state.editingGemId = selectedId || (state.gems.length > 0 ? state.gems[0].id : null);
+      document.getElementById('gemModal').classList.remove('hidden');
+      renderGemModalList();
+      if (state.editingGemId) {
+        selectGemForEditing(state.editingGemId);
+      } else {
+        createNewGemForm();
+      }
+    }
+
+    function closeGemModal() {
+      document.getElementById('gemModal').classList.add('hidden');
+      renderGems();
+      renderActiveChat();
+    }
+
+    function renderGemModalList() {
+      const container = document.getElementById('gemModalList');
+      container.innerHTML = '';
+      state.gems.forEach(g => {
+        const btn = document.createElement('button');
+        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-950/40 border-indigo-500 text-indigo-300' : 'bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800'}`;
+        btn.innerHTML = `<i class="fa-solid fa-gem mr-1.5 text-indigo-400"></i>${escapeHTML(g.name)}`;
+        btn.onclick = () => selectGemForEditing(g.id);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectGemForEditing(id) {
+      state.editingGemId = id;
+      renderGemModalList();
+      const gem = state.gems.find(g => g.id === id);
+      const container = document.getElementById('gemFormContainer');
+      if (!gem) return;
+
+      let sourceHTML = "";
+      state.sources.forEach(s => {
+        const isChecked = gem.baseSourceIds && gem.baseSourceIds.includes(s.id);
+        sourceHTML += `
+          <label class="flex items-center space-x-2 p-2 bg-slate-800/40 hover:bg-slate-800 rounded-lg cursor-pointer transition">
+            <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="gem-source-checkbox rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <span class="text-xs text-slate-300 truncate">${escapeHTML(s.name)}</span>
+          </label>
+        `;
+      });
+
+      if (state.sources.length === 0) {
+        sourceHTML = `<div class="text-[11px] text-slate-500 italic">No workspace sources. Link custom sources to associate context files with this Gem.</div>`;
+      }
+
+      container.innerHTML = `
+        <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <input type="text" id="editGemName" value="${escapeHTML(gem.name)}" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gem Mission Profile Description</label>
+            <input type="text" id="editGemDesc" value="${escapeHTML(gem.description || '')}" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behaviors</label>
+            <textarea id="editGemInstruction" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans">${escapeHTML(gem.systemInstruction)}</textarea>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <div class="grid grid-cols-1 gap-2 border border-slate-800 p-2.5 rounded-lg bg-slate-950/40 max-h-28 overflow-y-auto">
+              ${sourceHTML}
+            </div>
+          </div>
+          <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+            <button onclick="deleteGem('${gem.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete Gem</button>
+            <button onclick="saveGemChanges('${gem.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Save Gem</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function createNewGemForm() {
+      state.editingGemId = 'new';
+      renderGemModalList();
+      const container = document.getElementById('gemFormContainer');
+
+      let sourceHTML = "";
+      state.sources.forEach(s => {
+        sourceHTML += `
+          <label class="flex items-center space-x-2 p-2 bg-slate-800/40 hover:bg-slate-800 rounded-lg cursor-pointer transition">
+            <input type="checkbox" value="${s.id}" class="gem-source-checkbox rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <span class="text-xs text-slate-300 truncate">${escapeHTML(s.name)}</span>
+          </label>
+        `;
+      });
+
+      if (state.sources.length === 0) {
+        sourceHTML = `<div class="text-[11px] text-slate-500 italic">No workspace sources defined.</div>`;
+      }
+
+      container.innerHTML = `
+        <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <input type="text" id="editGemName" placeholder="e.g. Copywriter, Code Optimizer" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Mission Profile Description</label>
+            <input type="text" id="editGemDesc" placeholder="Helpful summary statement..." class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behavior Profile</label>
+            <textarea id="editGemInstruction" placeholder="You are an elegant assistant..." class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans"></textarea>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <div class="grid grid-cols-1 gap-2 border border-slate-800 p-2.5 rounded-lg bg-slate-950/40 max-h-28 overflow-y-auto">
+              ${sourceHTML}
+            </div>
+          </div>
+          <div class="flex justify-end border-t border-slate-800 pt-3">
+            <button onclick="saveNewGem()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Build Gem</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function saveNewGem() {
+      const name = document.getElementById('editGemName').value.trim();
+      const description = document.getElementById('editGemDesc').value.trim();
+      const systemInstruction = document.getElementById('editGemInstruction').value.trim();
+      if (!name) {
+        alert("Please set a name for your Gem.");
+        return;
+      }
+      const boxes = document.querySelectorAll('.gem-source-checkbox');
+      const baseSourceIds = [];
+      boxes.forEach(b => {
+        if (b.checked) baseSourceIds.push(b.value);
+      });
+
+      const newGem = {
+        id: 'gem_' + Date.now(),
+        name,
+        description,
+        systemInstruction: systemInstruction || "You are a helpful assistant.",
+        baseSourceIds
+      };
+      state.gems.push(newGem);
+      saveState();
+      openGemModal(newGem.id);
+    }
+
+    function saveGemChanges(id) {
+      const name = document.getElementById('editGemName').value.trim();
+      const description = document.getElementById('editGemDesc').value.trim();
+      const systemInstruction = document.getElementById('editGemInstruction').value.trim();
+      const gem = state.gems.find(g => g.id === id);
+      if (gem && name) {
+        gem.name = name;
+        gem.description = description;
+        gem.systemInstruction = systemInstruction || "You are a helpful assistant.";
+        const boxes = document.querySelectorAll('.gem-source-checkbox');
+        const baseSourceIds = [];
+        boxes.forEach(b => {
+          if (b.checked) baseSourceIds.push(b.value);
+        });
+        gem.baseSourceIds = baseSourceIds;
+        saveState();
+        selectGemForEditing(id);
+      }
+    }
+
+    function deleteGem(id) {
+      if (!confirm("Are you sure you want to delete this custom Gem?")) return;
+      state.gems = state.gems.filter(g => g.id !== id);
+      state.chats.forEach(c => {
+        if (c.gemId === id) c.gemId = null;
+      });
+      saveState();
+      openGemModal();
+    }
+
+    function startChatWithGem(e, id) {
+      e.stopPropagation();
+      const gem = state.gems.find(g => g.id === id);
+      if (!gem) return;
+
+      const newChat = {
+        id: 'c_' + Date.now(),
+        title: `${gem.name} Workspace 💎`,
+        folderId: state.activeFolderId !== 'all' ? state.activeFolderId : null,
+        tags: [],
+        messages: [{ role: 'model', content: `Greetings! I am executing as the custom Gem **${gem.name}**. Feel free to query.`, timestamp: Date.now() }],
+        gemId: id,
+        attachedSourceIds: [],
+        model: 'gemini-1.5-flash',
+        createdAt: Date.now()
+      };
+
+      state.chats.push(newChat);
+      state.activeChatId = newChat.id;
+      saveState();
+      renderChatsList();
+      renderActiveChat();
+    }
+
+    // Folders control actions
+    function promptAddFolder() {
+      const name = prompt("Enter a name for the new folder folder:");
+      if (!name || !name.trim()) return;
+      const f = { id: 'f_' + Date.now(), name: name.trim() };
+      state.folders.push(f);
+      saveState();
+      renderFolders();
+      renderActiveChat();
+    }
+
+    function deleteFolder(e, id) {
+      e.stopPropagation();
+      if (!confirm("Are you sure you want to delete this folder? Chat logs inside will be preserved under 'All Chats'.")) return;
+      state.folders = state.folders.filter(f => f.id !== id);
+      state.chats.forEach(c => {
+        if (c.folderId === id) c.folderId = null;
+      });
+      if (state.activeFolderId === id) state.activeFolderId = 'all';
+      saveState();
+      renderFolders();
+      renderChatsList();
+      renderActiveChat();
+    }
+
+    // Chat Metadata Modifications
+    function saveChatTitle() {
+      const el = document.getElementById('chatTitleInput');
+      if (!el) return;
+      const title = el.value.trim();
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat && title && title !== chat.title) {
+        chat.title = title;
+        saveState();
+        renderChatsList();
+      }
+    }
+
+    function handleChatTitleKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.target.blur();
+      }
+    }
+
+    function updateChatModel(model) {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.model = model;
+        saveState();
+        updateCostMeter(chat);
+      }
+    }
+
+    function updateChatGem(gemId) {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.gemId = gemId || null;
+        saveState();
+        renderActiveChat();
+      }
+    }
+
+    function updateChatFolder(folderId) {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.folderId = folderId || null;
+        saveState();
+        renderFolders();
+        renderChatsList();
+      }
+    }
+
+    function promptAddTagToChat() {
+      const t = prompt("Specify tag parameter:");
+      if (!t || !t.trim()) return;
+      const clean = t.trim().toLowerCase().replace(/#/g, '');
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        if (!chat.tags) chat.tags = [];
+        if (!chat.tags.includes(clean)) {
+          chat.tags.push(clean);
+          saveState();
+          renderActiveChat();
+          renderTags();
+          renderChatsList();
+        }
+      }
+    }
+
+    function removeTagFromChat(tag) {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.tags = chat.tags.filter(t => t !== tag);
+        saveState();
+        renderActiveChat();
+        renderTags();
+        renderChatsList();
+      }
+    }
+
+    function createNewChat() {
+      const newChat = {
+        id: 'c_' + Date.now(),
+        title: 'Untitled Note 📝',
+        folderId: state.activeFolderId !== 'all' ? state.activeFolderId : null,
+        tags: state.activeTag !== 'all' ? [state.activeTag] : [],
+        messages: [],
+        gemId: null,
+        attachedSourceIds: [],
+        model: 'gemini-1.5-flash',
+        createdAt: Date.now()
+      };
+      state.chats.push(newChat);
+      state.activeChatId = newChat.id;
+      saveState();
+      renderChatsList();
+      renderActiveChat();
+      renderFolders();
+      renderTags();
+    }
+
+    function deleteChat(e, id) {
+      e.stopPropagation();
+      if (!confirm("Delete this conversation permanently?")) return;
+      state.chats = state.chats.filter(c => c.id !== id);
+      if (state.activeChatId === id) {
+        state.activeChatId = state.chats.length > 0 ? state.chats[0].id : null;
+      }
+      saveState();
+      renderFolders();
+      renderTags();
+      renderChatsList();
+      renderActiveChat();
+    }
+
+    // UI Helper tools
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
+    }
+
+    function getSenderName(chat) {
+      if (chat.gemId) {
+        const gem = state.gems.find(g => g.id === chat.gemId);
+        if (gem) return gem.name;
+      }
+      return MODEL_PRICING[chat.model]?.name || 'Gemini';
+    }
+
+    // Drag-and-drop document grounding feature initialization
+    function setupWorkspaceDragDrop() {
+      const el = document.body;
+      el.addEventListener('dragover', (e) => { e.preventDefault(); });
+      el.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          const file = files[0];
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            const newSrc = { id: 's_' + Date.now(), name: file.name, content: evt.target.result };
+            state.sources.push(newSrc);
+            const chat = state.chats.find(c => c.id === state.activeChatId);
+            if (chat) {
+              if (!chat.attachedSourceIds) chat.attachedSourceIds = [];
+              chat.attachedSourceIds.push(newSrc.id);
+            }
+            saveState();
+            renderActiveChat();
+            renderSources();
+            alert(`Document file "${file.name}" imported and attached to conversation active grounding context!`);
+          };
+          reader.readAsText(file);
+        }
+      });
+    }
+
+    // Startup
+    window.onload = function() {
+      initializeState();
+      renderFolders();
+      renderTags();
+      renderGems();
+      renderSources();
+      renderChatsList();
+      renderActiveChat();
+      updateApiKeyStatus();
+      setupWorkspaceDragDrop();
+    };
+  </script>
+</body>
+</html>
