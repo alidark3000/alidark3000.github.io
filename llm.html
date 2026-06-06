@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -226,7 +225,7 @@
         </div>
 
         <div class="flex justify-end space-x-2 pt-2">
-          <button onclick="closeModal('apiKey')" class="px-4 py-2 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
+          <button onclick="closeModal('apiKey')" class="px-4 py-2 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
           <button onclick="saveApiKey()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-xs transition">Save Keys</button>
         </div>
       </div>
@@ -334,7 +333,7 @@
         <div class="space-y-3">
           <div>
             <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">GitHub Personal Access Token (PAT)</label>
-            <input type="password" id="ghTokenInput" placeholder="ghp_..." class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono" />
+            <input type="password" id="ghTokenInput" placeholder="ghp_..." class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono" />
             <p class="text-[10px] text-slate-500 mt-1">Requires a classic PAT with the <code class="bg-slate-200 dark:bg-slate-950 text-indigo-600 dark:text-amber-500 px-1 py-0.5 rounded">gist</code> permission scope enabled.</p>
           </div>
           
@@ -478,7 +477,7 @@
       return map;
     }
 
-    // STEP 1: Synchronous load sequence (guarantees `state` is never null on load)
+    // STEP 1: Synchronous load sequence with self-repair schema mapping
     function initializeStateSync() {
       loadSyncSettings();
       loadFetchedModels();
@@ -487,18 +486,34 @@
       if (saved) {
         try {
           state = JSON.parse(saved);
-          if (!state.folders) state.folders = [];
-          if (!state.gems) state.gems = [];
-          if (!state.sources) state.sources = [];
-          if (!state.chats) state.chats = [];
-          if (!state.activeFolderId) state.activeFolderId = 'all';
-          if (!state.activeTag) state.activeTag = 'all';
-          state.isGenerating = false;
+          
+          // Self-heal loaded state: if corrupted or contains 0 chat objects, reload DEFAULT_STATE
+          if (!state || !state.chats || state.chats.length === 0) {
+            state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+          } else {
+            // Guarantee essential fields
+            if (!state.folders) state.folders = [];
+            if (!state.gems) state.gems = [];
+            if (!state.sources) state.sources = [];
+            if (!state.chats) state.chats = [];
+            if (!state.activeFolderId) state.activeFolderId = 'all';
+            if (!state.activeTag) state.activeTag = 'all';
+          }
         } catch (e) {
           state = JSON.parse(JSON.stringify(DEFAULT_STATE));
         }
       } else {
         state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
+
+      // Automatically auto-resolve invalid or missing activeChatId
+      if (state.chats && state.chats.length > 0) {
+        const exists = state.chats.some(c => c.id === state.activeChatId);
+        if (!exists) {
+          state.activeChatId = state.chats[0].id;
+        }
+      } else {
+        state.activeChatId = null;
       }
     }
 
@@ -523,6 +538,23 @@
 
     function saveStateLocallyOnly() {
       localStorage.setItem('gemini_studio_state', JSON.stringify(state));
+    }
+
+    // Safe Markdown Compiler helper (guarantees marked CDN slow-loading never breaks the interface)
+    function compileMarkdown(text) {
+      if (!text) return "";
+      try {
+        if (typeof marked !== 'undefined') {
+          if (typeof marked.parse === 'function') {
+            return marked.parse(text);
+          } else if (typeof marked === 'function') {
+            return marked(text);
+          }
+        }
+      } catch (e) {
+        console.error("Markdown parse exception: ", e);
+      }
+      return escapeHTML(text).replace(/\n/g, '<br>');
     }
 
     // Dynamic API Model list Fetching
@@ -905,7 +937,7 @@
           '<!DOCTYPE html>\n' +
           '<html>\n' +
           '<head>\n' +
-          '  <script src="https://cdn.tailwindcss.com"></scr' + 'ipt>\n' +
+          '  <script src="https://cdn.tailwindcss.com/"></scr' + 'ipt>\n' +
           '</head>\n' +
           '<body class="p-6 bg-white text-slate-800 font-sans">\n' +
           content + '\n' +
@@ -915,7 +947,7 @@
       } else {
         // Markdown or text rendering
         container.innerHTML = '<div class="markdown-body p-6 overflow-y-auto h-full text-sm">' +
-          marked.parse(content) +
+          compileMarkdown(content) +
           '</div>';
       }
     }
@@ -1188,6 +1220,28 @@
         const textarea = document.getElementById('canvasTextarea');
         if (textarea) textarea.value = chat.canvasContent || "";
       }
+
+      // Safe, robust Dynamic Event Listener bindings (completely replaces unreliable inline triggers)
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendQuery();
+          }
+        });
+        chatInput.addEventListener('input', autoGrowTextArea);
+      }
+
+      const canvasFeedbackInput = document.getElementById('canvasFeedbackInput');
+      if (canvasFeedbackInput) {
+        canvasFeedbackInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            sendCanvasFeedback();
+          }
+        });
+      }
     }
 
     function getEmptyWorkspaceHTML() {
@@ -1310,7 +1364,7 @@
             <!-- Bottom Prompt Input -->
             <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-2 flex-shrink-0">
               <div class="relative flex items-end bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-2 transition">
-                <textarea id="chatInput" onkeydown="handleChatInputKeyDown(event)" oninput="autoGrowTextArea()" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
+                <textarea id="chatInput" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
                 <div class="absolute right-3 bottom-2.5 flex items-center space-x-2">
                   <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
                     <i class="fa-solid fa-paperclip"></i>
@@ -1371,7 +1425,7 @@
             <!-- Canvas Collaboration Bottom Chat Bar -->
             <div class="p-4 bg-slate-100/50 dark:bg-slate-950 flex flex-col space-y-2 flex-shrink-0">
               <div class="flex items-center space-x-2">
-                <input type="text" id="canvasFeedbackInput" onkeydown="handleCanvasFeedbackKeyDown(event)" placeholder="Prompt Gemini to modify this document..." class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500" />
+                <input type="text" id="canvasFeedbackInput" placeholder="Prompt Gemini to modify this document..." class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500" />
                 <button onclick="sendCanvasFeedback()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition">
                   Refine Doc
                 </button>
@@ -1405,7 +1459,7 @@
         const costStr = cost > 0 ? `• Est. $${cost.toFixed(6)}` : '';
         const roleLabel = isUser ? 'You' : getSenderName(chat);
 
-        const renderedText = isUser ? escapeHTML(msg.content) : marked.parse(msg.content);
+        const renderedText = isUser ? escapeHTML(msg.content) : compileMarkdown(msg.content);
 
         // Actions setup (Copy / Send To Canvas)
         const copyBtnHTML = '<button onclick="copyMessageText(\'' + chat.id + '\', ' + idx + ')" class="hover:text-indigo-500 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-500 transition px-1" title="Copy to Clipboard"><i class="fa-regular fa-copy"></i></button>';
@@ -1595,13 +1649,6 @@
       }
     }
 
-    function handleChatInputKeyDown(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendQuery();
-      }
-    }
-
     // API query Execution
     async function sendQuery() {
       const input = document.getElementById('chatInput');
@@ -1787,669 +1834,6 @@
         updateSendButtonState();
       }
     }
-
-    function updateSendButtonState() {
-      const sendBtn = document.getElementById('sendBtn');
-      if (!sendBtn) return;
-      if (state.isGenerating) {
-        sendBtn.innerHTML = `<i class="fa-solid fa-stop text-red-400 text-xs"></i>`;
-        sendBtn.title = "Stop Generating";
-        sendBtn.className = "p-2 bg-red-950/40 border border-red-500/20 text-white rounded-lg hover:bg-red-900/40 transition font-semibold text-xs flex items-center justify-center";
-      } else {
-        sendBtn.innerHTML = `<i class="fa-solid fa-paper-plane text-xs"></i>`;
-        sendBtn.title = "Send Query";
-        sendBtn.className = "p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition font-semibold text-xs flex items-center justify-center";
-      }
-    }
-
-    // Modal Control wrappers
-    function openModal(id) {
-      document.getElementById(id + 'Modal').classList.remove('hidden');
-      if (id === 'apiKey') {
-        document.getElementById('apiKeyInput').value = state.apiKey || '';
-      } else if (id === 'githubSync') {
-        document.getElementById('ghTokenInput').value = syncSettings.githubToken || '';
-        document.getElementById('gistIdInput').value = syncSettings.gistId || '';
-        document.getElementById('autoSyncCheckbox').checked = syncSettings.autoSync || false;
-      }
-    }
-
-    function closeModal(id) {
-      document.getElementById(id + 'Modal').classList.add('hidden');
-    }
-
-    function saveApiKey() {
-      state.apiKey = document.getElementById('apiKeyInput').value.trim();
-      saveState();
-      closeModal('apiKey');
-      updateApiKeyStatus();
-    }
-
-    function updateApiKeyStatus() {
-      const el = document.getElementById('apiKeyBadge');
-      if (!el) return;
-      if (state.apiKey) {
-        el.innerHTML = `<span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 rounded-full flex items-center space-x-1 cursor-pointer" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span><span>Active</span></span>`;
-      } else {
-        el.innerHTML = `<span class="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-[9px] font-bold text-rose-600 dark:text-rose-400 rounded-full flex items-center space-x-1 cursor-pointer hover:bg-rose-500/25 transition" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400"></span><span>Key Missing</span></span>`;
-      }
-    }
-
-    // Sources Local Document Logic
-    function openManageSourcesModal(selectedId = null) {
-      state.editingSourceId = selectedId || (state.sources.length > 0 ? state.sources[0].id : null);
-      document.getElementById('manageSourcesModal').classList.remove('hidden');
-      renderManageSourcesModalList();
-      if (state.editingSourceId) {
-        selectSourceForEditing(state.editingSourceId);
-      } else {
-        createNewSourceForm();
-      }
-    }
-
-    function closeManageSourcesModal() {
-      document.getElementById('manageSourcesModal').classList.add('hidden');
-      renderSources();
-      renderActiveChat();
-    }
-
-    function renderManageSourcesModalList() {
-      const container = document.getElementById('sourcesModalList');
-      container.innerHTML = '';
-      state.sources.forEach(s => {
-        const btn = document.createElement('button');
-        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingSourceId === s.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
-        btn.innerHTML = `<i class="fa-solid fa-file-lines mr-1.5 text-amber-500/80"></i>${escapeHTML(s.name)}`;
-        btn.onclick = () => selectSourceForEditing(s.id);
-        container.appendChild(btn);
-      });
-    }
-
-    function selectSourceForEditing(id) {
-      state.editingSourceId = id;
-      renderManageSourcesModalList();
-      const s = state.sources.find(src => src.id === id);
-      const container = document.getElementById('sourceFormContainer');
-      if (!s) return;
-
-      container.innerHTML = `
-        <div class="flex-1 flex flex-col space-y-3 min-h-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Source Name</label>
-            <input type="text" id="editSourceName" value="${escapeHTML(s.name)}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
-          </div>
-          <div class="flex-1 flex flex-col min-h-0 font-sans">
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
-            <textarea id="editSourceContent" class="flex-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto">${escapeHTML(s.content)}</textarea>
-          </div>
-          <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-3">
-            <button onclick="deleteSource('${s.id}')" class="text-red-550 dark:text-red-400 hover:text-red-400 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete</button>
-            <div class="flex space-x-2">
-              <label class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-lg text-xs cursor-pointer flex items-center space-x-1 transition">
-                <i class="fa-solid fa-upload"></i> <span>Import File</span>
-                <input type="file" id="sourceFileInput" class="hidden" onchange="handleSourceFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
-              </label>
-              <button onclick="saveSourceChanges('${s.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Save Document</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function createNewSourceForm() {
-      state.editingSourceId = 'new';
-      renderManageSourcesModalList();
-      const container = document.getElementById('sourceFormContainer');
-      container.innerHTML = `
-        <div class="flex-1 flex flex-col space-y-3 min-h-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Source Title</label>
-            <input type="text" id="editSourceName" placeholder="e.g. Project Specifications" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
-          </div>
-          <div class="flex-1 flex flex-col min-h-0">
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
-            <textarea id="editSourceContent" placeholder="Paste guidelines or material logs..." class="flex-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto"></textarea>
-          </div>
-          <div class="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button onclick="saveNewSource()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Create Source</button>
-          </div>
-        </div>
-      `;
-    }
-
-    function saveNewSource() {
-      const name = document.getElementById('editSourceName').value.trim();
-      const content = document.getElementById('editSourceContent').value.trim();
-      if (!name || !content) {
-        alert("Please specify a document title and context block.");
-        return;
-      }
-      const newSrc = { id: 's_' + Date.now(), name, content };
-      state.sources.push(newSrc);
-      saveState();
-      openManageSourcesModal(newSrc.id);
-    }
-
-    function saveSourceChanges(id) {
-      const name = document.getElementById('editSourceName').value.trim();
-      const content = document.getElementById('editSourceContent').value.trim();
-      const src = state.sources.find(s => s.id === id);
-      if (src && name && content) {
-        src.name = name;
-        src.content = content;
-        saveState();
-        selectSourceForEditing(id);
-      }
-    }
-
-    function deleteSource(id) {
-      if (!confirm("Are you sure you want to delete this source? This removes its reference context from all conversations.")) return;
-      state.sources = state.sources.filter(s => s.id !== id);
-      state.chats.forEach(c => {
-        if (c.attachedSourceIds) c.attachedSourceIds = c.attachedSourceIds.filter(sid => sid !== id);
-      });
-      state.gems.forEach(g => {
-        if (g.baseSourceIds) g.baseSourceIds = g.baseSourceIds.filter(sid => sid !== id);
-      });
-      saveState();
-      openManageSourcesModal();
-    }
-
-    function handleSourceFileUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        document.getElementById('editSourceName').value = file.name;
-        document.getElementById('editSourceContent').value = evt.target.result;
-      }
-      reader.readAsText(file);
-    }
-
-    // Temporary inline files uploader
-    function handleTempFileUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const newSrc = { id: 's_' + Date.now(), name: file.name, content: evt.target.result };
-        state.sources.push(newSrc);
-        const chat = state.chats.find(c => c.id === state.activeChatId);
-        if (chat) {
-          if (!chat.attachedSourceIds) chat.attachedSourceIds = [];
-          chat.attachedSourceIds.push(newSrc.id);
-        }
-        saveState();
-        renderActiveChat();
-        renderSources();
-        alert(`Document file "${file.name}" imported and attached to conversation active grounding context!`);
-      }
-      reader.readAsText(file);
-    }
-
-    // Chat Grounding checklists
-    function openChatSourcesModal() {
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (!chat) return;
-
-      const container = document.getElementById('sourcesChecklist');
-      container.innerHTML = '';
-
-      if (state.sources.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-6 text-slate-500">
-            <p class="text-xs italic mb-3">No sources are currently defined in the workspace database.</p>
-          </div>
-        `;
-      } else {
-        state.sources.forEach(s => {
-          const isChecked = chat.attachedSourceIds && chat.attachedSourceIds.includes(s.id);
-          const div = document.createElement('label');
-          div.className = "flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer transition";
-          div.innerHTML = `
-            <div class="flex items-center space-x-3 truncate">
-              <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="chat-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-100 dark:focus:ring-offset-slate-900" />
-              <div class="flex flex-col truncate">
-                <span class="text-xs font-bold text-slate-700 dark:text-slate-200">${escapeHTML(s.name)}</span>
-                <span class="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${escapeHTML(s.content.substring(0, 90))}...</span>
-              </div>
-            </div>
-          `;
-          container.appendChild(div);
-        });
-      }
-      document.getElementById('chatSourcesModal').classList.remove('hidden');
-    }
-
-    function closeChatSourcesModal() {
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (chat) {
-        const checked = [];
-        document.querySelectorAll('.chat-source-checkbox').forEach(box => {
-          if (box.checked) checked.push(box.value);
-        });
-        chat.attachedSourceIds = checked;
-        saveState();
-        renderActiveChat();
-      }
-      document.getElementById('chatSourcesModal').classList.add('hidden');
-    }
-
-    // Gems Controls logic
-    function openGemModal(selectedId = null) {
-      state.editingGemId = selectedId || (state.gems.length > 0 ? state.gems[0].id : null);
-      document.getElementById('gemModal').classList.remove('hidden');
-      renderGemModalList();
-      if (state.editingGemId) {
-        selectGemForEditing(state.editingGemId);
-      } else {
-        createNewGemForm();
-      }
-    }
-
-    function closeGemModal() {
-      document.getElementById('gemModal').classList.add('hidden');
-      renderGems();
-      renderActiveChat();
-    }
-
-    function renderGemModalList() {
-      const container = document.getElementById('gemModalList');
-      container.innerHTML = '';
-      state.gems.forEach(g => {
-        const btn = document.createElement('button');
-        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
-        btn.innerHTML = `<i class="fa-solid fa-gem mr-1.5 text-indigo-500 dark:text-indigo-400"></i>${escapeHTML(g.name)}`;
-        btn.onclick = () => selectGemForEditing(g.id);
-        container.appendChild(btn);
-      });
-    }
-
-    function selectGemForEditing(id) {
-      state.editingGemId = id;
-      renderGemModalList();
-      const gem = state.gems.find(g => g.id === id);
-      const container = document.getElementById('gemFormContainer');
-      if (!gem) return;
-
-      let sourceHTML = "";
-      state.sources.forEach(s => {
-        const isChecked = gem.baseSourceIds && gem.baseSourceIds.includes(s.id);
-        sourceHTML += `
-          <label class="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
-            <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="gem-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
-            <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
-          </label>
-        `;
-      });
-
-      if (state.sources.length === 0) {
-        sourceHTML = `<div class="text-[11px] text-slate-500 italic">No workspace sources. Link custom sources to associate context files with this Gem.</div>`;
-      }
-
-      container.innerHTML = `
-        <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
-            <input type="text" id="editGemName" value="${escapeHTML(gem.name)}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Mission Profile Description</label>
-            <input type="text" id="editGemDesc" value="${escapeHTML(gem.description || '')}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behaviors</label>
-            <textarea id="editGemInstruction" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans">${escapeHTML(gem.systemInstruction)}</textarea>
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
-            <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 max-h-28 overflow-y-auto">
-              ${sourceHTML}
-            </div>
-          </div>
-          <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-3">
-            <button onclick="deleteGem('${gem.id}')" class="text-red-500 dark:text-red-400 hover:text-red-400 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete Gem</button>
-            <button onclick="saveGemChanges('${gem.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Save Gem</button>
-          </div>
-        </div>
-      `;
-    }
-
-    function createNewGemForm() {
-      state.editingGemId = 'new';
-      renderGemModalList();
-      const container = document.getElementById('gemFormContainer');
-
-      let sourceHTML = "";
-      state.sources.forEach(s => {
-        sourceHTML += `
-          <label class="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
-            <input type="checkbox" value="${s.id}" class="gem-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
-            <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
-          </label>
-        `;
-      });
-
-      if (state.sources.length === 0) {
-        sourceHTML = `<div class="text-[11px] text-slate-500 italic">No workspace sources defined.</div>`;
-      }
-
-      container.innerHTML = `
-        <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
-            <input type="text" id="editGemName" placeholder="e.g. Copywriter, Code Optimizer" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Mission Profile Description</label>
-            <input type="text" id="editGemDesc" placeholder="Helpful summary statement..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behavior Profile</label>
-            <textarea id="editGemInstruction" placeholder="You are an elegant assistant..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans"></textarea>
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
-            <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 max-h-28 overflow-y-auto">
-              ${sourceHTML}
-            </div>
-          </div>
-          <div class="flex justify-end border-t border-slate-200 dark:border-slate-800 pt-3">
-            <button onclick="saveNewGem()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Build Gem</button>
-          </div>
-        </div>
-      `;
-    }
-
-    function saveNewGem() {
-      const name = document.getElementById('editGemName').value.trim();
-      const description = document.getElementById('editGemDesc').value.trim();
-      const systemInstruction = document.getElementById('editGemInstruction').value.trim();
-      if (!name) {
-        alert("Please set a name for your Gem.");
-        return;
-      }
-      const boxes = document.querySelectorAll('.gem-source-checkbox');
-      const baseSourceIds = [];
-      boxes.forEach(b => {
-        if (b.checked) baseSourceIds.push(b.value);
-      });
-
-      const newGem = {
-        id: 'gem_' + Date.now(),
-        name,
-        description,
-        systemInstruction: systemInstruction || "You are a helpful assistant.",
-        baseSourceIds
-      };
-      state.gems.push(newGem);
-      saveState();
-      openGemModal(newGem.id);
-    }
-
-    function saveGemChanges(id) {
-      const name = document.getElementById('editGemName').value.trim();
-      const description = document.getElementById('editGemDesc').value.trim();
-      const systemInstruction = document.getElementById('editGemInstruction').value.trim();
-      const gem = state.gems.find(g => g.id === id);
-      if (gem && name) {
-        gem.name = name;
-        gem.description = description;
-        gem.systemInstruction = systemInstruction || "You are a helpful assistant.";
-        gem.baseSourceIds = [];
-        const boxes = document.querySelectorAll('.gem-source-checkbox');
-        boxes.forEach(b => {
-          if (b.checked) gem.baseSourceIds.push(b.value);
-        });
-        saveState();
-        selectGemForEditing(id);
-      }
-    }
-
-    function deleteGem(id) {
-      if (!confirm("Are you sure you want to delete this custom Gem?")) return;
-      state.gems = state.gems.filter(g => g.id !== id);
-      state.chats.forEach(c => {
-        if (c.gemId === id) c.gemId = null;
-      });
-      saveState();
-      openGemModal();
-    }
-
-    function startChatWithGem(e, id) {
-      e.stopPropagation();
-      const gem = state.gems.find(g => g.id === id);
-      if (!gem) return;
-
-      const newChat = {
-        id: 'c_' + Date.now(),
-        title: `${gem.name} Workspace 💎`,
-        folderId: state.activeFolderId !== 'all' ? state.activeFolderId : null,
-        tags: [],
-        messages: [{ role: 'model', content: `Greetings! I am executing as the custom Gem **${gem.name}**. Feel free to query.`, timestamp: Date.now() }],
-        gemId: id,
-        attachedSourceIds: [],
-        model: 'gemini-3.1-flash-lite',
-        createdAt: Date.now(),
-        enableSearch: false,
-        canvasOpen: false,
-        canvasContent: "",
-        canvasLanguage: "markdown",
-        canvasTab: "preview"
-      };
-
-      state.chats.push(newChat);
-      state.activeChatId = newChat.id;
-      saveState();
-      renderChatsList();
-      renderActiveChat();
-    }
-
-    // Folders control actions
-    function promptAddFolder() {
-      const name = prompt("Enter a name for the new folder:");
-      if (!name || !name.trim()) return;
-      const f = { id: 'f_' + Date.now(), name: name.trim() };
-      state.folders.push(f);
-      saveState();
-      renderFolders();
-      renderActiveChat();
-    }
-
-    function deleteFolder(e, id) {
-      e.stopPropagation();
-      if (!confirm("Are you sure you want to delete this folder? Chat logs inside will be preserved under 'All Chats'.")) return;
-      state.folders = state.folders.filter(f => f.id !== id);
-      state.chats.forEach(c => {
-        if (c.folderId === id) c.folderId = null;
-      });
-      if (state.activeFolderId === id) state.activeFolderId = 'all';
-      saveState();
-      renderFolders();
-      renderChatsList();
-      renderActiveChat();
-    }
-
-    // Chat Metadata Modifications
-    function saveChatTitle() {
-      const el = document.getElementById('chatTitleInput');
-      if (!el) return;
-      const title = el.value.trim();
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (chat && title && title !== chat.title) {
-        chat.title = title;
-        saveState();
-        renderChatsList();
-      }
-    }
-
-    function handleChatTitleKeyDown(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.target.blur();
-      }
-    }
-
-    function updateChatModel(model) {
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (chat) {
-        chat.model = model;
-        saveState();
-        updateCostMeter(chat);
-      }
-    }
-
-    function updateChatGem(gemId) {
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (chat) {
-        chat.gemId = gemId || null;
-        saveState();
-        renderActiveChat();
-      }
-    }
-
-    function updateChatFolder(folderId) {
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (chat) {
-        chat.folderId = folderId || null;
-        saveState();
-        renderFolders();
-        renderChatsList();
-      }
-    }
-
-    function promptAddTagToChat() {
-      const t = prompt("Specify tag parameter:");
-      if (!t || !t.trim()) return;
-      const clean = t.trim().toLowerCase().replace(/#/g, '');
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (chat) {
-        if (!chat.tags) chat.tags = [];
-        if (!chat.tags.includes(clean)) {
-          chat.tags.push(clean);
-          saveState();
-          renderActiveChat();
-          renderTags();
-          renderChatsList();
-        }
-      }
-    }
-
-    function removeTagFromChat(tag) {
-      const chat = state.chats.find(c => c.id === state.activeChatId);
-      if (chat) {
-        chat.tags = chat.tags.filter(t => t !== tag);
-        saveState();
-        renderActiveChat();
-        renderTags();
-        renderChatsList();
-      }
-    }
-
-    function createNewChat() {
-      const newChat = {
-        id: 'c_' + Date.now(),
-        title: 'Untitled Note 📝',
-        folderId: state.activeFolderId !== 'all' ? state.activeFolderId : null,
-        tags: state.activeTag !== 'all' ? [state.activeTag] : [],
-        messages: [],
-        gemId: null,
-        attachedSourceIds: [],
-        model: 'gemini-3.1-flash-lite',
-        createdAt: Date.now(),
-        enableSearch: false,
-        canvasOpen: false,
-        canvasContent: "",
-        canvasLanguage: "markdown",
-        canvasTab: "preview"
-      };
-      state.chats.push(newChat);
-      state.activeChatId = newChat.id;
-      saveState();
-      renderChatsList();
-      renderActiveChat();
-      renderFolders();
-      renderTags();
-    }
-
-    function deleteChat(e, id) {
-      e.stopPropagation();
-      if (!confirm("Delete this conversation permanently?")) return;
-      state.chats = state.chats.filter(c => c.id !== id);
-      if (state.activeChatId === id) {
-        state.activeChatId = state.chats.length > 0 ? state.chats[0].id : null;
-      }
-      saveState();
-      renderFolders();
-      renderTags();
-      renderChatsList();
-      renderActiveChat();
-    }
-
-    // UI Helper tools
-    function escapeHTML(str) {
-      return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
-    }
-
-    function getSenderName(chat) {
-      if (chat.gemId) {
-        const gem = state.gems.find(g => g.id === chat.gemId);
-        if (gem) return gem.name;
-      }
-      const pricingMap = getModelPricingMap();
-      return pricingMap[chat.model]?.name || 'Gemini';
-    }
-
-    // Drag-and-drop document grounding feature initialization
-    function setupWorkspaceDragDrop() {
-      const el = document.body;
-      el.addEventListener('dragover', (e) => { e.preventDefault(); });
-      el.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-          const file = files[0];
-          const reader = new FileReader();
-          reader.onload = function(evt) {
-            const newSrc = { id: 's_' + Date.now(), name: file.name, content: evt.target.result };
-            state.sources.push(newSrc);
-            const chat = state.chats.find(c => c.id === state.activeChatId);
-            if (chat) {
-              if (!chat.attachedSourceIds) chat.attachedSourceIds = [];
-              chat.attachedSourceIds.push(newSrc.id);
-            }
-            saveState();
-            renderActiveChat();
-            renderSources();
-            alert(`Document file "${file.name}" imported and attached to conversation active grounding context!`);
-          };
-          reader.readAsText(file);
-        }
-      });
-    }
-
-    function renderAll() {
-      renderFolders();
-      renderTags();
-      renderGems();
-      renderSources();
-      renderChatsList();
-      renderActiveChat();
-      updateApiKeyStatus();
-      refreshSyncStatusUI();
-    }
-
-    // Startup Execution Entry-point
-    window.onload = function() {
-      applyTheme(); // Setup Light/Dark mode
-      initializeStateSync(); // Synchronously load core state so `state` is immediately populated
-      setSyncStatus(syncSettings.gistId ? 'synced' : 'local'); // Safe non-colliding call
-      renderAll();
-      setupWorkspaceDragDrop();
-      
-      // Asynchronously trigger cloud pulling sequence in the background
-      triggerCloudSyncOnInit();
-    };
   </script>
 </body>
 </html>
