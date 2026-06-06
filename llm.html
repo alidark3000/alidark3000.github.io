@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -372,15 +373,74 @@
 
   <!-- JS LOGIC SYSTEM -->
   <script>
-    // Stable models mapping with updated 2026 releases
+    // Stable models mapping with 2026 default targets
     const MODEL_PRICING = {
+      'gemini-3.1-flash-lite': { name: 'Gemini 3.1 Flash-Lite', inputCost: 0.25 / 1000000, outputCost: 1.50 / 1000000 },
       'gemini-3.5-flash': { name: 'Gemini 3.5 Flash', inputCost: 1.50 / 1000000, outputCost: 9.00 / 1000000 },
       'gemini-3.1-pro': { name: 'Gemini 3.1 Pro', inputCost: 2.00 / 1000000, outputCost: 12.00 / 1000000 },
-      'gemini-3.1-flash-lite': { name: 'Gemini 3.1 Flash-Lite', inputCost: 0.25 / 1000000, outputCost: 1.50 / 1000000 },
       'gemini-2.5-pro': { name: 'Gemini 2.5 Pro', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 },
       'gemini-2.5-flash': { name: 'Gemini 2.5 Flash', inputCost: 0.075 / 1000000, outputCost: 0.30 / 1000000 },
       'gemini-1.5-pro': { name: 'Gemini 1.5 Pro (Legacy)', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 },
       'gemini-1.5-flash': { name: 'Gemini 1.5 Flash (Legacy)', inputCost: 0.075 / 1000000, outputCost: 0.30 / 1000000 }
+    };
+
+    const DEFAULT_STATE = {
+      apiKey: '',
+      folders: [
+        { id: 'f1', name: 'Academic' },
+        { id: 'f2', name: 'Software Development' },
+        { id: 'f3', name: 'Guides' }
+      ],
+      gems: [
+        {
+          id: 'g1',
+          name: 'Academic Researcher',
+          description: 'Constructs responses strictly anchored back to attached sources.',
+          systemInstruction: 'You are Academic Researcher. Read all supplied source documents carefully. Provide complete analytical evaluations citing the exact content of materials. If materials do not specify answers, respond clarifying data boundaries.',
+          baseSourceIds: []
+        },
+        {
+          id: 'g2',
+          name: 'Optimizing Architect',
+          description: 'A programmer that audits, refactors, and clarifies codebase designs.',
+          systemInstruction: 'You are Optimizing Architect. Read user patterns or source scripts. Provide refactored, production-ready improvements annotating algorithmic logic adjustments step-by-step.',
+          baseSourceIds: []
+        }
+      ],
+      sources: [
+        {
+          id: 's1',
+          name: 'Markdown Writing Best-Practices',
+          content: 'Guidelines for writing:\n1. Organize topics structured with standard semantic Header depths (H1-H4).\n2. Format numeric procedures inside neat lists.\n3. Implement explicit syntax designations on all codeblocks.\n4. Avoid raw URLs; format custom text inline anchors.'
+        }
+      ],
+      chats: [
+        {
+          id: 'c1',
+          title: 'Welcome to Gemini Studio 🚀',
+          folderId: 'f3',
+          tags: ['tutorial', 'onboarding'],
+          messages: [
+            { role: 'user', content: 'What is this system workspace and how do I configure it?' },
+            { role: 'model', content: '### Welcome to Gemini Studio!\n\nThis application is a self-contained, notes-app style interface interfacing directly with Google AI Studio API services.\n\n**To set up your environment**:\n1. Open **Configure API Key** in the sidebar. Add your developer key.\n2. Organize discussions using **Folders** and custom **Tags** inside chats.\n3. **Query Documents**: Go to **Knowledge Sources** to upload reference documents. Attach them to any session for instant grounded querying.\n4. **Gems Presets**: Link system rules + baseline files together to launch specialized workflow chat presets instantly.\n\nAll costs are estimated dynamically! Let me know if you would like to run some prompts.' }
+          ],
+          gemId: null,
+          attachedSourceIds: ['s1'],
+          model: 'gemini-3.1-flash-lite',
+          createdAt: Date.now(),
+          enableSearch: false,
+          canvasOpen: false,
+          canvasContent: "",
+          canvasLanguage: "markdown",
+          canvasTab: "preview"
+        }
+      ],
+      activeChatId: 'c1',
+      activeFolderId: 'all',
+      activeTag: 'all',
+      editingSourceId: null,
+      editingGemId: null,
+      isGenerating: false
     };
 
     let state = null;
@@ -794,55 +854,148 @@
       setSyncStatus(currentStatus, currentMsg);
     }
 
-    // Heuristic estimation: ~4 chars per token average
-    function estimateTokens(text) {
-      if (!text) return 0;
-      return Math.ceil(text.length / 4);
-    }
-
-    function calculateMessageCost(msg, model) {
-      const pricingMap = getModelPricingMap();
-      const rate = pricingMap[model] || pricingMap['gemini-3.5-flash'] || MODEL_PRICING['gemini-3.5-flash'];
-      const tokens = estimateTokens(msg.content);
-      return msg.role === 'user' ? tokens * rate.inputCost : tokens * rate.outputCost;
-    }
-
-    function calculateChatTotalCost(chat) {
-      if (!chat || !chat.messages) return 0;
-      const pricingMap = getModelPricingMap();
-      const rate = pricingMap[chat.model] || pricingMap['gemini-3.5-flash'] || MODEL_PRICING['gemini-3.5-flash'];
-      let total = 0;
-
-      // Extract system text
-      let systemText = "";
-      if (chat.gemId) {
-        const gem = state.gems.find(g => g.id === chat.gemId);
-        if (gem) systemText += gem.systemInstruction;
-      }
-      const sourceIds = [...(chat.attachedSourceIds || [])];
-      if (chat.gemId) {
-        const gem = state.gems.find(g => g.id === chat.gemId);
-        if (gem && gem.baseSourceIds) {
-          gem.baseSourceIds.forEach(id => {
-            if (!sourceIds.includes(id)) sourceIds.push(id);
-          });
-        }
-      }
-      sourceIds.forEach(id => {
-        const s = state.sources.find(src => src.id === id);
-        if (s) systemText += `\n${s.name}\n${s.content}`;
-      });
-
-      const baseSystemTokens = estimateTokens(systemText);
-
-      chat.messages.forEach(m => {
-        if (m.role === 'user') {
-          total += (estimateTokens(m.content) + baseSystemTokens) * rate.inputCost;
+    // Collaborative Canvas Management
+    function setCanvasTab(tab) {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.canvasTab = tab;
+        saveState();
+        renderActiveChat();
+        if (tab === 'preview') {
+          renderCanvasPreview(chat.canvasContent || "", chat.canvasLanguage || "markdown");
         } else {
-          total += estimateTokens(m.content) * rate.outputCost;
+          const textarea = document.getElementById('canvasTextarea');
+          if (textarea) textarea.value = chat.canvasContent || "";
         }
-      });
-      return total;
+      }
+    }
+
+    function handleCanvasTextareaChange(val) {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.canvasContent = val;
+        saveStateLocallyOnly(); // Save state silently on typing
+      }
+    }
+
+    function closeCanvas() {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.canvasOpen = false;
+        saveState();
+        renderActiveChat();
+      }
+    }
+
+    function copyCanvasContent() {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat && chat.canvasContent) {
+        navigator.clipboard.writeText(chat.canvasContent);
+        alert("Canvas document content copied to clipboard!");
+      }
+    }
+
+    function handleCanvasFeedbackKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendCanvasFeedback();
+      }
+    }
+
+    function sendCanvasFeedback() {
+      const input = document.getElementById('canvasFeedbackInput');
+      if (!input) return;
+      const feedback = input.value.trim();
+      if (!feedback) return;
+
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (!chat) return;
+
+      // Append user message referencing canvas
+      const promptText = `Please refine the active document code/text in our collaborative Canvas based on this instruction: "${feedback}"\n\nActive Document Contents:\n\`\`\`${chat.canvasLanguage}\n${chat.canvasContent}\n\`\`\``;
+
+      // Insert into chat textarea
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.value = promptText;
+        autoGrowTextArea();
+        chatInput.focus();
+      }
+      
+      input.value = ''; // Clean feedback input
+    }
+
+    function sendToCanvas(chatId, idx) {
+      const chat = state.chats.find(c => c.id === chatId);
+      if (!chat || !chat.messages[idx]) return;
+      
+      const content = chat.messages[idx].content;
+      
+      // Extract first code block or standard text
+      const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/;
+      const match = codeBlockRegex.exec(content);
+      
+      if (match) {
+        chat.canvasLanguage = match[1] || 'markdown';
+        chat.canvasContent = match[2];
+      } else {
+        chat.canvasLanguage = 'markdown';
+        chat.canvasContent = content;
+      }
+      
+      chat.canvasOpen = true;
+      chat.canvasTab = 'preview';
+      saveState();
+      renderActiveChat();
+    }
+
+    function renderCanvasPreview(content, language) {
+      const container = document.getElementById('canvasPreviewFrameContainer');
+      if (!container) return;
+      
+      if (language === 'html') {
+        container.innerHTML = `
+          <iframe id="canvasHtmlSandbox" class="w-full h-full border-0 bg-white" sandbox="allow-scripts"></iframe>
+        `;
+        const iframe = document.getElementById('canvasHtmlSandbox');
+        // Inject Tailwind CDN automatically into HTML sandbox so user designs render beautifully immediately
+        const processedContent = content.includes('tailwindcss') ? content : `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <script src="https://cdn.tailwindcss.com"></script>
+          </head>
+          <body class="p-6 bg-white text-slate-800 font-sans">
+            ${content}
+          </body>
+          </html>
+        `;
+        iframe.srcdoc = processedContent;
+      } else {
+        // Markdown or text rendering
+        container.innerHTML = `
+          <div class="markdown-body p-6 overflow-y-auto h-full text-sm">
+            ${marked.parse(content)}
+          </div>
+        `;
+      }
+    }
+
+    function copyMessageText(chatId, idx) {
+      const chat = state.chats.find(c => c.id === chatId);
+      if (chat && chat.messages[idx]) {
+        navigator.clipboard.writeText(chat.messages[idx].content);
+        alert("Message content copied to clipboard!");
+      }
+    }
+
+    function toggleWebSearch() {
+      const chat = state.chats.find(c => c.id === state.activeChatId);
+      if (chat) {
+        chat.enableSearch = !chat.enableSearch;
+        saveState();
+        renderActiveChat();
+      }
     }
 
     // DOM Rendering Engine
@@ -876,7 +1029,7 @@
         div.className = 'group relative w-full';
         const isSelected = state.activeFolderId === f.id;
         div.innerHTML = `
-          <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-500 font-bold border border-indigo-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-200'}">
+          <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-400 font-bold border border-indigo-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-200'}">
             <span class="flex items-center space-x-2 truncate">
               <i class="fa-solid fa-folder text-yellow-500/80"></i>
               <span class="truncate">${escapeHTML(f.name)}</span>
@@ -1088,6 +1241,14 @@
       container.innerHTML = getChatWorkspaceHTML(chat);
       renderMessages(chat);
       updateCostMeter(chat);
+
+      // Render canvas frame on boot/load if open
+      if (chat.canvasOpen && chat.canvasTab === 'preview') {
+        renderCanvasPreview(chat.canvasContent || "", chat.canvasLanguage || "markdown");
+      } else if (chat.canvasOpen && chat.canvasTab === 'edit') {
+        const textarea = document.getElementById('canvasTextarea');
+        if (textarea) textarea.value = chat.canvasContent || "";
+      }
     }
 
     function getEmptyWorkspaceHTML() {
@@ -1138,78 +1299,145 @@
         });
       }
 
+      const canvasOpen = chat.canvasOpen || false;
+      const canvasLanguage = chat.canvasLanguage || "markdown";
+      const activeTab = chat.canvasTab || "preview";
+
       return `
-        <div class="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900">
-          <!-- Chat Header metadata controls -->
-          <div class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <input type="text" id="chatTitleInput" value="${escapeHTML(chat.title || '')}" onblur="saveChatTitle()" onkeydown="handleChatTitleKeyDown(event)" class="flex-1 bg-transparent text-slate-800 dark:text-slate-100 font-extrabold text-base focus:outline-none focus:bg-slate-200/50 dark:focus:bg-slate-850/40 px-2 py-1 rounded border border-transparent focus:border-indigo-500/40 transition truncate mr-4" />
-              
-              <div class="flex items-center space-x-3 flex-shrink-0">
-                <button onclick="openChatSourcesModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition" title="Attach knowledge sources to this chat note">
-                  <i class="fa-solid fa-file-invoice text-indigo-500 dark:text-indigo-400"></i>
-                  <span>Sources (${chat.attachedSourceIds ? chat.attachedSourceIds.length : 0})</span>
-                </button>
-                <div class="flex flex-col items-end" title="Accumulated approximate cost of input context queries and generated outputs. Rates estimated per character counts.">
-                  <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Estimated Cost</span>
-                  <span id="chatTotalCostSpan" class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 dark:border-emerald-400/10">$0.000000</span>
+        <div class="flex-1 flex overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-200">
+          
+          <!-- Left: Chat conversation list -->
+          <div id="chatPane" class="${canvasOpen ? 'w-1/2' : 'w-full'} flex flex-col h-full border-r border-slate-200 dark:border-slate-800 transition-all duration-300">
+            <!-- Chat Header metadata controls -->
+            <div class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 space-y-3 flex-shrink-0">
+              <div class="flex items-center justify-between">
+                <input type="text" id="chatTitleInput" value="${escapeHTML(chat.title || '')}" onblur="saveChatTitle()" onkeydown="handleChatTitleKeyDown(event)" class="flex-1 bg-transparent text-slate-800 dark:text-slate-100 font-extrabold text-base focus:outline-none focus:bg-slate-200/50 dark:focus:bg-slate-850/40 px-2 py-1 rounded border border-transparent focus:border-indigo-500/40 transition truncate mr-4" />
+                
+                <div class="flex items-center space-x-3 flex-shrink-0">
+                  <!-- Web Search & YouTube Grounding Toggle button -->
+                  <button onclick="toggleWebSearch()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${chat.enableSearch ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-750'}" title="Enables Google Search Grounding to research live web & YouTube transcripts natively">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>Live Search: ${chat.enableSearch ? 'ON' : 'OFF'}</span>
+                  </button>
+
+                  <button onclick="openChatSourcesModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition" title="Attach knowledge sources to this chat note">
+                    <i class="fa-solid fa-file-invoice text-indigo-500 dark:text-indigo-400"></i>
+                    <span>Sources (${chat.attachedSourceIds ? chat.attachedSourceIds.length : 0})</span>
+                  </button>
+                  <div class="flex flex-col items-end" title="Accumulated approximate cost. Rates estimated per character counts.">
+                    <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Estimated Cost</span>
+                    <span id="chatTotalCostSpan" class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 dark:border-emerald-400/10">$0.000000</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Parameters Grid line -->
+              <div class="flex flex-wrap gap-2 items-center justify-between text-xs pt-1">
+                <div class="flex flex-wrap gap-2 items-center">
+                  <!-- Dropdown Model -->
+                  <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
+                    <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold">MODEL:</span>
+                    <select onchange="updateChatModel(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
+                      ${modelOptions}
+                    </select>
+                  </div>
+                  <!-- Dropdown Gem -->
+                  <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
+                    <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-bold"><i class="fa-solid fa-gem mr-1"></i>GEM:</span>
+                    <select onchange="updateChatGem(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
+                      ${gemOptions}
+                    </select>
+                  </div>
+                  <!-- Dropdown Folder -->
+                  <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
+                    <span class="text-[9px] text-yellow-600 dark:text-yellow-500 font-bold"><i class="fa-solid fa-folder mr-1"></i>FOLDER:</span>
+                    <select onchange="updateChatFolder(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
+                      ${folderOptions}
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Tags container list -->
+                <div class="flex items-center space-x-1.5">
+                  <div id="chatTagsContainer" class="flex flex-wrap gap-1">${tagsHTML}</div>
+                  <button onclick="promptAddTagToChat()" class="px-2 py-1 bg-white dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 rounded-full text-[10px] transition"><i class="fa-solid fa-plus text-[8px] mr-1"></i>Tag</button>
                 </div>
               </div>
             </div>
 
-            <!-- Parameters Grid line -->
-            <div class="flex flex-wrap gap-2 items-center justify-between text-xs pt-1">
-              <div class="flex flex-wrap gap-2 items-center">
-                <!-- Dropdown Model -->
-                <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
-                  <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold">MODEL:</span>
-                  <select onchange="updateChatModel(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
-                    ${modelOptions}
-                  </select>
-                </div>
-                <!-- Dropdown Gem -->
-                <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
-                  <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-bold"><i class="fa-solid fa-gem mr-1"></i>GEM:</span>
-                  <select onchange="updateChatGem(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
-                    ${gemOptions}
-                  </select>
-                </div>
-                <!-- Dropdown Folder -->
-                <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
-                  <span class="text-[9px] text-yellow-600 dark:text-yellow-500 font-bold"><i class="fa-solid fa-folder mr-1"></i>FOLDER:</span>
-                  <select onchange="updateChatFolder(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
-                    ${folderOptions}
-                  </select>
-                </div>
-              </div>
+            <!-- Messages scroll section -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-5 bg-white dark:bg-slate-900"></div>
 
-              <!-- Tags container list -->
-              <div class="flex items-center space-x-1.5">
-                <div id="chatTagsContainer" class="flex flex-wrap gap-1">${tagsHTML}</div>
-                <button onclick="promptAddTagToChat()" class="px-2 py-1 bg-white dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 rounded-full text-[10px] transition"><i class="fa-solid fa-plus text-[8px] mr-1"></i>Tag</button>
+            <!-- Bottom Prompt Input -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-2 flex-shrink-0">
+              <div class="relative flex items-end bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-2 transition">
+                <textarea id="chatInput" onkeydown="handleChatInputKeyDown(event)" oninput="autoGrowTextArea()" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
+                <div class="absolute right-3 bottom-2.5 flex items-center space-x-2">
+                  <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
+                    <i class="fa-solid fa-paperclip"></i>
+                    <input type="file" id="tempFileInput" class="hidden" onchange="handleTempFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
+                  </label>
+                  <button id="sendBtn" onclick="sendQuery()" class="p-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition">
+                    <i class="fa-solid fa-paper-plane"></i>
+                  </button>
+                </div>
               </div>
+              <!-- Dynamic context visual helper line -->
+              <div id="activeAttachedSourcesBar" class="flex flex-wrap gap-1.5 text-[10px] items-center"></div>
             </div>
           </div>
 
-          <!-- Messages scroll section -->
-          <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-5 bg-white dark:bg-slate-900"></div>
+          <!-- Right: Canvas Collaboration Workspace -->
+          <div id="canvasPane" class="${canvasOpen ? 'w-1/2' : 'w-0 hidden'} flex flex-col h-full bg-slate-50 dark:bg-slate-950 transition-all duration-300">
+            <!-- Canvas Header -->
+            <div class="bg-slate-100/80 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between flex-shrink-0">
+              <div class="flex items-center space-x-2.5">
+                <div class="flex space-x-1 bg-slate-200 dark:bg-slate-850 p-1 rounded-lg border border-slate-300 dark:border-slate-800">
+                  <button onclick="setCanvasTab('edit')" class="px-2.5 py-1 text-xs font-bold rounded transition ${activeTab === 'edit' ? 'bg-white dark:bg-slate-800 text-indigo-500' : 'text-slate-500'}" title="Edit Document Code">
+                    <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                  </button>
+                  <button onclick="setCanvasTab('preview')" class="px-2.5 py-1 text-xs font-bold rounded transition ${activeTab === 'preview' ? 'bg-white dark:bg-slate-800 text-indigo-500' : 'text-slate-500'}" title="View Live preview">
+                    <i class="fa-solid fa-play mr-1"></i> Preview
+                  </button>
+                </div>
+                
+                <div class="bg-slate-200 dark:bg-slate-850 text-slate-500 dark:text-slate-400 px-2 py-1 rounded-lg text-xs font-mono border border-slate-300 dark:border-slate-800 uppercase text-[10px] font-bold">
+                  ${canvasLanguage}
+                </div>
+              </div>
 
-          <!-- Bottom Prompt Input -->
-          <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-2">
-            <div class="relative flex items-end bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-2 transition">
-              <textarea id="chatInput" onkeydown="handleChatInputKeyDown(event)" oninput="autoGrowTextArea()" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
-              <div class="absolute right-3 bottom-2.5 flex items-center space-x-2">
-                <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
-                  <i class="fa-solid fa-paperclip"></i>
-                  <input type="file" id="tempFileInput" class="hidden" onchange="handleTempFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
-                </label>
-                <button id="sendBtn" onclick="sendQuery()" class="p-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition">
-                  <i class="fa-solid fa-paper-plane"></i>
+              <div class="flex items-center space-x-2">
+                <button onclick="copyCanvasContent()" class="p-1.5 hover:text-indigo-500 text-slate-400 dark:text-slate-500 transition text-sm" title="Copy Canvas Content">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+                <button onclick="closeCanvas()" class="p-1.5 hover:text-red-500 text-slate-400 dark:text-slate-500 transition text-sm" title="Close Canvas Workspace">
+                  <i class="fa-solid fa-xmark"></i>
                 </button>
               </div>
             </div>
-            <!-- Dynamic context visual helper line -->
-            <div id="activeAttachedSourcesBar" class="flex flex-wrap gap-1.5 text-[10px] items-center"></div>
+
+            <!-- Canvas Body (Editor or Preview) -->
+            <div class="flex-1 overflow-hidden min-h-0 flex flex-col p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+              <div id="canvasEditorContainer" class="${activeTab === 'edit' ? 'flex flex-col h-full' : 'hidden'}">
+                <textarea id="canvasTextarea" oninput="handleCanvasTextareaChange(this.value)" class="w-full h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl p-4 font-mono text-xs focus:outline-none focus:border-indigo-500 resize-none h-full"></textarea>
+              </div>
+
+              <div id="canvasPreviewContainer" class="${activeTab === 'preview' ? 'flex flex-col h-full' : 'hidden'}">
+                <div id="canvasPreviewFrameContainer" class="w-full h-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                  <!-- Rendered via JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Canvas Collaboration Bottom Chat Bar -->
+            <div class="p-4 bg-slate-100/50 dark:bg-slate-950 flex flex-col space-y-2 flex-shrink-0">
+              <div class="flex items-center space-x-2">
+                <input type="text" id="canvasFeedbackInput" onkeydown="handleCanvasFeedbackKeyDown(event)" placeholder="Prompt Gemini to modify this document..." class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500" />
+                <button onclick="sendCanvasFeedback()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition">
+                  Refine Doc
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -1229,16 +1457,72 @@
         return;
       }
 
-      chat.messages.forEach((msg) => {
+      chat.messages.forEach((msg, idx) => {
         const isUser = msg.role === 'user';
         const msgDiv = document.createElement('div');
         msgDiv.className = `flex flex-col mb-4 ${isUser ? 'items-end' : 'items-start'}`;
 
-        const cost = calculateMessageCost(msg, chat.model || 'gemini-3.5-flash');
+        const cost = calculateMessageCost(msg, chat.model || 'gemini-3.1-flash-lite');
         const costStr = cost > 0 ? `• Est. $${cost.toFixed(6)}` : '';
         const roleLabel = isUser ? 'You' : getSenderName(chat);
 
         const renderedText = isUser ? escapeHTML(msg.content) : marked.parse(msg.content);
+
+        // Actions setup (Copy / Send To Canvas)
+        const copyBtnHTML = `
+          <button onclick="copyMessageText('${chat.id}', ${idx})" class="hover:text-indigo-500 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-500 transition px-1" title="Copy to Clipboard">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+        `;
+        const hasCode = msg.content && msg.content.includes('```');
+        const canvasBtnHTML = (!isUser && hasCode) ? `
+          <button onclick="sendToCanvas('${chat.id}', ${idx})" class="hover:text-indigo-500 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-500 transition px-1" title="Open inside Collaborative Canvas">
+            <i class="fa-solid fa-laptop-code"></i>
+          </button>
+        ` : '';
+
+        // Citations / Grounding sources representation
+        let groundingHTML = "";
+        if (msg.groundingMetadata) {
+          const chunks = msg.groundingMetadata.groundingChunks || [];
+          const queries = msg.groundingMetadata.webSearchQueries || [];
+          
+          if (chunks.length > 0 || queries.length > 0) {
+            groundingHTML += `
+              <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs">
+                <details class="group">
+                  <summary class="flex items-center space-x-1.5 cursor-pointer font-bold text-slate-500 dark:text-slate-400 select-none hover:text-indigo-500 dark:hover:text-indigo-400 transition">
+                    <i class="fa-solid fa-square-rss"></i>
+                    <span>Citations & Web Sources (${chunks.length})</span>
+                    <i class="fa-solid fa-angle-down text-[10px] group-open:rotate-180 transition-transform"></i>
+                  </summary>
+                  
+                  <div class="mt-2 pl-4 border-l-2 border-slate-200 dark:border-slate-800 space-y-2">
+                    ${queries.length > 0 ? `
+                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic">
+                        Web Searches: ${queries.map(q => `"${escapeHTML(q)}"`).join(', ')}
+                      </div>
+                    ` : ''}
+                    <ul class="space-y-1.5">
+                      ${chunks.map(chunk => {
+                        const title = chunk.web?.title || chunk.web?.uri || "Grounded Web Reference";
+                        const uri = chunk.web?.uri || "#";
+                        return `
+                          <li>
+                            <a href="${uri}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center space-x-1">
+                              <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                              <span>${escapeHTML(title)}</span>
+                            </a>
+                          </li>
+                        `;
+                      }).join('')}
+                    </ul>
+                  </div>
+                </details>
+              </div>
+            `;
+          }
+        }
 
         msgDiv.innerHTML = `
           <div class="max-w-[85%] flex flex-col">
@@ -1247,9 +1531,15 @@
               <span>•</span>
               <span>${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               ${costStr ? `<span>•</span><span class="text-indigo-600 dark:text-indigo-400 font-semibold">${costStr}</span>` : ''}
+              <span>•</span>
+              <div class="flex items-center space-x-1">
+                ${copyBtnHTML}
+                ${canvasBtnHTML}
+              </div>
             </div>
             <div class="p-4 rounded-2xl ${isUser ? 'bg-indigo-600 text-white rounded-tr-none shadow-md' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 rounded-tl-none'}">
               <div class="markdown-body text-sm leading-relaxed">${renderedText}</div>
+              ${groundingHTML}
             </div>
           </div>
         `;
@@ -1392,6 +1682,19 @@
         });
       });
 
+      const modelName = chat.model || 'gemini-3.1-flash-lite';
+
+      // Integrate Google Search Grounding dynamically
+      const tools = [];
+      if (chat.enableSearch) {
+        if (modelName.startsWith('gemini-1.5')) {
+          tools.push({ "google_search_retrieval": { "dynamic_retrieval_config": { "mode": "MODE_DYNAMIC" } } });
+        } else {
+          // Gemini 2.0+ and 3.x Models
+          tools.push({ "google_search": {} });
+        }
+      }
+
       const payload = {
         contents: history,
         systemInstruction: {
@@ -1403,7 +1706,10 @@
         }
       };
 
-      const modelName = chat.model || 'gemini-3.5-flash';
+      if (tools.length > 0) {
+        payload.tools = tools;
+      }
+
       // streamGenerateContent alt=sse is native stream for Google endpoints
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${state.apiKey}`;
 
@@ -1446,6 +1752,12 @@
                   assistantMsg.content += chunkText;
                   activeBubble.innerHTML = marked.parse(assistantMsg.content);
                   container.scrollTop = container.scrollHeight;
+                }
+
+                // Retrieve and preserve live web search grounding citations
+                const groundingMetadata = json.candidates?.[0]?.groundingMetadata;
+                if (groundingMetadata) {
+                  assistantMsg.groundingMetadata = groundingMetadata;
                 }
               } catch (e) {
                 // Buffer JSON parsing failed; wait for incoming parts
@@ -1746,7 +2058,7 @@
         const btn = document.createElement('button');
         btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
         btn.innerHTML = `<i class="fa-solid fa-gem mr-1.5 text-indigo-500 dark:text-indigo-400"></i>${escapeHTML(g.name)}`;
-        btn.onclick = () => selectGemForEditing(gem.id);
+        btn.onclick = () => selectGemForEditing(g.id);
         container.appendChild(btn);
       });
     }
@@ -1881,7 +2193,7 @@
       if (gem && name) {
         gem.name = name;
         gem.description = description;
-        gem.systemInstruction = systemInstruction || "You are a helpful assistant.",
+        gem.systemInstruction = systemInstruction || "You are a helpful assistant.";
         gem.baseSourceIds = [];
         const boxes = document.querySelectorAll('.gem-source-checkbox');
         boxes.forEach(b => {
@@ -1915,8 +2227,13 @@
         messages: [{ role: 'model', content: `Greetings! I am executing as the custom Gem **${gem.name}**. Feel free to query.`, timestamp: Date.now() }],
         gemId: id,
         attachedSourceIds: [],
-        model: 'gemini-3.5-flash',
-        createdAt: Date.now()
+        model: 'gemini-3.1-flash-lite',
+        createdAt: Date.now(),
+        enableSearch: false,
+        canvasOpen: false,
+        canvasContent: "",
+        canvasLanguage: "markdown",
+        canvasTab: "preview"
       };
 
       state.chats.push(newChat);
@@ -2036,8 +2353,13 @@
         messages: [],
         gemId: null,
         attachedSourceIds: [],
-        model: 'gemini-3.5-flash',
-        createdAt: Date.now()
+        model: 'gemini-3.1-flash-lite',
+        createdAt: Date.now(),
+        enableSearch: false,
+        canvasOpen: false,
+        canvasContent: "",
+        canvasLanguage: "markdown",
+        canvasTab: "preview"
       };
       state.chats.push(newChat);
       state.activeChatId = newChat.id;
