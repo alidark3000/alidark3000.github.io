@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -11,6 +12,13 @@
   <!-- Marked Markdown Parser -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   
+  <script>
+    // Enable class-based dark mode on Tailwind CDN
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+
   <style>
     /* Custom Scrollbar Styles */
     ::-webkit-scrollbar {
@@ -28,35 +36,46 @@
       background: #64748b;
     }
 
-    /* Markdown Styling Container */
-    .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #334155; padding-bottom: 0.25rem; }
+    /* Markdown Styling Container - Light Theme */
+    .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
     .markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin-top: 0.875rem; margin-bottom: 0.5rem; }
     .markdown-body h3 { font-size: 1.125rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; }
     .markdown-body p { margin-bottom: 0.75rem; line-height: 1.625; }
     .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
     .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
     .markdown-body li { margin-bottom: 0.25rem; }
-    .markdown-body code { background-color: #1e293b; color: #fbbf24; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; }
-    .markdown-body pre { background-color: #020617; padding: 1rem; border-radius: 0.5rem; margin-top: 0.75rem; margin-bottom: 0.75rem; overflow-x: auto; border: 1px solid #1e293b; }
-    .markdown-body pre code { background-color: transparent; color: #f1f5f9; padding: 0; border-radius: 0; font-size: 0.875rem; display: block; }
-    .markdown-body blockquote { border-left: 4px solid #6366f1; padding-left: 1rem; font-style: italic; margin-top: 0.75rem; margin-bottom: 0.75rem; color: #94a3b8; }
+    .markdown-body code { background-color: #f1f5f9; color: #b45309; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; }
+    .markdown-body pre { background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; margin-top: 0.75rem; margin-bottom: 0.75rem; overflow-x: auto; border: 1px solid #e2e8f0; }
+    .markdown-body pre code { background-color: transparent; color: #0f172a; padding: 0; border-radius: 0; font-size: 0.875rem; display: block; }
+    .markdown-body blockquote { border-left: 4px solid #4f46e5; padding-left: 1rem; font-style: italic; margin-top: 0.75rem; margin-bottom: 0.75rem; color: #475569; }
     .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; font-size: 0.875rem; }
-    .markdown-body th { background-color: #1e293b; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #e2e8f0; }
-    .markdown-body td { padding: 0.5rem 0.75rem; border-top: 1px solid #1e293b; color: #cbd5e1; }
-    .markdown-body a { color: #818cf8; text-decoration: underline; }
-    .markdown-body a:hover { color: #a5b4fc; }
+    .markdown-body th { background-color: #f1f5f9; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #0f172a; }
+    .markdown-body td { padding: 0.5rem 0.75rem; border-top: 1px solid #f1f5f9; color: #334155; }
+    .markdown-body a { color: #4f46e5; text-decoration: underline; }
+    .markdown-body a:hover { color: #3730a3; }
+
+    /* Markdown Styling Overrides - Dark Theme */
+    .dark .markdown-body h1 { border-bottom: 1px solid #334155; }
+    .dark .markdown-body code { background-color: #1e293b; color: #fbbf24; }
+    .dark .markdown-body pre { background-color: #020617; border: 1px solid #1e293b; }
+    .dark .markdown-body pre code { color: #f1f5f9; }
+    .dark .markdown-body blockquote { border-left: 4px solid #6366f1; color: #94a3b8; }
+    .dark .markdown-body th { background-color: #1e293b; color: #e2e8f0; }
+    .dark .markdown-body td { border-top: 1px solid #1e293b; color: #cbd5e1; }
+    .dark .markdown-body a { color: #818cf8; }
+    .dark .markdown-body a:hover { color: #a5b4fc; }
   </style>
 </head>
-<body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans antialiased overflow-hidden select-none">
+<body class="h-full bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans antialiased overflow-hidden select-none transition-colors duration-200">
 
   <!-- Main Container -->
   <div class="flex-1 flex overflow-hidden">
     
     <!-- Sidebar 1: Global Notes Layout (Folders, Tags, Gems, Sources) -->
-    <div class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col flex-shrink-0">
+    <div class="w-64 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col flex-shrink-0">
       <!-- App Identity -->
-      <div class="p-4 border-b border-slate-800/80 flex items-center justify-between">
-        <span class="flex items-center space-x-2 font-bold text-sm tracking-wide text-slate-100">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+        <span class="flex items-center space-x-2 font-bold text-sm tracking-wide text-slate-800 dark:text-slate-100">
           <i class="fa-solid fa-brain text-indigo-500 text-base"></i>
           <span>GEMINI STUDIO</span>
         </span>
@@ -69,8 +88,8 @@
         <!-- Folders Section -->
         <div>
           <div class="flex items-center justify-between px-2 mb-2">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Folders</span>
-            <button onclick="promptAddFolder()" class="text-slate-500 hover:text-indigo-400 transition" title="Add Folder">
+            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Folders</span>
+            <button onclick="promptAddFolder()" class="text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition" title="Add Folder">
               <i class="fa-solid fa-plus-circle text-xs"></i>
             </button>
           </div>
@@ -80,7 +99,7 @@
         <!-- Tags Section -->
         <div>
           <div class="flex items-center justify-between px-2 mb-2">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tags</span>
+            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tags</span>
           </div>
           <div id="tagsList" class="space-y-0.5"></div>
         </div>
@@ -88,8 +107,8 @@
         <!-- Gems Section -->
         <div>
           <div class="flex items-center justify-between px-2 mb-2">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">My Gems</span>
-            <button onclick="openGemModal()" class="text-slate-500 hover:text-indigo-400 transition" title="Create Gem">
+            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">My Gems</span>
+            <button onclick="openGemModal()" class="text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition" title="Create Gem">
               <i class="fa-solid fa-plus-circle text-xs"></i>
             </button>
           </div>
@@ -99,8 +118,8 @@
         <!-- Sources Section -->
         <div>
           <div class="flex items-center justify-between px-2 mb-2">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Knowledge Sources</span>
-            <button onclick="openManageSourcesModal()" class="text-slate-500 hover:text-indigo-400 transition" title="Manage Sources">
+            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Knowledge Sources</span>
+            <button onclick="openManageSourcesModal()" class="text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition" title="Manage Sources">
               <i class="fa-solid fa-plus-circle text-xs"></i>
             </button>
           </div>
@@ -109,9 +128,38 @@
 
       </div>
 
-      <!-- API Control footer -->
-      <div class="p-3 border-t border-slate-800 bg-slate-950/50">
-        <button onclick="openModal('apiKey')" class="w-full py-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs font-semibold text-slate-300 rounded-lg transition flex items-center justify-center space-x-1.5">
+      <!-- Cloud Sync & API Settings footer -->
+      <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-950/50 space-y-2.5">
+        <!-- Theme Selector -->
+        <div class="flex items-center justify-between px-1 mb-1.5">
+          <span class="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider text-[9px]">Interface Theme</span>
+          <div class="flex bg-slate-200/60 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-300 dark:border-slate-800">
+            <button onclick="setTheme('light')" id="themeBtn-light" class="p-1 text-[10px] rounded transition px-1.5 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" title="Forced Light Mode">
+              <i class="fa-solid fa-sun"></i>
+            </button>
+            <button onclick="setTheme('dark')" id="themeBtn-dark" class="p-1 text-[10px] rounded transition px-1.5 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" title="Forced Dark Mode">
+              <i class="fa-solid fa-moon"></i>
+            </button>
+            <button onclick="setTheme('system')" id="themeBtn-system" class="p-1 text-[10px] rounded transition px-1.5 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" title="Follow System Theme Preference">
+              <i class="fa-solid fa-desktop"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs px-1">
+          <span class="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider text-[9px]">Gist Sync Backup</span>
+          <div id="syncStatusBadge" class="flex items-center space-x-1"></div>
+        </div>
+        <div class="flex space-x-1.5">
+          <button onclick="openModal('githubSync')" class="flex-1 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 rounded-lg transition flex items-center justify-center space-x-1" title="Configure Cloud Sync">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Cloud Settings</span>
+          </button>
+          <button onclick="manualPush()" class="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition text-[10px]" title="Push current state to Gist Now">
+            <i class="fa-solid fa-arrow-up-from-bracket"></i>
+          </button>
+        </div>
+        <button onclick="openModal('apiKey')" class="w-full py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition flex items-center justify-center space-x-1.5">
           <i class="fa-solid fa-key text-amber-500"></i>
           <span>Configure API Key</span>
         </button>
@@ -119,13 +167,13 @@
     </div>
 
     <!-- Sidebar 2: Chats/Notes List -->
-    <div class="w-72 bg-slate-900/60 border-r border-slate-800/80 flex flex-col flex-shrink-0">
+    <div class="w-72 bg-slate-100/40 dark:bg-slate-900/60 border-r border-slate-200 dark:border-slate-800/80 flex flex-col flex-shrink-0">
       <!-- Search and Quick Add -->
-      <div class="p-4 border-b border-slate-800/80 space-y-3">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800/80 space-y-3">
         <div class="relative">
-          <input type="text" id="chatSearchInput" oninput="renderChatsList()" placeholder="Search chats..." class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs focus:outline-none text-slate-200 transition" />
+          <input type="text" id="chatSearchInput" oninput="renderChatsList()" placeholder="Search chats..." class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs focus:outline-none text-slate-700 dark:text-slate-200 transition" />
         </div>
-        <button onclick="createNewChat()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-950/20 transition flex items-center justify-center space-x-1.5">
+        <button onclick="createNewChat()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center space-x-1.5">
           <i class="fa-solid fa-plus"></i>
           <span>New Chat Note</span>
         </button>
@@ -136,7 +184,7 @@
     </div>
 
     <!-- Main Active Workspace Panel -->
-    <div id="chatWorkspace" class="flex-1 flex flex-col bg-slate-900 overflow-hidden">
+    <div id="chatWorkspace" class="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
       <!-- Loaded dynamically via JS -->
     </div>
 
@@ -146,27 +194,39 @@
 
   <!-- Modal 1: API Configuration -->
   <div id="apiKeyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-key text-teal-400 text-lg"></i>
-          <h3 class="text-lg font-bold text-slate-100">Set Gemini API Key</h3>
+          <i class="fa-solid fa-key text-teal-500 dark:text-teal-400 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Set Gemini API Key</h3>
         </div>
-        <button onclick="closeModal('apiKey')" class="text-slate-400 hover:text-slate-200 transition">
+        <button onclick="closeModal('apiKey')" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
       <div class="space-y-4">
-        <p class="text-xs text-slate-400 leading-relaxed">
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           Your key is saved locally inside your browser's private local storage, communicating securely directly with Google's API endpoints.
         </p>
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5">Gemini Developer Key</label>
-          <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono" />
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Gemini Developer Key</label>
+          <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500 font-mono" />
         </div>
+
+        <!-- Dynamic Model Refresher tool -->
+        <div class="mt-2 border-t border-slate-200 dark:border-slate-800 pt-3">
+          <div class="flex items-center justify-between">
+            <span class="block font-bold text-xs text-slate-600 dark:text-slate-400 mb-1">Live Model Discovery</span>
+            <button onclick="fetchModelsFromAPI()" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 rounded transition flex items-center">
+              <i class="fa-solid fa-cloud-arrow-down mr-1"></i> <span id="fetchModelsStatusSpan">Fetch Live API Models</span>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-500 dark:text-slate-500 mt-1">Programmatically query Google's developer API to list and cache all active models dynamically.</p>
+        </div>
+
         <div class="flex justify-end space-x-2 pt-2">
-          <button onclick="closeModal('apiKey')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
-          <button onclick="saveApiKey()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-semibold rounded-lg text-xs transition">Save Keys</button>
+          <button onclick="closeModal('apiKey')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
+          <button onclick="saveApiKey()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-xs transition">Save Keys</button>
         </div>
       </div>
     </div>
@@ -174,20 +234,20 @@
 
   <!-- Modal 2: Source Management (Local Knowledge Documents) -->
   <div id="manageSourcesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl p-6 flex flex-col max-h-[85vh]">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl p-6 flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-file-invoice text-indigo-500 text-lg"></i>
-          <h3 class="text-lg font-bold text-slate-100">Knowledge Base Sources</h3>
+          <i class="fa-solid fa-file-invoice text-indigo-600 dark:text-indigo-500 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Knowledge Base Sources</h3>
         </div>
-        <button onclick="closeManageSourcesModal()" class="text-slate-400 hover:text-slate-200 transition">
+        <button onclick="closeManageSourcesModal()" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
       <div class="flex flex-1 overflow-hidden space-x-4 min-h-0">
         <!-- Sources Directory Side -->
-        <div class="w-1/3 border-r border-slate-800 pr-4 flex flex-col min-h-0">
-          <button onclick="createNewSourceForm()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-bold rounded-lg text-xs mb-3 transition flex items-center justify-center space-x-1">
+        <div class="w-1/3 border-r border-slate-200 dark:border-slate-800 pr-4 flex flex-col min-h-0">
+          <button onclick="createNewSourceForm()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs mb-3 transition flex items-center justify-center space-x-1">
             <i class="fa-solid fa-plus"></i>
             <span>New Source</span>
           </button>
@@ -201,20 +261,20 @@
 
   <!-- Modal 3: Gems Management -->
   <div id="gemModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl p-6 flex flex-col max-h-[85vh]">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl p-6 flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-gem text-indigo-500 text-lg"></i>
-          <h3 class="text-lg font-bold text-slate-100">Custom Gems Manager</h3>
+          <i class="fa-solid fa-gem text-indigo-600 dark:text-indigo-500 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Custom Gems Manager</h3>
         </div>
-        <button onclick="closeGemModal()" class="text-slate-400 hover:text-slate-200 transition">
+        <button onclick="closeGemModal()" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
       <div class="flex flex-1 overflow-hidden space-x-4 min-h-0">
         <!-- Gems Directory Side -->
-        <div class="w-1/3 border-r border-slate-800 pr-4 flex flex-col min-h-0">
-          <button onclick="createNewGemForm()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-bold rounded-lg text-xs mb-3 transition flex items-center justify-center space-x-1">
+        <div class="w-1/3 border-r border-slate-200 dark:border-slate-800 pr-4 flex flex-col min-h-0">
+          <button onclick="createNewGemForm()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs mb-3 transition flex items-center justify-center space-x-1">
             <i class="fa-solid fa-plus"></i>
             <span>New Gem</span>
           </button>
@@ -228,40 +288,99 @@
 
   <!-- Modal 4: Chat Sources Checklist selector -->
   <div id="chatSourcesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col max-h-[75vh]">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col max-h-[75vh]">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-file-circle-plus text-indigo-500 text-lg"></i>
-          <h3 class="text-lg font-bold text-slate-100">Attach Sources to Chat</h3>
+          <i class="fa-solid fa-file-circle-plus text-indigo-600 dark:text-indigo-500 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Attach Sources to Chat</h3>
         </div>
-        <button onclick="closeChatSourcesModal()" class="text-slate-400 hover:text-slate-200 transition">
+        <button onclick="closeChatSourcesModal()" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
         Select source documents to inject directly into the dynamic context queries of this conversation session.
       </p>
       <div id="sourcesChecklist" class="flex-1 overflow-y-auto space-y-2 mb-4"></div>
-      <div class="flex items-center justify-between border-t border-slate-800 pt-4">
-        <button onclick="closeChatSourcesModal(); openManageSourcesModal()" class="text-indigo-400 hover:text-indigo-300 text-xs font-semibold">
+      <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4">
+        <button onclick="closeChatSourcesModal(); openManageSourcesModal()" class="text-indigo-600 dark:text-indigo-400 text-xs font-semibold">
           <i class="fa-solid fa-sliders mr-1"></i> Manage Sources
         </button>
-        <button onclick="closeChatSourcesModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-semibold rounded-lg text-xs transition">
+        <button onclick="closeChatSourcesModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">
           Apply Context
         </button>
       </div>
     </div>
   </div>
 
+  <!-- Modal 5: GitHub Gist Sync Settings -->
+  <div id="githubSyncModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-2">
+          <i class="fa-brands fa-github text-slate-700 dark:text-slate-300 text-lg"></i>
+          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">GitHub Gist Cloud Sync</h3>
+        </div>
+        <button onclick="closeModal('githubSync')" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="space-y-4 text-xs">
+        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">
+          Synchronizing with GitHub Gist creates a secure cloud backup of your chats, keys, Gems, and sources. This lets you access a continuous, synchronized session on any device.
+        </p>
+        
+        <div class="space-y-3">
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">GitHub Personal Access Token (PAT)</label>
+            <input type="password" id="ghTokenInput" placeholder="ghp_..." class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono" />
+            <p class="text-[10px] text-slate-500 mt-1">Requires a classic PAT with the <code class="bg-slate-200 dark:bg-slate-950 text-indigo-600 dark:text-amber-500 px-1 py-0.5 rounded">gist</code> permission scope enabled.</p>
+          </div>
+          
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Gist ID</label>
+            <div class="flex space-x-2">
+              <input type="text" id="gistIdInput" placeholder="Alpha-numeric gist identifier string" class="flex-1 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono" />
+              <button onclick="createGistAutomatically()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition" title="Automatically create a secret gist populated with your current data">
+                Auto Create Gist
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg">
+            <input type="checkbox" id="autoSyncCheckbox" class="rounded bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <label for="autoSyncCheckbox" class="font-semibold text-slate-500 dark:text-slate-400 cursor-pointer">Enable cloud auto-sync on updates</label>
+          </div>
+        </div>
+        
+        <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4 mt-2">
+          <div class="flex space-x-2">
+            <button onclick="manualPull()" class="px-3 py-2 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-lg border border-slate-300 dark:border-slate-700 transition">
+              <i class="fa-solid fa-download mr-1"></i> Pull From Cloud
+            </button>
+            <button onclick="manualPush()" class="px-3 py-2 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-lg border border-slate-300 dark:border-slate-700 transition">
+              <i class="fa-solid fa-upload mr-1"></i> Push To Cloud
+            </button>
+          </div>
+          <button onclick="saveSyncSettingsUI()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition">
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JS LOGIC SYSTEM -->
   <script>
-    // Price breakdown per million tokens
+    // Stable models mapping with updated 2026 releases
     const MODEL_PRICING = {
-      'gemini-1.5-flash': { name: 'Gemini 1.5 Flash', inputCost: 0.075 / 1000000, outputCost: 0.30 / 1000000 },
-      'gemini-1.5-pro': { name: 'Gemini 1.5 Pro', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 },
-      'gemini-2.0-flash': { name: 'Gemini 2.0 Flash', inputCost: 0.10 / 1000000, outputCost: 0.40 / 1000000 },
-      'gemini-2.5-flash': { name: 'Gemini 2.5 Flash', inputCost: 0.10 / 1000000, outputCost: 0.40 / 1000000 },
-      'gemini-2.5-pro': { name: 'Gemini 2.5 Pro', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 }
+      'gemini-3.5-flash': { name: 'Gemini 3.5 Flash', inputCost: 1.50 / 1000000, outputCost: 9.00 / 1000000 },
+      'gemini-3.1-pro': { name: 'Gemini 3.1 Pro', inputCost: 2.00 / 1000000, outputCost: 12.00 / 1000000 },
+      'gemini-3.1-flash-lite': { name: 'Gemini 3.1 Flash-Lite', inputCost: 0.25 / 1000000, outputCost: 1.50 / 1000000 },
+      'gemini-2.5-pro': { name: 'Gemini 2.5 Pro', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 },
+      'gemini-2.5-flash': { name: 'Gemini 2.5 Flash', inputCost: 0.075 / 1000000, outputCost: 0.30 / 1000000 },
+      'gemini-1.5-pro': { name: 'Gemini 1.5 Pro (Legacy)', inputCost: 1.25 / 1000000, outputCost: 5.00 / 1000000 },
+      'gemini-1.5-flash': { name: 'Gemini 1.5 Flash (Legacy)', inputCost: 0.075 / 1000000, outputCost: 0.30 / 1000000 }
     };
 
     const DEFAULT_STATE = {
@@ -306,7 +425,7 @@
           ],
           gemId: null,
           attachedSourceIds: ['s1'],
-          model: 'gemini-1.5-flash',
+          model: 'gemini-3.5-flash',
           createdAt: Date.now()
         }
       ],
@@ -320,8 +439,111 @@
 
     let state = null;
     let currentAbortController = null;
+    let fetchedModels = [];
 
-    function initializeState() {
+    // Gist Sync Credentials Structure (Kept fully independent of Chat State)
+    let syncSettings = {
+      githubToken: '',
+      gistId: '',
+      autoSync: false
+    };
+
+    // System theme controller
+    let currentTheme = 'system';
+
+    function applyTheme() {
+      const root = document.documentElement;
+      const savedTheme = localStorage.getItem('gemini_studio_theme') || 'system';
+      currentTheme = savedTheme;
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      if (currentTheme === 'dark' || (currentTheme === 'system' && systemPrefersDark)) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      updateThemeUI();
+    }
+
+    function setTheme(mode) {
+      currentTheme = mode;
+      localStorage.setItem('gemini_studio_theme', mode);
+      applyTheme();
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (currentTheme === 'system') {
+        applyTheme();
+      }
+    });
+
+    function updateThemeUI() {
+      const modes = ['light', 'dark', 'system'];
+      modes.forEach(mode => {
+        const el = document.getElementById('themeBtn-' + mode);
+        if (!el) return;
+        if (currentTheme === mode) {
+          el.className = "p-1 text-[10px] rounded transition px-1.5 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm border border-slate-300 dark:border-slate-700";
+        } else {
+          el.className = "p-1 text-[10px] rounded transition px-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 border border-transparent";
+        }
+      });
+    }
+
+    function loadSyncSettings() {
+      const saved = localStorage.getItem('gemini_studio_sync_settings');
+      if (saved) {
+        try {
+          syncSettings = JSON.parse(saved);
+        } catch (e) {
+          console.warn("Failed to parse sync settings configuration.");
+        }
+      }
+    }
+
+    function saveSyncSettings() {
+      localStorage.setItem('gemini_studio_sync_settings', JSON.stringify(syncSettings));
+      updateSyncStatusIndicator();
+    }
+
+    function loadFetchedModels() {
+      const saved = localStorage.getItem('gemini_studio_fetched_models');
+      if (saved) {
+        try {
+          fetchedModels = JSON.parse(saved);
+        } catch (e) {
+          fetchedModels = [];
+        }
+      }
+    }
+
+    function saveFetchedModels() {
+      localStorage.setItem('gemini_studio_fetched_models', JSON.stringify(fetchedModels));
+    }
+
+    // Merge static baseline model mapping parameters with dynamic API-fetched keys
+    function getModelPricingMap() {
+      const map = { ...MODEL_PRICING };
+      fetchedModels.forEach(m => {
+        map[m.id] = { name: m.name, inputCost: m.inputCost, outputCost: m.outputCost };
+      });
+      return map;
+    }
+
+    async function initializeState() {
+      loadSyncSettings();
+      loadFetchedModels();
+
+      // Attempt loading cloud state database if Gist ID is populated
+      if (syncSettings.githubToken && syncSettings.gistId) {
+        const pullSuccess = await pullStateFromGist();
+        if (pullSuccess) {
+          console.log("Cloud session data integrated successfully.");
+          return;
+        }
+      }
+
+      // Local fallback
       const saved = localStorage.getItem('gemini_studio_state');
       if (saved) {
         try {
@@ -341,8 +563,287 @@
       }
     }
 
+    // Save locally and automatically sync asynchronously
     function saveState() {
       localStorage.setItem('gemini_studio_state', JSON.stringify(state));
+      if (syncSettings.autoSync && syncSettings.githubToken && syncSettings.gistId) {
+        syncWithGistDebounced();
+      }
+    }
+
+    function saveStateLocallyOnly() {
+      localStorage.setItem('gemini_studio_state', JSON.stringify(state));
+    }
+
+    // Dynamic API Model list Fetching
+    async function fetchModelsFromAPI() {
+      const apiKeyVal = state.apiKey || (document.getElementById('apiKeyInput') ? document.getElementById('apiKeyInput').value.trim() : '');
+      if (!apiKeyVal) {
+        alert("Please specify and save your Gemini developer key inside the config pane first.");
+        return;
+      }
+
+      const statusSpan = document.getElementById('fetchModelsStatusSpan');
+      if (statusSpan) {
+        statusSpan.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1"></i> Listing...`;
+      }
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKeyVal}`);
+        if (!response.ok) {
+          throw new Error(`Endpoint model query failed with status code ${response.status}`);
+        }
+        const data = await response.json();
+
+        if (data && data.models) {
+          const contentGenerationCapable = data.models.filter(m => 
+            m.supportedGenerationMethods && 
+            m.supportedGenerationMethods.includes('generateContent') &&
+            (m.name.startsWith('models/gemini') || m.name.includes('gemma'))
+          );
+
+          fetchedModels = contentGenerationCapable.map(m => {
+            const id = m.name.replace('models/', '');
+            const displayName = m.displayName || id;
+
+            // Apply pricing mapping heuristics to programmatically identify costs
+            let inputCost = 0.075 / 1000000;
+            let outputCost = 0.30 / 1000000;
+
+            const lowerId = id.toLowerCase();
+            if (lowerId.includes('3.5-flash')) {
+              inputCost = 1.50 / 1000000;
+              outputCost = 9.00 / 1000000;
+            } else if (lowerId.includes('3.1-pro')) {
+              inputCost = 2.00 / 1000000;
+              outputCost = 12.00 / 1000000;
+            } else if (lowerId.includes('3.1-flash-lite')) {
+              inputCost = 0.25 / 1000000;
+              outputCost = 1.50 / 1000000;
+            } else if (lowerId.includes('3-flash')) {
+              inputCost = 0.50 / 1000000;
+              outputCost = 3.00 / 1000000;
+            } else if (lowerId.includes('pro')) {
+              inputCost = 1.25 / 1000000;
+              outputCost = 5.00 / 1000000;
+            }
+
+            return { id, name: displayName, inputCost, outputCost };
+          });
+
+          saveFetchedModels();
+          alert(`Successfully mapped and saved ${fetchedModels.length} compatible models directly from Google's active developer channels!`);
+          renderActiveChat();
+        }
+      } catch (err) {
+        console.error(err);
+        alert(`Failed to query model listing: ${err.message}`);
+      } finally {
+        if (statusSpan) {
+          statusSpan.innerText = "Fetch Live API Models";
+        }
+      }
+    }
+
+    // Gist Integration Functions
+    async function pushStateToGist() {
+      if (!syncSettings.githubToken || !syncSettings.gistId) return false;
+      updateSyncStatusIndicator('syncing', 'Backing up to Gist...');
+
+      try {
+        const response = await fetch(`https://api.github.com/gists/${syncSettings.gistId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `token ${syncSettings.githubToken}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            description: "Gemini Studio State Backup",
+            files: {
+              "gemini_studio_state.json": {
+                "content": JSON.stringify(state, null, 2)
+              }
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Gist PATCH rejected with status code ${response.status}`);
+        }
+
+        updateSyncStatusIndicator('synced');
+        return true;
+      } catch (err) {
+        console.error(err);
+        updateSyncStatusIndicator('error', `Backup failed: ${err.message}`);
+        return false;
+      }
+    }
+
+    async function pullStateFromGist() {
+      if (!syncSettings.githubToken || !syncSettings.gistId) return false;
+      updateSyncStatusIndicator('syncing', 'Syncing Gist data...');
+
+      try {
+        const response = await fetch(`https://api.github.com/gists/${syncSettings.gistId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `token ${syncSettings.githubToken}`,
+            'Accept': 'application/vnd.github+json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Gist GET rejected with status code ${response.status}`);
+        }
+
+        const data = await response.json();
+        const fileContent = data.files["gemini_studio_state.json"];
+        if (fileContent && fileContent.content) {
+          const loadedState = JSON.parse(fileContent.content);
+          if (loadedState && loadedState.chats) {
+            state = loadedState;
+            saveStateLocallyOnly();
+            updateSyncStatusIndicator('synced');
+            return true;
+          }
+        }
+        throw new Error("Target file gemini_studio_state.json was missing inside Gist.");
+      } catch (err) {
+        console.error(err);
+        updateSyncStatusIndicator('error', `Retrieval failed: ${err.message}`);
+        return false;
+      }
+    }
+
+    async function createGistAutomatically() {
+      const token = document.getElementById('ghTokenInput').value.trim();
+      if (!token) {
+        alert("Please paste your GitHub Personal Access Token first.");
+        return;
+      }
+
+      updateSyncStatusIndicator('syncing', 'Creating Gist...');
+      try {
+        const response = await fetch(`https://api.github.com/gists`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            description: "Gemini Studio Cloud Backup",
+            public: false, // Create a secret Gist for privacy
+            files: {
+              "gemini_studio_state.json": {
+                "content": JSON.stringify(state || DEFAULT_STATE, null, 2)
+              }
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error("Creation failed with response status check.");
+        }
+
+        const data = await response.json();
+        const newId = data.id;
+        document.getElementById('gistIdInput').value = newId;
+        updateSyncStatusIndicator('synced');
+        alert(`Secret Gist created successfully!\nGist ID: ${newId}\n\nThis ID has been assigned to your sync configuration.`);
+      } catch (err) {
+        console.error(err);
+        updateSyncStatusIndicator('error', `Failed to create Gist.`);
+        alert(`Error automatically creating Gist: ${err.message}`);
+      }
+    }
+
+    // Debounce syncing wrapper to avoid blocking user keystrokes
+    let syncDebounceTimeout = null;
+    function syncWithGistDebounced() {
+      clearTimeout(syncDebounceTimeout);
+      updateSyncStatusIndicator('syncing', 'Waiting for changes...');
+      syncDebounceTimeout = setTimeout(async () => {
+        await pushStateToGist();
+      }, 5000); // Wait 5 seconds after modifications before pushing changes
+    }
+
+    function saveSyncSettingsUI() {
+      syncSettings.githubToken = document.getElementById('ghTokenInput').value.trim();
+      syncSettings.gistId = document.getElementById('gistIdInput').value.trim();
+      syncSettings.autoSync = document.getElementById('autoSyncCheckbox').checked;
+      saveSyncSettings();
+      closeModal('githubSync');
+      alert("Sync configurations saved successfully.");
+    }
+
+    async function manualPush() {
+      const success = await pushStateToGist();
+      if (success) {
+        alert("Workspace state pushed to Gist backup successfully.");
+      } else {
+        alert("Failed to push state. Verify your token permissions and Gist ID configuration.");
+      }
+    }
+
+    async function manualPull() {
+      if (!confirm("Are you sure you want to load data from GitHub Gist? This will overwrite any unsaved local modifications.")) return;
+      const success = await pullStateFromGist();
+      if (success) {
+        alert("Workspace state pulled and loaded from Gist successfully.");
+        renderAll();
+      } else {
+        alert("Failed to pull state. Verify your network, token, and Gist ID settings.");
+      }
+    }
+
+    function updateSyncStatusIndicator() {
+      const badge = document.getElementById('syncStatusBadge');
+      if (!badge) return;
+
+      const status = badge.getAttribute('data-status') || 'local';
+      const msg = badge.getAttribute('data-msg') || '';
+
+      if (status === 'syncing') {
+        badge.innerHTML = `
+          <span class="inline-flex items-center space-x-1 text-sky-500" title="${escapeHTML(msg)}">
+            <i class="fa-solid fa-spinner animate-spin text-[10px]"></i>
+            <span class="text-[9px] font-bold">Syncing</span>
+          </span>
+        `;
+      } else if (status === 'synced') {
+        badge.innerHTML = `
+          <span class="inline-flex items-center space-x-1 text-emerald-500" title="Cloud state fully updated.">
+            <i class="fa-solid fa-circle-check text-[10px]"></i>
+            <span class="text-[9px] font-bold">Synced</span>
+          </span>
+        `;
+      } else if (status === 'error') {
+        badge.innerHTML = `
+          <span class="inline-flex items-center space-x-1 text-rose-500" title="${escapeHTML(msg)}">
+            <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+            <span class="text-[9px] font-bold">Sync Error</span>
+          </span>
+        `;
+      } else {
+        badge.innerHTML = `
+          <span class="inline-flex items-center space-x-1 text-slate-400 dark:text-slate-500" title="Workspace configured locally.">
+            <i class="fa-solid fa-cloud text-[10px]"></i>
+            <span class="text-[9px] font-bold">Local</span>
+          </span>
+        `;
+      }
+    }
+
+    function updateSyncStatusIndicator(status = 'local', msg = '') {
+      const badge = document.getElementById('syncStatusBadge');
+      if (badge) {
+        badge.setAttribute('data-status', status);
+        badge.setAttribute('data-msg', msg);
+      }
+      updateSyncStatusIndicator();
     }
 
     // Heuristic estimation: ~4 chars per token average
@@ -352,14 +853,16 @@
     }
 
     function calculateMessageCost(msg, model) {
-      const rate = MODEL_PRICING[model] || MODEL_PRICING['gemini-1.5-flash'];
+      const pricingMap = getModelPricingMap();
+      const rate = pricingMap[model] || pricingMap['gemini-3.5-flash'] || MODEL_PRICING['gemini-3.5-flash'];
       const tokens = estimateTokens(msg.content);
       return msg.role === 'user' ? tokens * rate.inputCost : tokens * rate.outputCost;
     }
 
     function calculateChatTotalCost(chat) {
       if (!chat || !chat.messages) return 0;
-      const rate = MODEL_PRICING[chat.model || 'gemini-1.5-flash'] || MODEL_PRICING['gemini-1.5-flash'];
+      const pricingMap = getModelPricingMap();
+      const rate = pricingMap[chat.model] || pricingMap['gemini-3.5-flash'] || MODEL_PRICING['gemini-3.5-flash'];
       let total = 0;
 
       // Extract system text
@@ -401,13 +904,13 @@
 
       // All item
       const allBtn = document.createElement('button');
-      allBtn.className = `w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${state.activeFolderId === 'all' && state.activeTag === 'all' ? 'bg-indigo-600/10 text-indigo-400 font-bold border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`;
+      allBtn.className = `w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${state.activeFolderId === 'all' && state.activeTag === 'all' ? 'bg-indigo-600/10 text-indigo-500 font-bold border border-indigo-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-200'}`;
       allBtn.innerHTML = `
         <span class="flex items-center space-x-2">
           <i class="fa-solid fa-box-archive"></i>
           <span>All Chats</span>
         </span>
-        <span class="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${state.chats.length}</span>
+        <span class="bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${state.chats.length}</span>
       `;
       allBtn.onclick = () => {
         state.activeFolderId = 'all';
@@ -425,13 +928,13 @@
         div.className = 'group relative w-full';
         const isSelected = state.activeFolderId === f.id;
         div.innerHTML = `
-          <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-400 font-bold border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}">
+          <button class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-500 font-bold border border-indigo-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-200'}">
             <span class="flex items-center space-x-2 truncate">
               <i class="fa-solid fa-folder text-yellow-500/80"></i>
               <span class="truncate">${escapeHTML(f.name)}</span>
             </span>
             <div class="flex items-center space-x-1.5">
-              <span class="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${count}</span>
+              <span class="bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${count}</span>
               <span class="opacity-0 group-hover:opacity-100 transition hover:text-red-400 px-0.5" onclick="deleteFolder(event, '${f.id}')" title="Delete Folder">
                 <i class="fa-solid fa-trash"></i>
               </span>
@@ -466,20 +969,20 @@
 
       const tags = Object.keys(tagsMap).sort();
       if (tags.length === 0) {
-        container.innerHTML = `<div class="text-[10px] text-slate-500 italic px-3 py-1">No tags active.</div>`;
+        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-500 italic px-3 py-1">No tags active.</div>`;
         return;
       }
 
       tags.forEach(tag => {
         const isSelected = state.activeTag === tag;
         const btn = document.createElement('button');
-        btn.className = `w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-400 font-bold border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`;
+        btn.className = `w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold transition ${isSelected ? 'bg-indigo-600/10 text-indigo-500 font-bold border border-indigo-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-200'}`;
         btn.innerHTML = `
           <span class="flex items-center space-x-2 truncate">
-            <i class="fa-solid fa-hashtag text-teal-400"></i>
+            <i class="fa-solid fa-hashtag text-teal-500 dark:text-teal-400"></i>
             <span class="truncate">${escapeHTML(tag)}</span>
           </span>
-          <span class="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${tagsMap[tag]}</span>
+          <span class="bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-mono">${tagsMap[tag]}</span>
         `;
         btn.onclick = () => {
           state.activeTag = tag;
@@ -498,18 +1001,18 @@
 
       state.gems.forEach(gem => {
         const div = document.createElement('div');
-        div.className = 'group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition';
+        div.className = 'group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-850 dark:hover:text-slate-200 transition';
         div.innerHTML = `
           <button class="flex items-center space-x-2 truncate text-left flex-1" title="${escapeHTML(gem.description || '')}">
-            <i class="fa-solid fa-gem text-indigo-400"></i>
+            <i class="fa-solid fa-gem text-indigo-500 dark:text-indigo-400"></i>
             <span class="truncate">${escapeHTML(gem.name)}</span>
           </button>
           <div class="flex items-center space-x-1">
-            <button onclick="startChatWithGem(event, '${gem.id}')" title="Start Chat with Gem" class="opacity-0 group-hover:opacity-100 hover:text-emerald-400 px-1 transition">
-              <i class="fa-solid fa-play"></i>
+            <button onclick="startChatWithGem(event, '${gem.id}')" title="Start Chat with Gem" class="opacity-0 group-hover:opacity-100 hover:text-emerald-500 dark:hover:text-emerald-400 px-1 transition">
+              <i class="fa-solid fa-play text-[11px]"></i>
             </button>
-            <button onclick="openGemModal('${gem.id}')" title="Edit Gem" class="opacity-0 group-hover:opacity-100 hover:text-indigo-400 px-1 transition">
-              <i class="fa-solid fa-pen-to-square"></i>
+            <button onclick="openGemModal('${gem.id}')" title="Edit Gem" class="opacity-0 group-hover:opacity-100 hover:text-indigo-500 dark:hover:text-indigo-400 px-1 transition">
+              <i class="fa-solid fa-pen-to-square text-[11px]"></i>
             </button>
           </div>
         `;
@@ -518,7 +1021,7 @@
       });
 
       if (state.gems.length === 0) {
-        container.innerHTML = `<div class="text-[10px] text-slate-500 italic px-3 py-1">No custom Gems.</div>`;
+        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-500 italic px-3 py-1">No custom Gems.</div>`;
       }
     }
 
@@ -528,14 +1031,14 @@
 
       state.sources.forEach(src => {
         const div = document.createElement('div');
-        div.className = 'group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition';
+        div.className = 'group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 hover:text-slate-850 dark:hover:text-slate-200 transition';
         div.innerHTML = `
           <button class="flex items-center space-x-2 truncate text-left flex-1">
             <i class="fa-solid fa-file-invoice text-amber-500/85"></i>
             <span class="truncate">${escapeHTML(src.name)}</span>
           </button>
-          <button onclick="openManageSourcesModal('${src.id}')" title="Edit Source" class="opacity-0 group-hover:opacity-100 hover:text-indigo-400 px-1 transition">
-            <i class="fa-solid fa-pen-to-square"></i>
+          <button onclick="openManageSourcesModal('${src.id}')" title="Edit Source" class="opacity-0 group-hover:opacity-100 hover:text-indigo-500 dark:hover:text-indigo-400 px-1 transition">
+            <i class="fa-solid fa-pen-to-square text-[11px]"></i>
           </button>
         `;
         div.querySelector('button').onclick = () => openManageSourcesModal(src.id);
@@ -543,7 +1046,7 @@
       });
 
       if (state.sources.length === 0) {
-        container.innerHTML = `<div class="text-[10px] text-slate-500 italic px-3 py-1">No reference sources.</div>`;
+        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-500 italic px-3 py-1">No reference sources.</div>`;
       }
     }
 
@@ -570,7 +1073,7 @@
       if (chats.length === 0) {
         container.innerHTML = `
           <div class="flex flex-col items-center justify-center h-48 text-center px-4">
-            <i class="fa-solid fa-magnifying-glass text-slate-700 text-2xl mb-2"></i>
+            <i class="fa-solid fa-magnifying-glass text-slate-400 dark:text-slate-700 text-2xl mb-2"></i>
             <p class="text-xs text-slate-500">No matching conversations found.</p>
           </div>
         `;
@@ -586,31 +1089,31 @@
         if (chat.folderId) {
           const folder = state.folders.find(f => f.id === chat.folderId);
           if (folder) {
-            folderBadge = `<span class="bg-yellow-500/10 border border-yellow-500/10 text-yellow-500 text-[9px] px-1.5 py-0.5 rounded font-medium"><i class="fa-solid fa-folder text-[8px] mr-1"></i>${escapeHTML(folder.name)}</span>`;
+            folderBadge = `<span class="bg-yellow-500/10 border border-yellow-500/10 text-yellow-600 dark:text-yellow-500 text-[9px] px-1.5 py-0.5 rounded font-medium"><i class="fa-solid fa-folder text-[8px] mr-1"></i>${escapeHTML(folder.name)}</span>`;
           }
         }
 
         let tagsHTML = "";
         if (chat.tags) {
           chat.tags.forEach(t => {
-            tagsHTML += `<span class="bg-slate-800 text-teal-400 text-[9px] px-1.5 py-0.5 rounded font-medium border border-teal-500/10">#${escapeHTML(t)}</span>`;
+            tagsHTML += `<span class="bg-slate-200 dark:bg-slate-800 text-teal-600 dark:text-teal-400 text-[9px] px-1.5 py-0.5 rounded font-medium border border-teal-500/10">#${escapeHTML(t)}</span>`;
           });
         }
 
         const div = document.createElement('div');
-        div.className = `group relative p-3 mx-2 my-1.5 rounded-xl border transition cursor-pointer flex flex-col space-y-1.5 ${isSelected ? 'bg-slate-800/80 border-indigo-500/50 shadow-lg' : 'bg-slate-900/30 border-slate-900 hover:bg-slate-850/40'}`;
+        div.className = `group relative p-3 mx-2 my-1.5 rounded-xl border transition cursor-pointer flex flex-col space-y-1.5 ${isSelected ? 'bg-white dark:bg-slate-800/80 border-indigo-500/50 shadow-lg' : 'bg-white/40 dark:bg-slate-900/30 border-slate-200 dark:border-slate-900 hover:bg-slate-200/20 dark:hover:bg-slate-850/40'}`;
         div.innerHTML = `
           <div class="flex justify-between items-start">
-            <h4 class="font-bold text-xs text-slate-200 truncate flex-1 group-hover:text-indigo-400 transition pr-2">${escapeHTML(chat.title || 'Untitled Note')}</h4>
-            <span class="text-[9px] text-slate-500 font-mono flex-shrink-0">${dateStr}</span>
+            <h4 class="font-bold text-xs text-slate-700 dark:text-slate-200 truncate flex-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition pr-2">${escapeHTML(chat.title || 'Untitled Note')}</h4>
+            <span class="text-[9px] text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">${dateStr}</span>
           </div>
-          <p class="text-[11px] text-slate-400 line-clamp-2 h-8 leading-relaxed">${escapeHTML(lastMsg) || '<span class="italic text-slate-600">Blank note discussion</span>'}</p>
-          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 min-h-[22px]">
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 h-8 leading-relaxed">${escapeHTML(lastMsg) || '<span class="italic text-slate-400 dark:text-slate-600">Blank note discussion</span>'}</p>
+          <div class="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-800/60 min-h-[22px]">
             <div class="flex flex-wrap gap-1 items-center">
               ${folderBadge}
               ${tagsHTML}
             </div>
-            <button onclick="deleteChat(event, '${chat.id}')" title="Delete Note" class="opacity-0 group-hover:opacity-100 hover:text-red-400 text-xs px-1 py-0.5 rounded transition">
+            <button onclick="deleteChat(event, '${chat.id}')" title="Delete Note" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 dark:hover:text-red-400 text-xs px-1 py-0.5 rounded transition">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
@@ -641,12 +1144,12 @@
 
     function getEmptyWorkspaceHTML() {
       return `
-        <div class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-950/20 select-none">
+        <div class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/20 select-none">
           <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/10 flex items-center justify-center mb-6 shadow-xl shadow-indigo-950/20">
-            <i class="fa-solid fa-book-open text-2xl text-indigo-400"></i>
+            <i class="fa-solid fa-book-open text-2xl text-indigo-500 dark:text-indigo-400"></i>
           </div>
-          <h2 class="text-lg font-bold text-slate-200 mb-1.5">No Conversation Loaded</h2>
-          <p class="text-slate-400 text-xs max-w-sm mb-6 leading-relaxed">
+          <h2 class="text-lg font-bold text-slate-700 dark:text-slate-200 mb-1.5">No Conversation Loaded</h2>
+          <p class="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-6 leading-relaxed">
             Select a notes chat session from the list, or launch a new workspace to start configuring models and querying documents.
           </p>
           <button onclick="createNewChat()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition">
@@ -662,9 +1165,10 @@
         folderOptions += `<option value="${f.id}" ${chat.folderId === f.id ? 'selected' : ''}>${escapeHTML(f.name)}</option>`;
       });
 
+      const pricingMap = getModelPricingMap();
       let modelOptions = "";
-      Object.keys(MODEL_PRICING).forEach(m => {
-        modelOptions += `<option value="${m}" ${chat.model === m ? 'selected' : ''}>${MODEL_PRICING[m].name}</option>`;
+      Object.keys(pricingMap).forEach(m => {
+        modelOptions += `<option value="${m}" ${chat.model === m ? 'selected' : ''}>${pricingMap[m].name}</option>`;
       });
 
       let gemOptions = `<option value="">No Gem (Standard assistant)</option>`;
@@ -676,9 +1180,9 @@
       if (chat.tags) {
         chat.tags.forEach(t => {
           tagsHTML += `
-            <span class="flex items-center bg-slate-800/80 text-teal-400 text-[10px] px-2 py-0.5 rounded-full border border-teal-500/15 space-x-1">
+            <span class="flex items-center bg-slate-200 dark:bg-slate-850 text-teal-600 dark:text-teal-400 text-[10px] px-2 py-0.5 rounded-full border border-teal-500/15 space-x-1">
               <span>#${escapeHTML(t)}</span>
-              <button onclick="removeTagFromChat('${t}')" class="text-slate-500 hover:text-slate-300 ml-1">
+              <button onclick="removeTagFromChat('${t}')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1">
                 <i class="fa-solid fa-times-circle"></i>
               </button>
             </span>
@@ -687,20 +1191,20 @@
       }
 
       return `
-        <div class="flex flex-col h-full overflow-hidden">
+        <div class="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900">
           <!-- Chat Header metadata controls -->
-          <div class="bg-slate-900 border-b border-slate-800 p-4 space-y-3">
+          <div class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 space-y-3">
             <div class="flex items-center justify-between">
-              <input type="text" id="chatTitleInput" value="${escapeHTML(chat.title || '')}" onblur="saveChatTitle()" onkeydown="handleChatTitleKeyDown(event)" class="flex-1 bg-transparent text-slate-100 font-extrabold text-base focus:outline-none focus:bg-slate-800/40 px-2 py-1 rounded border border-transparent focus:border-indigo-500/40 transition truncate mr-4" />
+              <input type="text" id="chatTitleInput" value="${escapeHTML(chat.title || '')}" onblur="saveChatTitle()" onkeydown="handleChatTitleKeyDown(event)" class="flex-1 bg-transparent text-slate-800 dark:text-slate-100 font-extrabold text-base focus:outline-none focus:bg-slate-200/50 dark:focus:bg-slate-850/40 px-2 py-1 rounded border border-transparent focus:border-indigo-500/40 transition truncate mr-4" />
               
               <div class="flex items-center space-x-3 flex-shrink-0">
-                <button onclick="openChatSourcesModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-slate-750 text-xs font-semibold text-slate-300 rounded-lg transition" title="Attach knowledge sources to this chat note">
-                  <i class="fa-solid fa-file-invoice text-indigo-400"></i>
+                <button onclick="openChatSourcesModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition" title="Attach knowledge sources to this chat note">
+                  <i class="fa-solid fa-file-invoice text-indigo-500 dark:text-indigo-400"></i>
                   <span>Sources (${chat.attachedSourceIds ? chat.attachedSourceIds.length : 0})</span>
                 </button>
                 <div class="flex flex-col items-end" title="Accumulated approximate cost of input context queries and generated outputs. Rates estimated per character counts.">
-                  <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Estimated Cost</span>
-                  <span id="chatTotalCostSpan" class="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">$0.000000</span>
+                  <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Estimated Cost</span>
+                  <span id="chatTotalCostSpan" class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 dark:border-emerald-400/10">$0.000000</span>
                 </div>
               </div>
             </div>
@@ -709,23 +1213,23 @@
             <div class="flex flex-wrap gap-2 items-center justify-between text-xs pt-1">
               <div class="flex flex-wrap gap-2 items-center">
                 <!-- Dropdown Model -->
-                <div class="flex items-center space-x-1 bg-slate-950/60 border border-slate-800 px-2.5 py-1 rounded-lg">
-                  <span class="text-[9px] text-slate-500 font-bold">MODEL:</span>
-                  <select onchange="updateChatModel(this.value)" class="bg-transparent text-slate-300 font-bold focus:outline-none cursor-pointer">
+                <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
+                  <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold">MODEL:</span>
+                  <select onchange="updateChatModel(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
                     ${modelOptions}
                   </select>
                 </div>
                 <!-- Dropdown Gem -->
-                <div class="flex items-center space-x-1 bg-slate-950/60 border border-slate-800 px-2.5 py-1 rounded-lg">
-                  <span class="text-[9px] text-indigo-400 font-bold"><i class="fa-solid fa-gem mr-1"></i>GEM:</span>
-                  <select onchange="updateChatGem(this.value)" class="bg-transparent text-slate-300 font-bold focus:outline-none cursor-pointer">
+                <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
+                  <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-bold"><i class="fa-solid fa-gem mr-1"></i>GEM:</span>
+                  <select onchange="updateChatGem(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
                     ${gemOptions}
                   </select>
                 </div>
                 <!-- Dropdown Folder -->
-                <div class="flex items-center space-x-1 bg-slate-950/60 border border-slate-800 px-2.5 py-1 rounded-lg">
-                  <span class="text-[9px] text-yellow-500 font-bold"><i class="fa-solid fa-folder mr-1"></i>FOLDER:</span>
-                  <select onchange="updateChatFolder(this.value)" class="bg-transparent text-slate-300 font-bold focus:outline-none cursor-pointer">
+                <div class="flex items-center space-x-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
+                  <span class="text-[9px] text-yellow-600 dark:text-yellow-500 font-bold"><i class="fa-solid fa-folder mr-1"></i>FOLDER:</span>
+                  <select onchange="updateChatFolder(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">
                     ${folderOptions}
                   </select>
                 </div>
@@ -734,20 +1238,20 @@
               <!-- Tags container list -->
               <div class="flex items-center space-x-1.5">
                 <div id="chatTagsContainer" class="flex flex-wrap gap-1">${tagsHTML}</div>
-                <button onclick="promptAddTagToChat()" class="px-2 py-1 bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-full text-[10px] transition"><i class="fa-solid fa-plus text-[8px] mr-1"></i>Tag</button>
+                <button onclick="promptAddTagToChat()" class="px-2 py-1 bg-white dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 rounded-full text-[10px] transition"><i class="fa-solid fa-plus text-[8px] mr-1"></i>Tag</button>
               </div>
             </div>
           </div>
 
           <!-- Messages scroll section -->
-          <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-5"></div>
+          <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-5 bg-white dark:bg-slate-900"></div>
 
           <!-- Bottom Prompt Input -->
-          <div class="p-4 bg-slate-900 border-t border-slate-800 space-y-2">
-            <div class="relative flex items-end bg-slate-950/50 border border-slate-800 focus-within:border-indigo-500 hover:border-slate-700 rounded-2xl p-2 transition">
-              <textarea id="chatInput" onkeydown="handleChatInputKeyDown(event)" oninput="autoGrowTextArea()" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-200 placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
+          <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-2">
+            <div class="relative flex items-end bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-2 transition">
+              <textarea id="chatInput" onkeydown="handleChatInputKeyDown(event)" oninput="autoGrowTextArea()" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
               <div class="absolute right-3 bottom-2.5 flex items-center space-x-2">
-                <label class="p-2 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
+                <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
                   <i class="fa-solid fa-paperclip"></i>
                   <input type="file" id="tempFileInput" class="hidden" onchange="handleTempFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
                 </label>
@@ -769,7 +1273,7 @@
 
       if (chat.messages.length === 0) {
         container.innerHTML = `
-          <div class="flex flex-col items-center justify-center h-full text-slate-500 space-y-2 py-16">
+          <div class="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 space-y-2 py-16">
             <i class="fa-solid fa-comments text-3xl opacity-40"></i>
             <p class="text-xs">Discussion empty. Send a prompt to query models.</p>
           </div>
@@ -782,7 +1286,7 @@
         const msgDiv = document.createElement('div');
         msgDiv.className = `flex flex-col mb-4 ${isUser ? 'items-end' : 'items-start'}`;
 
-        const cost = calculateMessageCost(msg, chat.model || 'gemini-1.5-flash');
+        const cost = calculateMessageCost(msg, chat.model || 'gemini-3.5-flash');
         const costStr = cost > 0 ? `• Est. $${cost.toFixed(6)}` : '';
         const roleLabel = isUser ? 'You' : getSenderName(chat);
 
@@ -790,13 +1294,13 @@
 
         msgDiv.innerHTML = `
           <div class="max-w-[85%] flex flex-col">
-            <div class="flex items-center space-x-2 text-[10px] text-slate-500 mb-1 px-1.5 ${isUser ? 'justify-end' : 'justify-start'}">
-              <span class="font-bold text-slate-300">${roleLabel}</span>
+            <div class="flex items-center space-x-2 text-[10px] text-slate-400 dark:text-slate-500 mb-1 px-1.5 ${isUser ? 'justify-end' : 'justify-start'}">
+              <span class="font-bold text-slate-600 dark:text-slate-300">${roleLabel}</span>
               <span>•</span>
               <span>${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              ${costStr ? `<span>•</span><span class="text-indigo-400 font-semibold">${costStr}</span>` : ''}
+              ${costStr ? `<span>•</span><span class="text-indigo-600 dark:text-indigo-400 font-semibold">${costStr}</span>` : ''}
             </div>
-            <div class="p-4 rounded-2xl ${isUser ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg' : 'bg-slate-800 border border-slate-700/80 text-slate-100 rounded-tl-none'}">
+            <div class="p-4 rounded-2xl ${isUser ? 'bg-indigo-600 text-white rounded-tr-none shadow-md' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 rounded-tl-none'}">
               <div class="markdown-body text-sm leading-relaxed">${renderedText}</div>
             </div>
           </div>
@@ -826,12 +1330,12 @@
         }
 
         if (activeIds.size > 0) {
-          sourcesBar.innerHTML = `<span class="font-bold text-slate-500 text-[9px] uppercase tracking-wider mr-1">Active Sources context:</span>`;
+          sourcesBar.innerHTML = `<span class="font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider mr-1">Active Sources context:</span>`;
           activeIds.forEach(id => {
             const s = state.sources.find(src => src.id === id);
             if (s) {
               sourcesBar.innerHTML += `
-                <span class="bg-slate-950 border border-slate-800 text-slate-300 px-2 py-0.5 rounded-lg flex items-center space-x-1">
+                <span class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-lg flex items-center space-x-1">
                   <i class="fa-solid fa-file-invoice text-amber-500/80 text-[8px]"></i>
                   <span>${escapeHTML(s.name)}</span>
                 </span>
@@ -951,7 +1455,7 @@
         }
       };
 
-      const modelName = chat.model || 'gemini-1.5-flash';
+      const modelName = chat.model || 'gemini-3.5-flash';
       // streamGenerateContent alt=sse is native stream for Google endpoints
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${state.apiKey}`;
 
@@ -1026,11 +1530,11 @@
       const sendBtn = document.getElementById('sendBtn');
       if (!sendBtn) return;
       if (state.isGenerating) {
-        sendBtn.innerHTML = `<i class="fa-solid fa-stop text-red-400"></i>`;
+        sendBtn.innerHTML = `<i class="fa-solid fa-stop text-red-400 text-xs"></i>`;
         sendBtn.title = "Stop Generating";
         sendBtn.className = "p-2 bg-red-950/40 border border-red-500/20 text-white rounded-lg hover:bg-red-900/40 transition font-semibold text-xs flex items-center justify-center";
       } else {
-        sendBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`;
+        sendBtn.innerHTML = `<i class="fa-solid fa-paper-plane text-xs"></i>`;
         sendBtn.title = "Send Query";
         sendBtn.className = "p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition font-semibold text-xs flex items-center justify-center";
       }
@@ -1041,6 +1545,10 @@
       document.getElementById(id + 'Modal').classList.remove('hidden');
       if (id === 'apiKey') {
         document.getElementById('apiKeyInput').value = state.apiKey || '';
+      } else if (id === 'githubSync') {
+        document.getElementById('ghTokenInput').value = syncSettings.githubToken || '';
+        document.getElementById('gistIdInput').value = syncSettings.gistId || '';
+        document.getElementById('autoSyncCheckbox').checked = syncSettings.autoSync || false;
       }
     }
 
@@ -1059,9 +1567,9 @@
       const el = document.getElementById('apiKeyBadge');
       if (!el) return;
       if (state.apiKey) {
-        el.innerHTML = `<span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-400 rounded-full flex items-center space-x-1 cursor-pointer" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Active</span></span>`;
+        el.innerHTML = `<span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 rounded-full flex items-center space-x-1 cursor-pointer" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span><span>Active</span></span>`;
       } else {
-        el.innerHTML = `<span class="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-[9px] font-bold text-rose-400 rounded-full flex items-center space-x-1 cursor-pointer hover:bg-rose-500/25 transition" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span><span>Key Missing</span></span>`;
+        el.innerHTML = `<span class="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-[9px] font-bold text-rose-600 dark:text-rose-400 rounded-full flex items-center space-x-1 cursor-pointer hover:bg-rose-500/25 transition" onclick="openModal('apiKey')"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400"></span><span>Key Missing</span></span>`;
       }
     }
 
@@ -1088,7 +1596,7 @@
       container.innerHTML = '';
       state.sources.forEach(s => {
         const btn = document.createElement('button');
-        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingSourceId === s.id ? 'bg-indigo-950/40 border-indigo-500 text-indigo-300' : 'bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800'}`;
+        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingSourceId === s.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
         btn.innerHTML = `<i class="fa-solid fa-file-lines mr-1.5 text-amber-500/80"></i>${escapeHTML(s.name)}`;
         btn.onclick = () => selectSourceForEditing(s.id);
         container.appendChild(btn);
@@ -1103,23 +1611,23 @@
       if (!s) return;
 
       container.innerHTML = `
-        <div class="flex-1 flex flex-col space-y-3 min-h-0">
+        <div class="flex-1 flex flex-col space-y-3 min-h-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Source Name</label>
-            <input type="text" id="editSourceName" value="${escapeHTML(s.name)}" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Source Name</label>
+            <input type="text" id="editSourceName" value="${escapeHTML(s.name)}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
-          <div class="flex-1 flex flex-col min-h-0">
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
-            <textarea id="editSourceContent" class="flex-1 w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto">${escapeHTML(s.content)}</textarea>
+          <div class="flex-1 flex flex-col min-h-0 font-sans">
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
+            <textarea id="editSourceContent" class="flex-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto">${escapeHTML(s.content)}</textarea>
           </div>
-          <div class="flex items-center justify-between border-t border-slate-800 pt-3">
-            <button onclick="deleteSource('${s.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete</button>
+          <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-3">
+            <button onclick="deleteSource('${s.id}')" class="text-red-500 dark:text-red-400 hover:text-red-400 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete</button>
             <div class="flex space-x-2">
-              <label class="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 font-bold rounded-lg text-xs cursor-pointer flex items-center space-x-1">
+              <label class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-lg text-xs cursor-pointer flex items-center space-x-1 transition">
                 <i class="fa-solid fa-upload"></i> <span>Import File</span>
                 <input type="file" id="sourceFileInput" class="hidden" onchange="handleSourceFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
               </label>
-              <button onclick="saveSourceChanges('${s.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Save Document</button>
+              <button onclick="saveSourceChanges('${s.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Save Document</button>
             </div>
           </div>
         </div>
@@ -1131,17 +1639,17 @@
       renderManageSourcesModalList();
       const container = document.getElementById('sourceFormContainer');
       container.innerHTML = `
-        <div class="flex-1 flex flex-col space-y-3 min-h-0">
+        <div class="flex-1 flex flex-col space-y-3 min-h-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Source Title</label>
-            <input type="text" id="editSourceName" placeholder="e.g. Project Specifications" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Source Title</label>
+            <input type="text" id="editSourceName" placeholder="e.g. Project Specifications" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div class="flex-1 flex flex-col min-h-0">
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
-            <textarea id="editSourceContent" placeholder="Paste guidelines or material logs..." class="flex-1 w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto"></textarea>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
+            <textarea id="editSourceContent" placeholder="Paste guidelines or material logs..." class="flex-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto"></textarea>
           </div>
-          <div class="flex justify-end pt-3 border-t border-slate-800">
-            <button onclick="saveNewSource()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Create Source</button>
+          <div class="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button onclick="saveNewSource()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Create Source</button>
           </div>
         </div>
       `;
@@ -1235,13 +1743,13 @@
         state.sources.forEach(s => {
           const isChecked = chat.attachedSourceIds && chat.attachedSourceIds.includes(s.id);
           const div = document.createElement('label');
-          div.className = "flex items-center justify-between p-3 bg-slate-800/40 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition";
+          div.className = "flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer transition";
           div.innerHTML = `
             <div class="flex items-center space-x-3 truncate">
-              <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="chat-source-checkbox rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900" />
+              <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="chat-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-100 dark:focus:ring-offset-slate-900" />
               <div class="flex flex-col truncate">
-                <span class="text-xs font-bold text-slate-200">${escapeHTML(s.name)}</span>
-                <span class="text-[9px] text-slate-400 truncate mt-0.5">${escapeHTML(s.content.substring(0, 90))}...</span>
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-200">${escapeHTML(s.name)}</span>
+                <span class="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${escapeHTML(s.content.substring(0, 90))}...</span>
               </div>
             </div>
           `;
@@ -1288,8 +1796,8 @@
       container.innerHTML = '';
       state.gems.forEach(g => {
         const btn = document.createElement('button');
-        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-950/40 border-indigo-500 text-indigo-300' : 'bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800'}`;
-        btn.innerHTML = `<i class="fa-solid fa-gem mr-1.5 text-indigo-400"></i>${escapeHTML(g.name)}`;
+        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
+        btn.innerHTML = `<i class="fa-solid fa-gem mr-1.5 text-indigo-500 dark:text-indigo-400"></i>${escapeHTML(g.name)}`;
         btn.onclick = () => selectGemForEditing(g.id);
         container.appendChild(btn);
       });
@@ -1306,9 +1814,9 @@
       state.sources.forEach(s => {
         const isChecked = gem.baseSourceIds && gem.baseSourceIds.includes(s.id);
         sourceHTML += `
-          <label class="flex items-center space-x-2 p-2 bg-slate-800/40 hover:bg-slate-800 rounded-lg cursor-pointer transition">
-            <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="gem-source-checkbox rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500" />
-            <span class="text-xs text-slate-300 truncate">${escapeHTML(s.name)}</span>
+          <label class="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
+            <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="gem-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
           </label>
         `;
       });
@@ -1320,26 +1828,26 @@
       container.innerHTML = `
         <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
-            <input type="text" id="editGemName" value="${escapeHTML(gem.name)}" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <input type="text" id="editGemName" value="${escapeHTML(gem.name)}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gem Mission Profile Description</label>
-            <input type="text" id="editGemDesc" value="${escapeHTML(gem.description || '')}" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Mission Profile Description</label>
+            <input type="text" id="editGemDesc" value="${escapeHTML(gem.description || '')}" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behaviors</label>
-            <textarea id="editGemInstruction" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans">${escapeHTML(gem.systemInstruction)}</textarea>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behaviors</label>
+            <textarea id="editGemInstruction" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans">${escapeHTML(gem.systemInstruction)}</textarea>
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
-            <div class="grid grid-cols-1 gap-2 border border-slate-800 p-2.5 rounded-lg bg-slate-950/40 max-h-28 overflow-y-auto">
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 max-h-28 overflow-y-auto">
               ${sourceHTML}
             </div>
           </div>
-          <div class="flex items-center justify-between border-t border-slate-800 pt-3">
-            <button onclick="deleteGem('${gem.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete Gem</button>
-            <button onclick="saveGemChanges('${gem.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Save Gem</button>
+          <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-3">
+            <button onclick="deleteGem('${gem.id}')" class="text-red-500 dark:text-red-400 hover:text-red-400 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Delete Gem</button>
+            <button onclick="saveGemChanges('${gem.id}')" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Save Gem</button>
           </div>
         </div>
       `;
@@ -1353,9 +1861,9 @@
       let sourceHTML = "";
       state.sources.forEach(s => {
         sourceHTML += `
-          <label class="flex items-center space-x-2 p-2 bg-slate-800/40 hover:bg-slate-800 rounded-lg cursor-pointer transition">
-            <input type="checkbox" value="${s.id}" class="gem-source-checkbox rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500" />
-            <span class="text-xs text-slate-300 truncate">${escapeHTML(s.name)}</span>
+          <label class="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
+            <input type="checkbox" value="${s.id}" class="gem-source-checkbox rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
           </label>
         `;
       });
@@ -1367,25 +1875,25 @@
       container.innerHTML = `
         <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
-            <input type="text" id="editGemName" placeholder="e.g. Copywriter, Code Optimizer" class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <input type="text" id="editGemName" placeholder="e.g. Copywriter, Code Optimizer" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Mission Profile Description</label>
-            <input type="text" id="editGemDesc" placeholder="Helpful summary statement..." class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none" />
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Mission Profile Description</label>
+            <input type="text" id="editGemDesc" placeholder="Helpful summary statement..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behavior Profile</label>
-            <textarea id="editGemInstruction" placeholder="You are an elegant assistant..." class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans"></textarea>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behavior Profile</label>
+            <textarea id="editGemInstruction" placeholder="You are an elegant assistant..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans"></textarea>
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
-            <div class="grid grid-cols-1 gap-2 border border-slate-800 p-2.5 rounded-lg bg-slate-950/40 max-h-28 overflow-y-auto">
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 max-h-28 overflow-y-auto">
               ${sourceHTML}
             </div>
           </div>
-          <div class="flex justify-end border-t border-slate-800 pt-3">
-            <button onclick="saveNewGem()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs">Build Gem</button>
+          <div class="flex justify-end border-t border-slate-200 dark:border-slate-800 pt-3">
+            <button onclick="saveNewGem()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition">Build Gem</button>
           </div>
         </div>
       `;
@@ -1460,7 +1968,7 @@
         messages: [{ role: 'model', content: `Greetings! I am executing as the custom Gem **${gem.name}**. Feel free to query.`, timestamp: Date.now() }],
         gemId: id,
         attachedSourceIds: [],
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         createdAt: Date.now()
       };
 
@@ -1581,7 +2089,7 @@
         messages: [],
         gemId: null,
         attachedSourceIds: [],
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         createdAt: Date.now()
       };
       state.chats.push(newChat);
@@ -1617,7 +2125,8 @@
         const gem = state.gems.find(g => g.id === chat.gemId);
         if (gem) return gem.name;
       }
-      return MODEL_PRICING[chat.model]?.name || 'Gemini';
+      const pricingMap = getModelPricingMap();
+      return pricingMap[chat.model]?.name || 'Gemini';
     }
 
     // Drag-and-drop document grounding feature initialization
@@ -1648,9 +2157,7 @@
       });
     }
 
-    // Startup
-    window.onload = function() {
-      initializeState();
+    function renderAll() {
       renderFolders();
       renderTags();
       renderGems();
@@ -1658,6 +2165,15 @@
       renderChatsList();
       renderActiveChat();
       updateApiKeyStatus();
+      updateSyncStatusIndicator();
+    }
+
+    // Startup Execution Entry-point
+    window.onload = async function() {
+      applyTheme(); // Setup Light/Dark mode
+      updateSyncStatusIndicator('local');
+      await initializeState();
+      renderAll();
       setupWorkspaceDragDrop();
     };
   </script>
