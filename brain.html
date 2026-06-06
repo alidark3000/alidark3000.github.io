@@ -53,7 +53,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.7.6";
+    const APP_VERSION = "v1.7.7";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -256,11 +256,13 @@
       const [chats, setChats] = useState({});
       const [apiKey, setApiKey] = useState('');
       const [model, setModel] = useState('gemini-3.1-flash-lite');
-      const [apiUsage, setApiUsage] = useState({ requests: 0, tokensEstimated: 0, logs: [] });
+      const [apiUsage, setApiUsage] = useState({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
       
       const [showKeyModal, setShowKeyModal] = useState(false);
       const [showManual, setShowManual] = useState(false);
       const [showUsageModal, setShowUsageModal] = useState(false);
+      const [isChatOpen, setIsChatOpen] = useState(false);
+      
       const [tempKey, setTempKey] = useState('');
       const [tempModel, setTempModel] = useState('');
       
@@ -268,7 +270,6 @@
       const [activeTags, setActiveTags] = useState([]);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
-      const [chatScope, setChatScope] = useState('selected'); 
       
       const [editingEntries, setEditingEntries] = useState({});
       const [editData, setEditData] = useState({});
@@ -322,7 +323,8 @@
              return {
                  ...prev,
                  requests: prev.requests + 1,
-                 tokensEstimated: prev.tokensEstimated + estTokensIn + estTokensOut,
+                 tokensInTotal: (prev.tokensInTotal || 0) + estTokensIn,
+                 tokensOutTotal: (prev.tokensOutTotal || 0) + estTokensOut,
                  logs: [newLog, ...(prev.logs || [])].slice(0, 100) // retain last 100
              };
          });
@@ -397,7 +399,17 @@
           if (data.chats) setChats(data.chats);
           if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
           if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
-          if (data.apiUsage) setApiUsage(data.apiUsage); else setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
+          
+          if (data.apiUsage) {
+            setApiUsage({
+                requests: data.apiUsage.requests || 0,
+                tokensInTotal: data.apiUsage.tokensInTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
+                tokensOutTotal: data.apiUsage.tokensOutTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
+                logs: data.apiUsage.logs || []
+            });
+          } else {
+            setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
+          }
           
           setFileHandle(handle);
           setFileName(file.name);
@@ -437,7 +449,7 @@
           setChats({});
           setApiKey('');
           setModel('gemini-3.1-flash-lite');
-          setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
+          setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
           setSelectedEntryIds([INITIAL_ENTRY.id]);
           if (typeof idbKeyval !== 'undefined') {
             await idbKeyval.set('kb_file_handle', handle);
@@ -463,7 +475,18 @@
             if (data.chats) setChats(data.chats);
             if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
             if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
-            if (data.apiUsage) setApiUsage(data.apiUsage); else setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
+            
+            if (data.apiUsage) {
+                setApiUsage({
+                    requests: data.apiUsage.requests || 0,
+                    tokensInTotal: data.apiUsage.tokensInTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
+                    tokensOutTotal: data.apiUsage.tokensOutTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
+                    logs: data.apiUsage.logs || []
+                });
+            } else {
+                setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
+            }
+            
             setFileName(file.name);
             setFileHandle(null);
             setAppState('workspace');
@@ -480,10 +503,11 @@
         setHistoryState({ past: [], present: [] });
         setChats({});
         setApiKey('');
-        setApiUsage({ requests: 0, tokensEstimated: 0, logs: [] });
+        setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
       };
 
       const categoryCounts = {};
+      const tagCounts = {};
       const allCategories = new Set();
       const allTags = new Set();
       entries.forEach(e => {
@@ -493,7 +517,12 @@
             categoryCounts[c] = (categoryCounts[c] || 0) + 1;
           });
         }
-        if (Array.isArray(e.tags)) e.tags.forEach(t => allTags.add(t));
+        if (Array.isArray(e.tags)) {
+            e.tags.forEach(t => {
+                allTags.add(t);
+                tagCounts[t] = (tagCounts[t] || 0) + 1;
+            });
+        }
       });
       const sortedCategories = Array.from(allCategories).sort((a, b) => a.localeCompare(b));
 
@@ -502,10 +531,14 @@
         const matchesCat = activeCategories.length === 0 || (Array.isArray(e.categories) && e.categories.some(c => activeCategories.includes(c)));
         if (matchesCat && Array.isArray(e.tags)) e.tags.forEach(t => availableTags.add(t));
       });
-      const sortedTags = Array.from(availableTags).sort((a, b) => a.localeCompare(b));
+      
+      const sortedTags = Array.from(availableTags).sort((a, b) => {
+         const diff = (tagCounts[b] || 0) - (tagCounts[a] || 0);
+         return diff !== 0 ? diff : a.localeCompare(b);
+      });
 
       const selectedEntries = entries.filter(e => selectedEntryIds.includes(e.id));
-      const currentChatKey = chatScope === 'all' ? 'global_all' : selectedEntryIds.slice().sort().join(',');
+      const currentChatKey = selectedEntryIds.slice().sort().join(',');
 
       useEffect(() => {
         if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
@@ -607,10 +640,20 @@
           const result = await handleGeminiCall(payload, model);
           const parsedResult = JSON.parse(result.candidates[0].content.parts[0].text);
           
-          parsedResult.categories = (parsedResult.categories || []).map(c => c.toLowerCase());
-          parsedResult.tags = (parsedResult.tags || []).map(t => t.toLowerCase());
-
           const nextNumericId = entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0) + 1;
+          
+          const autoTags = [];
+          if (file && file.type === 'application/pdf') autoTags.push('pdf');
+          else if (sourceUrl) {
+              if (isMediaSource(sourceUrl)) autoTags.push('video');
+              else autoTags.push('web');
+          } else {
+              autoTags.push('text');
+          }
+          
+          parsedResult.categories = (parsedResult.categories || []).map(c => c.toLowerCase());
+          parsedResult.tags = [...new Set([...(parsedResult.tags || []).map(t => t.toLowerCase()), ...autoTags])];
+
           const newEntry = { 
             ...parsedResult, 
             title: originalWebTitle || parsedResult.title || 'Untitled Note',
@@ -936,7 +979,9 @@
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
-            const entry = editData[id] || entries.find(e => e.id === id);
+            const entry = editData[id] || entries.find(e => e.id === id); // Reading from entries as these run in view mode
+            if (!entry) throw new Error("Note not found.");
+            
             let prompt = "";
             let sectionHeader = "";
             let text = "";
@@ -945,9 +990,7 @@
                 const otherEntries = entries.filter(e => e.id !== id && !e.isCombined);
                 const kbContext = otherEntries.map(e => ({ id: e.id, title: e.title, summary: e.summary, tags: e.tags }));
                 
-                prompt = `You are a strict cross-referencing AI. Read the 'Current Note' and find up to 3 EXTREMELY relevant related notes from the 'Knowledge Base Index'. 
-                CRITERIA: Relevance must be undeniable. They must share profound conceptual overlap.
-                Return ONLY a JSON array of the string IDs of the relevant notes. Example: ["entry-123", "entry-456"]. If none are highly relevant, return [].\n\nCurrent Note Title: ${entry.title}\nContent: ${entry.fullContent}\n\nKnowledge Base Index: ${JSON.stringify(kbContext)}`;
+                prompt = `Analyze the 'Current Note' and find up to 3 highly relevant related notes from the 'Knowledge Base Index'. Return ONLY a JSON array of the string IDs of the relevant notes. Example: ["entry-123", "entry-456"]. Only return IDs of notes that share very tight conceptual alignment.\n\nCurrent Note Title: ${entry.title}\nContent: ${entry.fullContent}\n\nKnowledge Base Index: ${JSON.stringify(kbContext)}`;
                 
                 const payload = {
                     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -957,29 +1000,19 @@
                 const result = await handleGeminiCall(payload, model);
                 const foundIds = JSON.parse(result.candidates[0].content.parts[0].text);
                 
-                const currentRefs = editData[id]?.references || [];
+                const currentRefs = entry.references || [];
                 const newValidIds = foundIds.filter(fid => 
                     otherEntries.some(oe => oe.id === fid) && !currentRefs.includes(fid)
                 ).slice(0, 3);
 
                 if (newValidIds.length === 0) {
-                    throw new Error("No highly relevant links found in the database based on strict criteria.");
+                    throw new Error("No highly relevant links found in the database.");
                 }
 
-                // Rewrite the content to embed the shortcodes in context
-                const rewritePrompt = `Rewrite the 'Current Note' content slightly to seamlessly embed these reference shortcodes directly next to the relevant concepts or sentences where they naturally fit. Do not just append them to the end.
-                Shortcodes to embed: ${newValidIds.map(fid => `[[kb-ref:${fid}]]`).join(', ')}
-                
-                Current Note Content:
-                ${entry.fullContent}
-                
-                Return ONLY the rewritten Markdown text. Do not add any conversational filler.`;
-                
-                const rewritePayload = { contents: [{ role: 'user', parts: [{ text: rewritePrompt }] }] };
-                const rewriteResult = await handleGeminiCall(rewritePayload, model);
-                const rewrittenContent = rewriteResult.candidates[0].content.parts[0].text;
+                const shortcodes = newValidIds.map(fid => `[[kb-ref:${fid}]]`).join('\n\n');
+                sectionHeader = "### ✨ AI Suggested Links";
+                text = shortcodes;
 
-                // Reciprocally update the target entries in the main entries state so the links are 2-way
                 setEntries(prev => prev.map(e => {
                     if (newValidIds.includes(e.id)) {
                         const existingRefs = e.references || [];
@@ -987,24 +1020,17 @@
                             return { ...e, references: [...existingRefs, id] };
                         }
                     }
-                    if (e.id === id && !editData[id]) {
-                        return { ...e, fullContent: rewrittenContent, references: [...new Set([...(e.references || []), ...newValidIds])] };
+                    if (e.id === id) {
+                        const existingRefs = e.references || [];
+                        return {
+                            ...e,
+                            fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}`,
+                            references: [...new Set([...existingRefs, ...newValidIds])]
+                        };
                     }
                     return e;
                 }));
-                
-                // If we are currently editing it, update the edit view directly
-                if (editData[id]) {
-                    setEditData(prev => ({
-                        ...prev,
-                        [id]: {
-                            ...prev[id],
-                            fullContent: rewrittenContent,
-                            references: [...(prev[id].references || []), ...newValidIds]
-                        }
-                    }));
-                }
-                return; // exit early since 'link' rewrites entirely rather than appending
+                return;
             } else if (toolType === 'eli5') {
                 prompt = `Explain this note as if I am 5 years old (ELI5). Keep it brief, fun, and use analogies if helpful. Return ONLY Markdown text.\n\nTitle: ${entry.title}\nContent: ${entry.fullContent}`;
                 sectionHeader = "### ✨ Explain Like I'm 5";
@@ -1100,11 +1126,11 @@
         setChatInput('');
         setIsChatting(true);
 
-        let targetEntries = chatScope === 'all' ? entries.filter(e => !e.isCombined) : selectedEntries.filter(e => !e.isCombined);
+        let targetEntries = selectedEntries.filter(e => !e.isCombined);
         let activeChatKey = currentChatKey;
         let newCombinedEntry = null;
 
-        if ((selectedEntryIds.length > 1 && targetEntries.length > 1) || chatScope === 'all') {
+        if (selectedEntryIds.length > 1 && targetEntries.length > 1) {
           if (targetEntries.length === 0) {
             setIsChatting(false);
             return setError("No standard notes found to query.");
@@ -1131,7 +1157,6 @@
           
           setEntries(prev => [newCombinedEntry, ...prev]);
           setSelectedEntryIds([newId]);
-          setChatScope('selected');
           activeChatKey = newId;
         } else if (selectedEntryIds.length === 1) {
           activeChatKey = selectedEntryIds[0];
@@ -1198,7 +1223,7 @@
 
           const payload = {
             contents: [...currentHistory.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })), { role: 'user', parts: [{ text: userMessage }] }],
-            systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${contextEntries.length} separate documents. Cite the document number when combining information. Context scope: ${chatScope}.
+            systemInstruction: { parts: [{ text: `Answer strictly based on the provided document context. The user has provided ${contextEntries.length} separate documents. Cite the document number when combining information. Context scope: selected documents.
             
 CRITICAL WRITING RULES:
 - Limit responses to 100 words max unless explicitly asked to expand.
@@ -1516,29 +1541,34 @@ Documents:\n${contextText}` }] }
                            <span className="font-mono font-bold">{apiUsage.requests}</span>
                          </div>
                          <div className="flex justify-between items-center mb-2">
-                           <span className="text-sm text-slate-500">Est. Tokens Processed</span>
-                           <span className="font-mono font-bold">~{apiUsage.tokensEstimated.toLocaleString()}</span>
+                           <span className="text-sm text-slate-500">Est. API Cost (If Paid)</span>
+                           <span className="font-mono font-bold text-green-600">${(((apiUsage.tokensInTotal || 0) / 1000000 * 0.075) + ((apiUsage.tokensOutTotal || 0) / 1000000 * 0.30)).toFixed(4)}</span>
                          </div>
-                         <button onClick={() => setApiUsage({requests:0, tokensEstimated:0, logs:[]})} className="w-full mt-2 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded border border-red-100 transition-colors">Clear Local Logs</button>
+                         <button onClick={() => setApiUsage({requests:0, tokensInTotal:0, tokensOutTotal:0, logs:[]})} className="w-full mt-2 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded border border-red-100 transition-colors">Clear Local Logs</button>
                       </div>
                    </div>
                    {/* Right Side: Logs */}
                    <div className="w-full md:w-2/3 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-                       <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 grid grid-cols-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                       <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 grid grid-cols-5 text-[10px] font-bold text-slate-500 uppercase tracking-wider gap-2">
                           <div>Time</div>
                           <div>Model</div>
-                          <div className="text-right">Est. Tokens In</div>
-                          <div className="text-right">Est. Tokens Out</div>
+                          <div className="text-right">In</div>
+                          <div className="text-right">Out</div>
+                          <div className="text-right">Est. Cost</div>
                        </div>
                        <div className="flex-1 overflow-y-auto p-2">
-                          {apiUsage.logs && apiUsage.logs.length > 0 ? apiUsage.logs.map((log, i) => (
-                              <div key={i} className="grid grid-cols-4 text-sm px-2 py-2 border-b border-slate-50 hover:bg-slate-50 text-slate-700">
-                                 <div className="font-mono text-xs text-slate-400 mt-0.5">{log.time}</div>
-                                 <div className="truncate pr-2 font-medium" title={log.model}>{log.model.replace('gemini-', '')}</div>
-                                 <div className="text-right font-mono text-slate-500">{log.tokensIn}</div>
-                                 <div className="text-right font-mono text-indigo-500">+{log.tokensOut}</div>
-                              </div>
-                          )) : <div className="text-center text-slate-400 p-8 text-sm">No requests logged yet.</div>}
+                          {apiUsage.logs && apiUsage.logs.length > 0 ? apiUsage.logs.map((log, i) => {
+                              const cost = ((log.tokensIn / 1000000) * 0.075) + ((log.tokensOut / 1000000) * 0.30);
+                              return (
+                                  <div key={i} className="grid grid-cols-5 text-sm px-2 py-2 border-b border-slate-50 hover:bg-slate-50 text-slate-700 items-center gap-2">
+                                     <div className="font-mono text-[10px] text-slate-400">{log.time}</div>
+                                     <div className="truncate font-medium text-xs" title={log.model}>{log.model.replace('gemini-', '')}</div>
+                                     <div className="text-right font-mono text-slate-500 text-xs">{log.tokensIn}</div>
+                                     <div className="text-right font-mono text-indigo-500 text-xs">+{log.tokensOut}</div>
+                                     <div className="text-right font-mono text-green-600 text-xs">${cost.toFixed(5)}</div>
+                                  </div>
+                              );
+                          }) : <div className="text-center text-slate-400 p-8 text-sm">No requests logged yet.</div>}
                        </div>
                    </div>
                 </div>
@@ -1580,12 +1610,12 @@ Documents:\n${contextText}` }] }
                   <h3>5. Chatting with your Documents</h3>
                   <p>The bottom right section is your AI chat interface. You can ask questions based entirely on your saved documents.</p>
                   <ul>
-                    <li><strong>Scope:</strong> Choose "Selected" to only query notes you have highlighted (Cmd/Ctrl + Click to select multiple), or choose "All" to query the entire database.</li>
+                    <li><strong>Scope:</strong> Select your target notes (Cmd/Ctrl + Click to select multiple).</li>
                     <li><strong>Combined Views:</strong> Querying multiple documents generates a temporary "Combined Session" note, allowing you to save the insights from that specific conversation.</li>
                   </ul>
 
                   <h3>6. Editing & AI Assistance</h3>
-                  <p>Click the pencil icon <i className="fa-solid fa-pen"></i> on any note to enter Edit Mode. Here you can write in Markdown. If you get stuck, use the "Generate" buttons to have AI write your summaries, extract takeaways, or clean up your tags based on your text.</p>
+                  <p>Click the pencil icon <i className="fa-solid fa-pen"></i> on any note to enter Edit Mode. Here you can write in Markdown. If you get stuck, use the magic buttons to have AI write your summaries, extract takeaways, or find links to other notes based on your text.</p>
                 </div>
               </div>
             </div>
@@ -2138,15 +2168,25 @@ Documents:\n${contextText}` }] }
               </div>
             </div>
 
+            {/* Floating Chat Button */}
+            {!isChatOpen && selectedEntryIds.length > 0 && Object.keys(editingEntries).length === 0 && (
+               <button 
+                  onClick={() => setIsChatOpen(true)} 
+                  className="absolute bottom-6 right-6 bg-indigo-600 text-white shadow-xl hover:bg-indigo-700 transition-all rounded-full h-14 px-6 font-bold flex items-center gap-3 z-40"
+               >
+                  <i className="fa-solid fa-messages"></i> Chat ({selectedEntryIds.length})
+               </button>
+            )}
+
             {/* CHAT AREA */}
-            {Object.keys(editingEntries).length === 0 && (
-              <div className="border-t min-[1500px]:border-t-0 min-[1500px]:border-l border-slate-200 bg-slate-100 min-[1500px]:w-[400px] flex flex-col flex-shrink-0 h-[40vh] min-[1500px]:h-full transition-all">
-                 <div className="flex bg-slate-200/60 p-1 rounded-lg m-4 mt-5">
-                    <button onClick={() => setChatScope('selected')} className={`flex-1 text-base py-1.5 rounded-md font-medium transition-colors ${chatScope === 'selected' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}>Selected ({selectedEntryIds.length})</button>
-                    <button onClick={() => setChatScope('all')} className={`flex-1 text-base py-1.5 rounded-md font-medium transition-colors ${chatScope === 'all' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}>All ({entries.filter(e => !e.isCombined).length})</button>
+            {isChatOpen && Object.keys(editingEntries).length === 0 && (
+              <div className="border-t min-[1500px]:border-t-0 min-[1500px]:border-l border-slate-200 bg-slate-100 min-[1500px]:w-[400px] flex flex-col flex-shrink-0 h-[50vh] min-[1500px]:h-full transition-all absolute min-[1500px]:relative bottom-0 left-0 right-0 z-30 shadow-2xl min-[1500px]:shadow-none">
+                 <div className="flex justify-between items-center bg-white border-b border-slate-200 px-4 py-3 shrink-0">
+                    <h3 className="font-bold text-slate-800 text-sm"><i className="fa-solid fa-sparkles text-indigo-600 mr-2"></i> Document Chat</h3>
+                    <button onClick={() => setIsChatOpen(false)} className="text-slate-400 hover:text-slate-700"><i className="fa-solid fa-xmark text-lg"></i></button>
                  </div>
                  
-                 <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+                 <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 pb-4 pt-4 space-y-4">
                     {chats[currentChatKey]?.map((msg, idx) => (
                       <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {msg.role === 'user' ? (
@@ -2165,7 +2205,7 @@ Documents:\n${contextText}` }] }
                  </div>
 
                  <form onSubmit={handleSendMessage} className="p-4 bg-slate-100 border-t border-slate-200 relative shrink-0">
-                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder={`Query ${chatScope === 'all' ? 'entire knowledge base' : 'selected documents'}...`} className="w-full pl-4 pr-12 py-3 text-base border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white shadow-sm" />
+                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask about selected documents..." className="w-full pl-4 pr-12 py-3 text-base border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white shadow-sm" />
                     <button type="submit" disabled={isChatting} className="absolute right-6 top-6 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"><i className="fa-solid fa-paper-plane"></i></button>
                  </form>
               </div>
