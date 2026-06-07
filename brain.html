@@ -52,7 +52,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.7.8";
+    const APP_VERSION = "v1.7.9";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -207,7 +207,6 @@
       const [fileName, setFileName] = useState('');
       const [lastSyncTime, setLastSyncTime] = useState(Date.now());
       
-      // Global Undo/History Manager
       const [historyState, setHistoryState] = useState({ past: [], present: [] });
       const entries = historyState.present;
       
@@ -216,7 +215,7 @@
               const nextPresent = typeof action === 'function' ? action(h.present) : action;
               if (nextPresent === h.present) return h;
               return {
-                  past: [...h.past, h.present].slice(-30), // keep last 30 actions
+                  past: [...h.past, h.present].slice(-30),
                   present: nextPresent
               };
           });
@@ -284,9 +283,6 @@
       const [editingTitleId, setEditingTitleId] = useState(null);
       const [tempTitle, setTempTitle] = useState('');
 
-      /* -------------------------------------------------------------
-         AI API Wrapper - Handles Key Rotation & Usage Tracking
-      -------------------------------------------------------------- */
       const handleGeminiCall = async (payload, customModel) => {
          const keys = apiKey.split(',').map(k => k.trim()).filter(Boolean);
          if (keys.length === 0) throw new Error("Please set your Gemini API key in Settings.");
@@ -331,9 +327,6 @@
         }
       }, []);
 
-      /* -------------------------------------------------------------
-         Auto-Save & Safe Merge Engine
-      -------------------------------------------------------------- */
       useEffect(() => {
         if (appState !== 'workspace' || !fileHandle) return;
         const timer = setTimeout(async () => {
@@ -347,7 +340,6 @@
             let dataToWrite = { entries, chats, apiKey, model, apiUsage };
             let stateMerged = false;
 
-            // Merge Check: If the file was changed externally, merge it in before saving
             if (currentDiskModified > lastSyncTime) {
                 const diskText = await file.text();
                 if (diskText.trim()) {
@@ -359,7 +351,7 @@
                     
                     entries.forEach(localE => {
                         const diskE = mergedMap.get(localE.id);
-                        if (!diskE || (localE.updatedAt || localE.createdAt) >= (diskE.updatedAt || diskE.createdAt)) {
+                        if (!diskE || (localE.updatedAt || localE.createdAt || 0) >= (diskE.updatedAt || diskE.createdAt || 0)) {
                             mergedMap.set(localE.id, localE);
                         }
                     });
@@ -396,39 +388,70 @@
         return () => clearTimeout(timer);
       }, [entries, chats, apiKey, model, apiUsage, appState, fileHandle]);
 
+      const ensureNumericIds = (loadedEntries) => {
+        let maxId = loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0);
+        return loadedEntries.map(e => {
+          if (!e.numericId) {
+            maxId += 1;
+            return { ...e, numericId: maxId };
+          }
+          return e;
+        });
+      };
+
+      const processLoadedEntries = (entries) => {
+        return normalizeTaxonomy(ensureNumericIds(entries));
+      };
+
+      const migrateWorkspaceData = (data) => {
+        let migratedEntries = [];
+        if (data.entries && Array.isArray(data.entries)) {
+          migratedEntries = processLoadedEntries(data.entries).map(e => ({
+            ...e,
+            updatedAt: e.updatedAt || e.createdAt || Date.now()
+          }));
+        } else {
+          migratedEntries = [INITIAL_ENTRY];
+        }
+
+        let safeUsage = { requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] };
+        if (data.apiUsage) {
+          safeUsage = {
+            requests: data.apiUsage.requests || 0,
+            tokensInTotal: data.apiUsage.tokensInTotal || Math.floor((data.apiUsage.tokensEstimated || 0) / 2) || 0,
+            tokensOutTotal: data.apiUsage.tokensOutTotal || Math.floor((data.apiUsage.tokensEstimated || 0) / 2) || 0,
+            logs: Array.isArray(data.apiUsage.logs) ? data.apiUsage.logs : []
+          };
+        }
+
+        return {
+          entries: migratedEntries,
+          chats: data.chats || {},
+          apiKey: data.apiKey || '',
+          model: data.model || 'gemini-3.1-flash-lite',
+          apiUsage: safeUsage
+        };
+      };
+
       const loadWorkspaceData = async (handle) => {
         try {
           const hasPerm = await verifyPermission(handle, true);
           if (!hasPerm) return;
           const file = await handle.getFile();
           const text = await file.text();
-          let data = { entries: [], chats: {} };
           
+          let data = { entries: [], chats: {} };
           if (text.trim()) data = JSON.parse(text);
           
-          if (data.entries?.length > 0) {
-            const migrated = processLoadedEntries(data.entries);
-            setHistoryState({ past: [], present: migrated });
-            setSelectedEntryIds([migrated[0].id]);
-          } else {
-            setHistoryState({ past: [], present: [INITIAL_ENTRY] });
-            setSelectedEntryIds([INITIAL_ENTRY.id]);
-          }
+          const migrated = migrateWorkspaceData(data);
           
-          if (data.chats) setChats(data.chats);
-          if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
-          if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
+          setHistoryState({ past: [], present: migrated.entries });
+          setSelectedEntryIds([migrated.entries[0]?.id || INITIAL_ENTRY.id]);
           
-          if (data.apiUsage) {
-            setApiUsage({
-                requests: data.apiUsage.requests || 0,
-                tokensInTotal: data.apiUsage.tokensInTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
-                tokensOutTotal: data.apiUsage.tokensOutTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
-                logs: data.apiUsage.logs || []
-            });
-          } else {
-            setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
-          }
+          setChats(migrated.chats);
+          setApiKey(migrated.apiKey);
+          setModel(migrated.model);
+          setApiUsage(migrated.apiUsage);
           
           setFileHandle(handle);
           setFileName(file.name);
@@ -492,32 +515,21 @@
         reader.onload = (event) => {
           try {
             const data = JSON.parse(event.target.result);
-            if (data.entries) {
-              const migrated = processLoadedEntries(data.entries);
-              setHistoryState({ past: [], present: migrated });
-              if (migrated.length > 0) setSelectedEntryIds([migrated[0].id]);
-            }
-            if (data.chats) setChats(data.chats);
-            if (data.apiKey) setApiKey(data.apiKey); else setApiKey('');
-            if (data.model) setModel(data.model); else setModel('gemini-3.1-flash-lite');
-            
-            if (data.apiUsage) {
-                setApiUsage({
-                    requests: data.apiUsage.requests || 0,
-                    tokensInTotal: data.apiUsage.tokensInTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
-                    tokensOutTotal: data.apiUsage.tokensOutTotal || Math.floor(data.apiUsage.tokensEstimated / 2) || 0,
-                    logs: data.apiUsage.logs || []
-                });
-            } else {
-                setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
-            }
+            const migrated = migrateWorkspaceData(data);
+
+            setHistoryState({ past: [], present: migrated.entries });
+            setSelectedEntryIds([migrated.entries[0]?.id || INITIAL_ENTRY.id]);
+            setChats(migrated.chats);
+            setApiKey(migrated.apiKey);
+            setModel(migrated.model);
+            setApiUsage(migrated.apiUsage);
             
             setFileName(file.name);
             setFileHandle(null);
             setLastSyncTime(Date.now());
             setAppState('workspace');
           } catch (err) {
-            setError("Invalid JSON file.");
+            setError(`Import error: ${err.message}`);
           }
         };
         reader.readAsText(file);
@@ -1011,7 +1023,7 @@
           
           setTaxonomyInput('');
         } catch(err) {
-          setError("Taxonomy update failed: " + err.message);
+          setError(`Taxonomy update failed: ${err.message}`);
         } finally {
           setIsTaxonomyProcessing(false);
         }
