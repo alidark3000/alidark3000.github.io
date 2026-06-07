@@ -18,9 +18,9 @@
   <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans overflow-hidden">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden transition-colors duration-200">
   
-  <!-- Global Diagnostic Screen (Catches & reveals compilation issues immediately) -->
+  <!-- Global Diagnostic Screen -->
   <div id="error-fallback" class="hidden fixed inset-0 bg-slate-900 text-white p-8 flex flex-col items-center justify-center z-[9999]">
     <div class="max-w-md w-full bg-slate-800 p-6 rounded-xl shadow-xl border border-red-500/30">
       <div class="flex items-center gap-3 text-red-500 mb-4">
@@ -38,7 +38,6 @@
   <div id="root"></div>
 
   <script>
-    // Listen for compilation errors before React mounts
     window.addEventListener('error', function(e) {
       console.error("Captured Error:", e);
       const fallback = document.getElementById('error-fallback');
@@ -53,14 +52,13 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.7.7";
+    const APP_VERSION = "v1.7.8";
 
     const isMediaSource = (url) => {
       if (!url) return false;
       return /(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|twitch\.tv|dailymotion\.com|spotify\.com|soundcloud\.com|\.(mp4|webm|ogg|mov|mp3|wav|m4a)$)/i.test(url);
     };
 
-    // Safe Wrapper for Markdown Parsing (Avoids crashing if Marked fails to load)
     const parseMarkdown = (content) => {
       if (typeof marked !== 'undefined' && marked.parse) {
         return marked.parse(content || '');
@@ -78,19 +76,18 @@
       return content || '';
     };
 
-    // Helper to replace shortcodes with interactive HTML cards before Markdown parsing
     const injectReferences = (text, allEntries) => {
       if (!text) return '';
       return text.replace(/\[\[kb-ref:([^\]]+)\]\]/g, (match, entryId) => {
         const refEntry = allEntries.find(e => e.id === entryId);
-        if (!refEntry) return `<span class="text-red-500 text-xs font-semibold bg-red-50 border border-red-200 px-2 py-1 rounded">[Broken Link: ${entryId}]</span>`;
+        if (!refEntry) return `<span class="text-red-500 dark:text-red-400 text-xs font-semibold bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 px-2 py-1 rounded">[Broken Link: ${entryId}]</span>`;
 
         const isMedia = isMediaSource(refEntry.sourceUrl);
-        const bgClass = isMedia ? 'bg-red-50 border-red-200 hover:border-red-400' : 'bg-white border-slate-200 hover:border-indigo-400';
-        const titleClass = isMedia ? 'text-red-900 group-hover:text-red-700' : 'text-slate-800 group-hover:text-indigo-700';
-        const idClass = isMedia ? 'text-red-500' : 'text-slate-400';
-        const iconClass = isMedia ? 'text-red-300 group-hover:text-red-500' : 'text-slate-300 group-hover:text-indigo-500';
-        const summaryClass = isMedia ? 'text-red-700' : 'text-slate-500';
+        const bgClass = isMedia ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 hover:border-red-400 dark:hover:border-red-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500';
+        const titleClass = isMedia ? 'text-red-900 dark:text-red-300 group-hover:text-red-700 dark:group-hover:text-red-200' : 'text-slate-800 dark:text-slate-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-400';
+        const idClass = isMedia ? 'text-red-500 dark:text-red-500' : 'text-slate-400 dark:text-slate-500';
+        const iconClass = isMedia ? 'text-red-300 dark:text-red-700 group-hover:text-red-500 dark:group-hover:text-red-400' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400';
+        const summaryClass = isMedia ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400';
 
         return `\n\n<div class="kb-embedded-ref not-prose my-5 p-4 border rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-all group select-none flex items-center justify-between ${bgClass}" data-id="${refEntry.id}" title="Click to open note">
           <div>
@@ -119,6 +116,7 @@
       tags: ['tutorial'],
       numericId: 1,
       createdAt: Date.now(),
+      updatedAt: Date.now(),
       sourceUrl: null,
       references: [],
       pinned: false
@@ -156,8 +154,7 @@
                           doc.querySelector('title')?.textContent || 
                           doc.querySelector('h1')?.textContent || 
                           "Untitled Page";
-      originalTitle = originalTitle.trim();
-      originalTitle = originalTitle.replace(/\s*[|•-]\s*([A-Za-z0-9 ]+Substack|[A-Za-z0-9 ]+Medium|[A-Za-z0-9 ]+Blog|[A-Za-z0-9 ]+HQ|QUT.*)$/i, '').trim();
+      originalTitle = originalTitle.trim().replace(/\s*[|•-]\s*([A-Za-z0-9 ]+Substack|[A-Za-z0-9 ]+Medium|[A-Za-z0-9 ]+Blog|[A-Za-z0-9 ]+HQ|QUT.*)$/i, '').trim();
 
       const unwanted = doc.querySelectorAll('script, style, noscript, iframe, svg, video, header, footer, nav, aside, form, .menu, .mega-menu, .global-nav, .navbar');
       unwanted.forEach(el => el.remove());
@@ -173,10 +170,7 @@
       }
       
       if (!markdownContent || markdownContent.length < 50) throw new Error("No text found. Falling back to search.");
-      return {
-        title: originalTitle,
-        content: markdownContent.substring(0, 50000)
-      }; 
+      return { title: originalTitle, content: markdownContent.substring(0, 50000) }; 
     };
 
     async function verifyPermission(fileHandle, readWrite) {
@@ -194,21 +188,16 @@
     });
 
     const callGemini = async (key, payload, model) => {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const result = await response.json();
-        
-        if (result.error) throw new Error(result.error.message);
-        if (!result.candidates || result.candidates.length === 0) {
-          const reason = result.promptFeedback?.blockReason || "Empty response from API";
-          throw new Error(`AI rejected the prompt. Reason: ${reason}`);
-        }
-        
-        return result;
-      } catch (err) {
-        throw err;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await response.json();
+      
+      if (result.error) throw new Error(result.error.message);
+      if (!result.candidates || result.candidates.length === 0) {
+        const reason = result.promptFeedback?.blockReason || "Empty response from API";
+        throw new Error(`AI rejected the prompt. Reason: ${reason}`);
       }
+      return result;
     };
 
     function KnowledgeApp() {
@@ -216,6 +205,7 @@
       const [savedHandle, setSavedHandle] = useState(null);
       const [fileHandle, setFileHandle] = useState(null);
       const [fileName, setFileName] = useState('');
+      const [lastSyncTime, setLastSyncTime] = useState(Date.now());
       
       // Global Undo/History Manager
       const [historyState, setHistoryState] = useState({ past: [], present: [] });
@@ -243,7 +233,7 @@
 
       useEffect(() => {
           const handleKeyDown = (e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+              if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
                   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
                   e.preventDefault();
                   undoEntries();
@@ -270,6 +260,7 @@
       const [activeTags, setActiveTags] = useState([]);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
+      const [chatScope, setChatScope] = useState('selected'); 
       
       const [editingEntries, setEditingEntries] = useState({});
       const [editData, setEditData] = useState({});
@@ -300,7 +291,6 @@
          const keys = apiKey.split(',').map(k => k.trim()).filter(Boolean);
          if (keys.length === 0) throw new Error("Please set your Gemini API key in Settings.");
          
-         // Rotate through available keys to distribute load
          const keyIndex = apiUsage.requests % keys.length;
          const selectedKey = keys[keyIndex];
          const activeModel = customModel || model;
@@ -314,18 +304,13 @@
          const estTokensOut = Math.ceil(responseStr.length / 4);
          
          setApiUsage(prev => {
-             const newLog = { 
-                time: new Date().toLocaleTimeString(), 
-                model: activeModel, 
-                tokensIn: estTokensIn, 
-                tokensOut: estTokensOut 
-             };
+             const newLog = { time: new Date().toLocaleTimeString(), model: activeModel, tokensIn: estTokensIn, tokensOut: estTokensOut };
              return {
                  ...prev,
                  requests: prev.requests + 1,
                  tokensInTotal: (prev.tokensInTotal || 0) + estTokensIn,
                  tokensOutTotal: (prev.tokensOutTotal || 0) + estTokensOut,
-                 logs: [newLog, ...(prev.logs || [])].slice(0, 100) // retain last 100
+                 logs: [newLog, ...(prev.logs || [])].slice(0, 100)
              };
          });
          
@@ -346,36 +331,70 @@
         }
       }, []);
 
+      /* -------------------------------------------------------------
+         Auto-Save & Safe Merge Engine
+      -------------------------------------------------------------- */
       useEffect(() => {
         if (appState !== 'workspace' || !fileHandle) return;
         const timer = setTimeout(async () => {
           try {
             const hasPerm = await verifyPermission(fileHandle, true);
             if (!hasPerm) return;
+
+            const file = await fileHandle.getFile();
+            const currentDiskModified = file.lastModified;
+
+            let dataToWrite = { entries, chats, apiKey, model, apiUsage };
+            let stateMerged = false;
+
+            // Merge Check: If the file was changed externally, merge it in before saving
+            if (currentDiskModified > lastSyncTime) {
+                const diskText = await file.text();
+                if (diskText.trim()) {
+                    const diskData = JSON.parse(diskText);
+                    const diskEntries = diskData.entries || [];
+                    
+                    const mergedMap = new Map();
+                    diskEntries.forEach(e => mergedMap.set(e.id, e));
+                    
+                    entries.forEach(localE => {
+                        const diskE = mergedMap.get(localE.id);
+                        if (!diskE || (localE.updatedAt || localE.createdAt) >= (diskE.updatedAt || diskE.createdAt)) {
+                            mergedMap.set(localE.id, localE);
+                        }
+                    });
+                    
+                    dataToWrite.entries = Array.from(mergedMap.values());
+                    
+                    const mergedChats = { ...diskData.chats };
+                    Object.keys(chats).forEach(id => {
+                        if (!mergedChats[id] || chats[id].length >= mergedChats[id].length) {
+                            mergedChats[id] = chats[id];
+                        }
+                    });
+                    dataToWrite.chats = mergedChats;
+                    stateMerged = true;
+                }
+            }
+
             const writable = await fileHandle.createWritable();
-            await writable.write(JSON.stringify({ entries, chats, apiKey, model, apiUsage }, null, 2));
+            await writable.write(JSON.stringify(dataToWrite, null, 2));
             await writable.close();
+
+            const updatedFile = await fileHandle.getFile();
+            setLastSyncTime(updatedFile.lastModified);
+
+            if (stateMerged) {
+                setHistoryState(prev => ({ ...prev, present: dataToWrite.entries }));
+                setChats(dataToWrite.chats);
+            }
+
           } catch (err) {
-            console.error("Auto-save failed:", err);
+            console.error("Auto-save sync failed:", err);
           }
-        }, 1000);
+        }, 1500);
         return () => clearTimeout(timer);
       }, [entries, chats, apiKey, model, apiUsage, appState, fileHandle]);
-
-      const ensureNumericIds = (loadedEntries) => {
-        let maxId = loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0);
-        return loadedEntries.map(e => {
-          if (!e.numericId) {
-            maxId += 1;
-            return { ...e, numericId: maxId };
-          }
-          return e;
-        });
-      };
-
-      const processLoadedEntries = (entries) => {
-        return normalizeTaxonomy(ensureNumericIds(entries));
-      };
 
       const loadWorkspaceData = async (handle) => {
         try {
@@ -413,6 +432,8 @@
           
           setFileHandle(handle);
           setFileName(file.name);
+          setLastSyncTime(file.lastModified);
+          
           if (typeof idbKeyval !== 'undefined') {
             await idbKeyval.set('kb_file_handle', handle);
           }
@@ -451,6 +472,10 @@
           setModel('gemini-3.1-flash-lite');
           setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
           setSelectedEntryIds([INITIAL_ENTRY.id]);
+          
+          const file = await handle.getFile();
+          setLastSyncTime(file.lastModified);
+          
           if (typeof idbKeyval !== 'undefined') {
             await idbKeyval.set('kb_file_handle', handle);
           }
@@ -489,6 +514,7 @@
             
             setFileName(file.name);
             setFileHandle(null);
+            setLastSyncTime(Date.now());
             setAppState('workspace');
           } catch (err) {
             setError("Invalid JSON file.");
@@ -660,6 +686,7 @@
             numericId: nextNumericId,
             id: 'entry-' + Date.now(), 
             createdAt: Date.now(),
+            updatedAt: Date.now(),
             sourceUrl: sourceUrl,
             references: [],
             pinned: false
@@ -715,7 +742,7 @@
         const newId = 'entry-' + Date.now();
         const newEntry = {
           id: newId, title: 'Untitled Note', numericId: nextNumericId, summary: '', shortVersion: [], fullContent: '',
-          categories: [], tags: [], createdAt: Date.now(), sourceUrl: null, references: [], pinned: false
+          categories: [], tags: [], createdAt: Date.now(), updatedAt: Date.now(), sourceUrl: null, references: [], pinned: false
         };
         setEntries(prev => [newEntry, ...prev]);
         setSelectedEntryIds(prev => [...prev.filter(id => id !== newId), newId]);
@@ -741,12 +768,16 @@
         setEntries(prev => prev.map(e => {
           if (e.id === id) {
             return {
-              ...e, title: data.title || 'Untitled', summary: data.summary, fullContent: data.fullContent,
+              ...e, 
+              title: data.title || 'Untitled', 
+              summary: data.summary, 
+              fullContent: data.fullContent,
               shortVersion: data.shortVersion.split('\n').map(s => s.trim()).filter(Boolean),
               sourceUrl: data.sourceUrl || null,
               categories: data.categories.map(c => c.toLowerCase()),
               tags: data.tags.map(t => t.toLowerCase()),
-              references: data.references || []
+              references: data.references || [],
+              updatedAt: Date.now()
             };
           }
           return e;
@@ -786,8 +817,8 @@
       const removeTaxonomyFromEntry = (entryId, type, val) => {
         setEntries(prev => prev.map(ent => {
           if (ent.id === entryId) {
-            if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val) };
-            if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val) };
+            if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val), updatedAt: Date.now() };
+            if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val), updatedAt: Date.now() };
           }
           return ent;
         }));
@@ -935,17 +966,21 @@
           setEntries(prev => prev.map(entry => {
             let newCats = [...(Array.isArray(entry.categories) ? entry.categories : [])];
             let newTags = [...(Array.isArray(entry.tags) ? entry.tags : [])];
+            let wasModified = false;
 
             if (data.categoryChanges) {
               data.categoryChanges.forEach(change => {
                 if (newCats.includes(change.old)) {
                   newCats = newCats.filter(c => c !== change.old);
                   if (change.new && !newCats.includes(change.new)) newCats.push(change.new.toLowerCase());
+                  wasModified = true;
                 }
               });
             }
-            if (data.categoryDeletions) {
+            if (data.categoryDeletions && data.categoryDeletions.length > 0) {
+              const startLen = newCats.length;
               newCats = newCats.filter(c => !data.categoryDeletions.includes(c));
+              if (newCats.length !== startLen) wasModified = true;
             }
 
             if (data.tagChanges) {
@@ -953,18 +988,25 @@
                 if (newTags.includes(change.old)) {
                   newTags = newTags.filter(t => t !== change.old);
                   if (change.new && !newTags.includes(change.new)) newTags.push(change.new.toLowerCase());
+                  wasModified = true;
                 }
               });
             }
-            if (data.tagDeletions) {
+            if (data.tagDeletions && data.tagDeletions.length > 0) {
+              const startLen = newTags.length;
               newTags = newTags.filter(t => !data.tagDeletions.includes(t));
+              if (newTags.length !== startLen) wasModified = true;
             }
 
-            return { 
-              ...entry, 
-              categories: [...new Set(newCats.map(c => c.toLowerCase()))], 
-              tags: [...new Set(newTags.map(t => t.toLowerCase()))] 
-            };
+            if (wasModified) {
+                return { 
+                  ...entry, 
+                  categories: [...new Set(newCats.map(c => c.toLowerCase()))], 
+                  tags: [...new Set(newTags.map(t => t.toLowerCase()))],
+                  updatedAt: Date.now()
+                };
+            }
+            return entry;
           }));
           
           setTaxonomyInput('');
@@ -979,7 +1021,7 @@
         if (!apiKey) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
-            const entry = editData[id] || entries.find(e => e.id === id); // Reading from entries as these run in view mode
+            const entry = editData[id] || entries.find(e => e.id === id);
             if (!entry) throw new Error("Note not found.");
             
             let prompt = "";
@@ -1017,7 +1059,7 @@
                     if (newValidIds.includes(e.id)) {
                         const existingRefs = e.references || [];
                         if (!existingRefs.includes(id)) {
-                            return { ...e, references: [...existingRefs, id] };
+                            return { ...e, references: [...existingRefs, id], updatedAt: Date.now() };
                         }
                     }
                     if (e.id === id) {
@@ -1025,7 +1067,8 @@
                         return {
                             ...e,
                             fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}`,
-                            references: [...new Set([...existingRefs, ...newValidIds])]
+                            references: [...new Set([...existingRefs, ...newValidIds])],
+                            updatedAt: Date.now()
                         };
                     }
                     return e;
@@ -1093,7 +1136,6 @@
                 text = result.candidates[0].content.parts[0].text;
             }
             
-            // Append the returned text into the editData fullContent box or main view
             if (editData[id]) {
                 setEditData(prev => ({
                     ...prev,
@@ -1105,7 +1147,11 @@
             } else {
                 setEntries(prev => prev.map(e => {
                     if (e.id === id) {
-                        return { ...e, fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}` };
+                        return { 
+                            ...e, 
+                            fullContent: (e.fullContent || '') + `\n\n${sectionHeader}\n${text}`,
+                            updatedAt: Date.now()
+                        };
                     }
                     return e;
                 }));
@@ -1148,6 +1194,7 @@
             categories: [],
             tags: [],
             createdAt: Date.now(),
+            updatedAt: Date.now(),
             sourceUrl: null,
             isCombined: true,
             referencedIds: targetEntries.map(ent => ent.id),
@@ -1285,7 +1332,7 @@ Documents:\n${contextText}` }] }
 
       const togglePin = (e, id) => {
         e.stopPropagation();
-        setEntries(prev => prev.map(ent => ent.id === id ? { ...ent, pinned: !ent.pinned } : ent));
+        setEntries(prev => prev.map(ent => ent.id === id ? { ...ent, pinned: !ent.pinned, updatedAt: Date.now() } : ent));
       };
 
       const handleContentClick = (e) => {
@@ -1305,7 +1352,7 @@ Documents:\n${contextText}` }] }
           const refShortcode = `\n\n[[kb-ref:${draggedId}]]`;
           setEntries(prev => prev.map(ent => 
             ent.id === targetEntry.id 
-            ? { ...ent, fullContent: (ent.fullContent || '') + refShortcode }
+            ? { ...ent, fullContent: (ent.fullContent || '') + refShortcode, updatedAt: Date.now() }
             : ent
           ));
         }
@@ -1321,8 +1368,8 @@ Documents:\n${contextText}` }] }
           const { type, val } = JSON.parse(taxData);
           setEntries(prev => prev.map(ent => {
             if (ent.id === targetId) {
-              if (type === 'cat' && !(ent.categories || []).includes(val)) return { ...ent, categories: [...(ent.categories || []), val.toLowerCase()] };
-              if (type === 'tag' && !(ent.tags || []).includes(val)) return { ...ent, tags: [...(ent.tags || []), val.toLowerCase()] };
+              if (type === 'cat' && !(ent.categories || []).includes(val)) return { ...ent, categories: [...(ent.categories || []), val.toLowerCase()], updatedAt: Date.now() };
+              if (type === 'tag' && !(ent.tags || []).includes(val)) return { ...ent, tags: [...(ent.tags || []), val.toLowerCase()], updatedAt: Date.now() };
             }
             return ent;
           }));
@@ -1335,8 +1382,8 @@ Documents:\n${contextText}` }] }
           if (entryId !== targetId) {
             setEntries(prev => prev.map(ent => {
               if (ent.id === entryId) {
-                if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val) };
-                if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val) };
+                if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val), updatedAt: Date.now() };
+                if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val), updatedAt: Date.now() };
               }
               return ent;
             }));
@@ -1349,7 +1396,7 @@ Documents:\n${contextText}` }] }
             if (ent.id === targetId) {
               const refs = ent.references || [];
               if (!refs.includes(draggedId)) {
-                return { ...ent, references: [...refs, draggedId] };
+                return { ...ent, references: [...refs, draggedId], updatedAt: Date.now() };
               }
             }
             return ent;
@@ -1367,41 +1414,41 @@ Documents:\n${contextText}` }] }
         }));
       };
 
-      if (appState === 'init') return <div className="flex h-screen items-center justify-center bg-slate-50"><i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600"></i></div>;
+      if (appState === 'init') return <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950"><i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 dark:text-indigo-400"></i></div>;
 
       if (appState === 'landing') {
         return (
-          <div className="flex h-screen items-center justify-center bg-slate-50">
-            <div className="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center max-w-md w-full relative">
-              <i className="fa-solid fa-folder-tree text-5xl text-indigo-600 mb-6"></i>
-              <h1 className="text-2xl font-bold text-slate-800 mb-2">Knowledge Workspaces</h1>
-              <p className="text-slate-500 mb-8 text-sm">Select a local JSON file to start syncing your research.</p>
+          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 text-center max-w-md w-full relative">
+              <i className="fa-solid fa-folder-tree text-5xl text-indigo-600 dark:text-indigo-400 mb-6"></i>
+              <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Knowledge Workspaces</h1>
+              <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm">Select a local JSON file to start syncing your research.</p>
               <div className="space-y-3">
                 {savedHandle && <button onClick={handleResume} className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center"><i className="fa-solid fa-rotate-right mr-2"></i> Resume "{savedHandle.name}"</button>}
-                <button onClick={handleOpenFile} className="w-full py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-regular fa-folder-open mr-2"></i> Open Existing File</button>
-                <button onClick={handleNewFile} className="w-full py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-solid fa-plus mr-2"></i> Create New File</button>
-                <div className="pt-4 border-t border-slate-100 flex flex-col space-y-3 mt-4">
-                  <label className="w-full py-2 px-4 text-slate-500 hover:text-indigo-600 text-sm font-medium transition-colors flex items-center justify-center cursor-pointer">
+                <button onClick={handleOpenFile} className="w-full py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-regular fa-folder-open mr-2"></i> Open Existing File</button>
+                <button onClick={handleNewFile} className="w-full py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium transition-colors flex items-center justify-center shadow-sm"><i className="fa-solid fa-plus mr-2"></i> Create New File</button>
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col space-y-3 mt-4">
+                  <label className="w-full py-2 px-4 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium transition-colors flex items-center justify-center cursor-pointer">
                     <i className="fa-solid fa-upload mr-2"></i> Manual Import (No Auto-sync)
                     <input type="file" accept=".json" className="hidden" onChange={handleManualImport} />
                   </label>
-                  <button onClick={() => setShowManual(true)} className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                  <button onClick={() => setShowManual(true)} className="w-full py-2 px-4 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-book mr-2"></i> User Manual
                   </button>
                 </div>
               </div>
-              <p className="mt-6 text-[10px] text-slate-400 font-mono font-bold tracking-wider">{APP_VERSION}</p>
-              {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+              <p className="mt-6 text-[10px] text-slate-400 dark:text-slate-600 font-mono font-bold tracking-wider">{APP_VERSION}</p>
+              {error && <p className="mt-4 text-sm text-red-500 dark:text-red-400">{error}</p>}
             </div>
             
             {showManual && (
-              <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 text-left">
-                  <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50 shrink-0">
-                    <h2 className="text-lg font-bold text-slate-800"><i className="fa-solid fa-book text-indigo-600 mr-2"></i> KnowledgeBase AI Manual</h2>
-                    <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
+              <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 text-left">
+                  <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100"><i className="fa-solid fa-book text-indigo-600 dark:text-indigo-400 mr-2"></i> KnowledgeBase AI Manual</h2>
+                    <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
                   </div>
-                  <div className="p-8 overflow-y-auto prose prose-slate prose-base max-w-none text-slate-700">
+                  <div className="p-8 overflow-y-auto prose prose-slate dark:prose-invert prose-base max-w-none text-slate-700 dark:text-slate-300">
                     <h3>1. Welcome to your Workspace</h3>
                     <p>This application is designed to be <strong>offline-first</strong>. All your notes, categories, and settings are saved directly to a local JSON file on your computer. You retain complete ownership of your data.</p>
                     
@@ -1428,12 +1475,12 @@ Documents:\n${contextText}` }] }
                     <h3>5. Chatting with your Documents</h3>
                     <p>The bottom right section is your AI chat interface. You can ask questions based entirely on your saved documents.</p>
                     <ul>
-                      <li><strong>Scope:</strong> Choose "Selected" to only query notes you have highlighted (Cmd/Ctrl + Click to select multiple), or choose "All" to query the entire database.</li>
+                      <li><strong>Scope:</strong> Select your target notes (Cmd/Ctrl + Click to select multiple).</li>
                       <li><strong>Combined Views:</strong> Querying multiple documents generates a temporary "Combined Session" note, allowing you to save the insights from that specific conversation.</li>
                     </ul>
 
                     <h3>6. Editing & AI Assistance</h3>
-                    <p>Click the pencil icon <i className="fa-solid fa-pen"></i> on any note to enter Edit Mode. Here you can write in Markdown. If you get stuck, use the "Generate" buttons to have AI write your summaries, extract takeaways, or clean up your tags based on your text.</p>
+                    <p>Click the pencil icon <i className="fa-solid fa-pen"></i> on any note to enter Edit Mode. Here you can write in Markdown. If you get stuck, use the magic buttons to have AI write your summaries, extract takeaways, or find links to other notes based on your text.</p>
                   </div>
                 </div>
               </div>
@@ -1464,22 +1511,22 @@ Documents:\n${contextText}` }] }
           : selectedEntries;
 
       return (
-        <div className="flex h-screen w-full bg-slate-50 text-slate-800 font-sans overflow-hidden relative">
+        <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden relative transition-colors duration-200">
           
           {showKeyModal && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[60]">
-              <div className="bg-white p-6 rounded-xl shadow-lg w-96 border border-slate-200">
+            <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60]">
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-lg w-96 border border-slate-200 dark:border-slate-800">
                 <div className="flex items-center mb-4">
-                  <i className="fa-solid fa-gear text-indigo-600 text-xl mr-3"></i>
-                  <h3 className="text-lg font-bold text-slate-800">Workspace Settings</h3>
+                  <i className="fa-solid fa-gear text-indigo-600 dark:text-indigo-400 text-xl mr-3"></i>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Workspace Settings</h3>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">API Key(s) <span className="font-normal text-slate-400">- Comma separate for rotation</span></label>
-                  <input type="password" value={tempKey} onChange={e => setTempKey(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIzaSy..., AIzaSy..." />
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">API Key(s) <span className="font-normal text-slate-400 dark:text-slate-500">- Comma separate for rotation</span></label>
+                  <input type="password" value={tempKey} onChange={e => setTempKey(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIzaSy..., AIzaSy..." />
                 </div>
                 <div className="mb-6">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">AI Model</label>
-                  <select value={tempModel} onChange={e => setTempModel(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">AI Model</label>
+                  <select value={tempModel} onChange={e => setTempModel(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <optgroup label="Advanced Reasoning (Pro / Thinking)">
                       <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
                       <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
@@ -1492,20 +1539,20 @@ Documents:\n${contextText}` }] }
                       <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                     </optgroup>
                   </select>
-                  <p className="text-[10px] text-slate-400 mt-1">Select a "Pro" or "Thinking" model for complex tasks and deep analysis.</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Select a "Pro" or "Thinking" model for complex tasks and deep analysis.</p>
                 </div>
                 <div className="mb-4">
-                  <button type="button" onClick={() => { setShowKeyModal(false); setShowUsageModal(true); }} className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                  <button type="button" onClick={() => { setShowKeyModal(false); setShowUsageModal(true); }} className="w-full py-2 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-chart-line mr-2"></i> View Local Usage & Limits
                   </button>
                 </div>
-                <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100">
-                  <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-base font-medium text-indigo-600 hover:text-indigo-800 flex items-center transition-colors">
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-base font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center transition-colors">
                     <i className="fa-solid fa-book mr-1.5"></i> Read Manual
                   </button>
                   <div className="flex gap-2">
-                    <button onClick={() => setShowKeyModal(false)} className="px-4 py-2 text-base font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-                    <button onClick={saveSettings} className="px-4 py-2 text-base font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Save</button>
+                    <button onClick={() => setShowKeyModal(false)} className="px-4 py-2 text-base font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
+                    <button onClick={saveSettings} className="px-4 py-2 text-base font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm">Save</button>
                   </div>
                 </div>
               </div>
@@ -1513,43 +1560,41 @@ Documents:\n${contextText}` }] }
           )}
 
           {showUsageModal && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-              <div className="bg-white rounded-2xl shadow-xl w-[90vw] h-[90vh] flex flex-col overflow-hidden border border-slate-200">
-                <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-slate-50 shrink-0">
-                  <h2 className="text-xl font-bold text-slate-800"><i className="fa-solid fa-chart-line text-indigo-600 mr-2"></i> Local API Usage Logs</h2>
-                  <button onClick={() => setShowUsageModal(false)} className="text-slate-400 hover:text-slate-700 p-1 transition-colors"><i className="fa-solid fa-xmark text-2xl"></i></button>
+            <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-[90vw] h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between items-center p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100"><i className="fa-solid fa-chart-line text-indigo-600 dark:text-indigo-400 mr-2"></i> Local API Usage Logs</h2>
+                  <button onClick={() => setShowUsageModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 transition-colors"><i className="fa-solid fa-xmark text-2xl"></i></button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-8 flex flex-col md:flex-row gap-8 bg-slate-50/50">
-                   {/* Left Side: Facts */}
+                <div className="flex-1 overflow-y-auto p-8 flex flex-col md:flex-row gap-8 bg-slate-50/50 dark:bg-slate-950/50">
                    <div className="w-full md:w-1/3 space-y-6">
-                      <div className="bg-blue-50 border border-blue-200 p-5 rounded-xl">
-                         <h3 className="font-bold text-blue-900 mb-2">Gemini Free Tier Limits (2026)</h3>
-                         <p className="text-xs text-blue-800 mb-3">Google does not provide a live API endpoint for free-tier stats. Adding a billing card voids the free tier immediately.</p>
-                         <ul className="text-sm space-y-2 text-blue-900">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 p-5 rounded-xl">
+                         <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2">Gemini Free Tier Limits (2026)</h3>
+                         <p className="text-xs text-blue-800 dark:text-blue-400 mb-3">Google does not provide a live API endpoint for free-tier stats. Adding a billing card voids the free tier immediately.</p>
+                         <ul className="text-sm space-y-2 text-blue-900 dark:text-blue-300">
                            <li><strong>Flash / Flash-Lite:</strong><br/>15 Req/Min • 1M Tokens/Min • 1,500 Req/Day</li>
                            <li><strong>Pro / Thinking:</strong><br/>2 Req/Min • 32K Tokens/Min • 50 Req/Day</li>
                          </ul>
                       </div>
-                      <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
-                         <h3 className="font-bold text-slate-800 mb-2">How to Multi-Key (Key Rotation)</h3>
-                         <p className="text-sm text-slate-600">To double or triple your rate limits, go to Google AI Studio and create multiple distinct "Projects". Generate one API key per project. Paste them all into the API Key settings field, separated by commas. This app will automatically rotate through them to balance the load.</p>
+                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-xl shadow-sm">
+                         <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-2">How to Multi-Key (Key Rotation)</h3>
+                         <p className="text-sm text-slate-600 dark:text-slate-400">To double or triple your rate limits, go to Google AI Studio and create multiple distinct "Projects". Generate one API key per project. Paste them all into the API Key settings field, separated by commas. This app will automatically rotate through them to balance the load.</p>
                       </div>
-                      <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
-                         <h3 className="font-bold text-slate-800 mb-2">Local App Stats</h3>
+                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-xl shadow-sm">
+                         <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-2">Local App Stats</h3>
                          <div className="flex justify-between items-center mb-2">
-                           <span className="text-sm text-slate-500">Total Requests</span>
-                           <span className="font-mono font-bold">{apiUsage.requests}</span>
+                           <span className="text-sm text-slate-500 dark:text-slate-400">Total Requests</span>
+                           <span className="font-mono font-bold dark:text-slate-200">{apiUsage.requests}</span>
                          </div>
                          <div className="flex justify-between items-center mb-2">
-                           <span className="text-sm text-slate-500">Est. API Cost (If Paid)</span>
-                           <span className="font-mono font-bold text-green-600">${(((apiUsage.tokensInTotal || 0) / 1000000 * 0.075) + ((apiUsage.tokensOutTotal || 0) / 1000000 * 0.30)).toFixed(4)}</span>
+                           <span className="text-sm text-slate-500 dark:text-slate-400">Est. API Cost (If Paid)</span>
+                           <span className="font-mono font-bold text-green-600 dark:text-green-400">${(((apiUsage.tokensInTotal || 0) / 1000000 * 0.075) + ((apiUsage.tokensOutTotal || 0) / 1000000 * 0.30)).toFixed(4)}</span>
                          </div>
-                         <button onClick={() => setApiUsage({requests:0, tokensInTotal:0, tokensOutTotal:0, logs:[]})} className="w-full mt-2 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded border border-red-100 transition-colors">Clear Local Logs</button>
+                         <button onClick={() => setApiUsage({requests:0, tokensInTotal:0, tokensOutTotal:0, logs:[]})} className="w-full mt-2 py-1.5 text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded border border-red-100 dark:border-red-800/50 transition-colors">Clear Local Logs</button>
                       </div>
                    </div>
-                   {/* Right Side: Logs */}
-                   <div className="w-full md:w-2/3 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-                       <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 grid grid-cols-5 text-[10px] font-bold text-slate-500 uppercase tracking-wider gap-2">
+                   <div className="w-full md:w-2/3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                       <div className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 px-4 py-2 grid grid-cols-5 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider gap-2">
                           <div>Time</div>
                           <div>Model</div>
                           <div className="text-right">In</div>
@@ -1560,15 +1605,15 @@ Documents:\n${contextText}` }] }
                           {apiUsage.logs && apiUsage.logs.length > 0 ? apiUsage.logs.map((log, i) => {
                               const cost = ((log.tokensIn / 1000000) * 0.075) + ((log.tokensOut / 1000000) * 0.30);
                               return (
-                                  <div key={i} className="grid grid-cols-5 text-sm px-2 py-2 border-b border-slate-50 hover:bg-slate-50 text-slate-700 items-center gap-2">
-                                     <div className="font-mono text-[10px] text-slate-400">{log.time}</div>
+                                  <div key={i} className="grid grid-cols-5 text-sm px-2 py-2 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 text-slate-700 dark:text-slate-300 items-center gap-2">
+                                     <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500">{log.time}</div>
                                      <div className="truncate font-medium text-xs" title={log.model}>{log.model.replace('gemini-', '')}</div>
-                                     <div className="text-right font-mono text-slate-500 text-xs">{log.tokensIn}</div>
-                                     <div className="text-right font-mono text-indigo-500 text-xs">+{log.tokensOut}</div>
-                                     <div className="text-right font-mono text-green-600 text-xs">${cost.toFixed(5)}</div>
+                                     <div className="text-right font-mono text-slate-500 dark:text-slate-400 text-xs">{log.tokensIn}</div>
+                                     <div className="text-right font-mono text-indigo-500 dark:text-indigo-400 text-xs">+{log.tokensOut}</div>
+                                     <div className="text-right font-mono text-green-600 dark:text-green-400 text-xs">${cost.toFixed(5)}</div>
                                   </div>
                               );
-                          }) : <div className="text-center text-slate-400 p-8 text-sm">No requests logged yet.</div>}
+                          }) : <div className="text-center text-slate-400 dark:text-slate-500 p-8 text-sm">No requests logged yet.</div>}
                        </div>
                    </div>
                 </div>
@@ -1577,13 +1622,13 @@ Documents:\n${contextText}` }] }
           )}
 
           {showManual && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
-                <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50 shrink-0">
-                  <h2 className="text-lg font-bold text-slate-800"><i className="fa-solid fa-book text-indigo-600 mr-2"></i> KnowledgeBase AI Manual</h2>
-                  <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
+            <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100"><i className="fa-solid fa-book text-indigo-600 dark:text-indigo-400 mr-2"></i> KnowledgeBase AI Manual</h2>
+                  <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
                 </div>
-                <div className="p-8 overflow-y-auto prose prose-slate prose-base max-w-none text-slate-700">
+                <div className="p-8 overflow-y-auto prose prose-slate dark:prose-invert prose-base max-w-none text-slate-700 dark:text-slate-300">
                   <h3>1. Welcome to your Workspace</h3>
                   <p>This application is designed to be <strong>offline-first</strong>. All your notes, categories, and settings are saved directly to a local JSON file on your computer. You retain complete ownership of your data.</p>
                   
@@ -1621,20 +1666,20 @@ Documents:\n${contextText}` }] }
             </div>
           )}
 
-          <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col hidden md:flex z-10 relative">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-               <div className="flex items-center text-base font-semibold text-slate-600 truncate">
-                 <i className="fa-solid fa-file-code mr-2 text-indigo-500"></i> <span className="truncate max-w-[120px]">{fileName}</span>
-                 <button onClick={openSettings} className={`ml-2 px-1.5 py-0.5 rounded transition-colors flex-shrink-0 ${apiKey ? 'text-green-500 hover:bg-green-100' : 'text-slate-400 hover:bg-slate-200 hover:text-indigo-600'}`} title="Settings"><i className="fa-solid fa-gear"></i></button>
+          <div className="w-72 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col hidden md:flex z-10 relative">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+               <div className="flex items-center text-base font-semibold text-slate-600 dark:text-slate-300 truncate">
+                 <i className="fa-solid fa-file-code mr-2 text-indigo-500 dark:text-indigo-400"></i> <span className="truncate max-w-[120px]">{fileName}</span>
+                 <button onClick={openSettings} className={`ml-2 px-1.5 py-0.5 rounded transition-colors flex-shrink-0 ${apiKey ? 'text-green-500 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30' : 'text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400'}`} title="Settings"><i className="fa-solid fa-gear"></i></button>
                </div>
-               <button onClick={handleCloseWorkspace} className="text-base text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200 transition-colors flex-shrink-0" title="Switch Workspace"><i className="fa-solid fa-right-from-bracket"></i></button>
+               <button onClick={handleCloseWorkspace} className="text-base text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex-shrink-0" title="Switch Workspace"><i className="fa-solid fa-right-from-bracket"></i></button>
             </div>
             
-            <div className="p-4 border-b border-slate-100">
-              <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} className={`relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all text-center ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'} ${isAnalyzing ? 'opacity-75 pointer-events-none' : ''}`}>
-                {isAnalyzing ? <i className="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 mb-2"></i> : <i className={`fa-solid fa-cloud-arrow-up text-3xl mb-2 ${isDragging ? 'text-indigo-600' : 'text-slate-400'}`}></i>}
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+              <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} className={`relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all text-center ${isDragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800'} ${isAnalyzing ? 'opacity-75 pointer-events-none' : ''}`}>
+                {isAnalyzing ? <i className="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 dark:text-indigo-400 mb-2"></i> : <i className={`fa-solid fa-cloud-arrow-up text-3xl mb-2 ${isDragging ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}></i>}
                 <h3 className="font-semibold text-base mb-1">{isAnalyzing ? 'Analyzing...' : 'Add New Entry'}</h3>
-                <p className="text-sm text-slate-500">Drag text, URL, or PDF here</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Drag text, URL, or PDF here</p>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); if (addInput.trim()) processInput(addInput.trim()); }} className="mt-3 relative">
                 <input 
@@ -1643,17 +1688,17 @@ Documents:\n${contextText}` }] }
                   onChange={e => setAddInput(e.target.value)} 
                   disabled={isAnalyzing} 
                   placeholder="Paste link or text..." 
-                  className="w-full pl-3 pr-8 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm disabled:opacity-50" 
+                  className="w-full pl-3 pr-8 py-2 text-base border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white shadow-sm disabled:opacity-50" 
                 />
-                <button type="submit" disabled={isAnalyzing || !addInput.trim()} className="absolute right-2 top-1.5 text-indigo-600 hover:text-indigo-800 disabled:opacity-50 p-1 transition-colors"><i className="fa-solid fa-arrow-right"></i></button>
+                <button type="submit" disabled={isAnalyzing || !addInput.trim()} className="absolute right-2 top-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 p-1 transition-colors"><i className="fa-solid fa-arrow-right"></i></button>
               </form>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
               <div>
-                <div className="flex items-center text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Categories</div>
+                <div className="flex items-center text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Categories</div>
                 <div className="flex flex-col space-y-1">
-                  <button onClick={() => setActiveCategories([])} className={`text-left px-3 py-1.5 rounded-md text-base ${activeCategories.length === 0 ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100'}`}>All Categories</button>
+                  <button onClick={() => setActiveCategories([])} className={`text-left px-3 py-1.5 rounded-md text-base transition-colors ${activeCategories.length === 0 ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>All Categories</button>
                   {sortedCategories.map(cat => (
                     <button 
                       key={cat} 
@@ -1663,18 +1708,18 @@ Documents:\n${contextText}` }] }
                         e.dataTransfer.effectAllowed = 'copyMove';
                       }} 
                       onClick={(e) => handleCategoryClick(cat, e)} 
-                      className={`flex items-center justify-between w-full px-3 py-1.5 rounded-md text-base ${activeCategories.includes(cat) ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-100'}`}
+                      className={`flex items-center justify-between w-full px-3 py-1.5 rounded-md text-base transition-colors ${activeCategories.includes(cat) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
                     >
                       <span className="truncate mr-2">{cat}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono font-medium ${activeCategories.includes(cat) ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-200 text-slate-500'}`}>{categoryCounts[cat]}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono font-medium ${activeCategories.includes(cat) ? 'bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>{categoryCounts[cat]}</span>
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <div className="flex items-center text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Tags</div>
+                <div className="flex items-center text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Tags</div>
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setActiveTags([])} className={`px-3 py-1 rounded-full text-sm border ${activeTags.length === 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-600'}`}>All</button>
+                  <button onClick={() => setActiveTags([])} className={`px-3 py-1 rounded-full text-sm border transition-colors ${activeTags.length === 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}>All</button>
                   {sortedTags.map(tag => (
                     <button 
                       key={tag} 
@@ -1684,7 +1729,7 @@ Documents:\n${contextText}` }] }
                         e.dataTransfer.effectAllowed = 'copyMove';
                       }} 
                       onClick={(e) => handleTagClick(tag, e)} 
-                      className={`px-3 py-1 rounded-full text-sm border ${activeTags.includes(tag) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-600'}`}
+                      className={`px-3 py-1 rounded-full text-sm border transition-colors ${activeTags.includes(tag) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
                     >
                       {tag}
                     </button>
@@ -1693,8 +1738,8 @@ Documents:\n${contextText}` }] }
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50">
-              <div className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+              <div className="flex items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
                 <i className="fa-solid fa-robot mr-1.5"></i> Manage Taxonomies
               </div>
               <form onSubmit={handleTaxonomyCommand} className="relative">
@@ -1703,24 +1748,24 @@ Documents:\n${contextText}` }] }
                   value={taxonomyInput} 
                   onChange={(e) => setTaxonomyInput(e.target.value)} 
                   placeholder="Merge tags, rename..." 
-                  className="w-full pl-3 pr-8 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  className="w-full pl-3 pr-8 py-2 text-base border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white"
                   disabled={isTaxonomyProcessing}
                 />
                 <button 
                   type="submit" 
                   disabled={isTaxonomyProcessing || !taxonomyInput.trim()} 
-                  className="absolute right-2 top-2 text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+                  className="absolute right-2 top-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors"
                 >
                   {isTaxonomyProcessing ? <i className="fa-solid fa-spinner fa-spin text-base"></i> : <i className="fa-solid fa-wand-magic-sparkles text-base"></i>}
                 </button>
               </form>
             </div>
-            <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-[10px] uppercase font-medium tracking-wider">
+            <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-[10px] uppercase font-medium tracking-wider">
               <div className="flex items-center">
                 <button 
                    onClick={undoEntries} 
                    disabled={historyState.past.length === 0} 
-                   className="mr-3 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors" 
+                   className="mr-3 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors" 
                    title="Undo (Cmd/Ctrl+Z)"
                 >
                    <i className="fa-solid fa-rotate-left text-sm"></i>
@@ -1739,7 +1784,7 @@ Documents:\n${contextText}` }] }
                       a.click();
                       URL.revokeObjectURL(url);
                     }}
-                    className="text-indigo-600 hover:text-indigo-800 transition-colors flex items-center"
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors flex items-center"
                   >
                     <i className="fa-solid fa-download mr-2"></i> Manual Export
                   </button>
@@ -1748,10 +1793,10 @@ Documents:\n${contextText}` }] }
             </div>
           </div>
 
-          <div className="w-80 flex-shrink-0 bg-slate-50 flex flex-col hidden lg:flex z-10 relative">
-            <div className="p-4 pb-2 bg-slate-50">
-              <input type="text" placeholder="Search knowledge base..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border-none shadow-sm rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white" />
-              <button onClick={handleNewNote} className="w-full mt-3 py-2 bg-white text-indigo-700 hover:bg-indigo-50 shadow-sm rounded-lg text-base font-medium transition-colors flex items-center justify-center">
+          <div className="w-80 flex-shrink-0 bg-slate-50 dark:bg-slate-950 flex flex-col hidden lg:flex z-10 relative">
+            <div className="p-4 pb-2 bg-slate-50 dark:bg-slate-950">
+              <input type="text" placeholder="Search knowledge base..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border-none shadow-sm rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white dark:bg-slate-900 dark:text-white" />
+              <button onClick={handleNewNote} className="w-full mt-3 py-2 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-slate-700 shadow-sm rounded-lg text-base font-medium transition-colors flex items-center justify-center">
                 <i className="fa-solid fa-plus mr-2"></i> New Note
               </button>
             </div>
@@ -1765,23 +1810,23 @@ Documents:\n${contextText}` }] }
                 const isManual = !entry.sourceUrl && !isCombined && !isPdf;
                 const isPinned = entry.pinned;
                 
-                let typeIndicator = 'border-l-slate-300';
-                if (isCombined) typeIndicator = 'border-l-purple-500';
-                else if (isPdf) typeIndicator = 'border-l-blue-400';
-                else if (isMedia) typeIndicator = 'border-l-red-500';
-                else if (isManual) typeIndicator = 'border-l-yellow-400';
+                let typeIndicator = 'border-l-slate-300 dark:border-l-slate-700';
+                if (isCombined) typeIndicator = 'border-l-purple-500 dark:border-l-purple-400';
+                else if (isPdf) typeIndicator = 'border-l-blue-400 dark:border-l-blue-500';
+                else if (isMedia) typeIndicator = 'border-l-red-500 dark:border-l-red-400';
+                else if (isManual) typeIndicator = 'border-l-yellow-400 dark:border-l-yellow-500';
                 
-                const bgClass = isSelected ? 'bg-blue-600' : 'bg-white';
+                const bgClass = isSelected ? 'bg-blue-600 dark:bg-blue-600' : 'bg-white dark:bg-slate-800';
                 const shadowClass = isSelected ? 'shadow-md ring-1 ring-blue-600/30' : 'shadow-sm hover:shadow-md';
                 
-                const titleText = isSelected ? 'text-white' : 'text-slate-800';
-                const idText = isSelected ? 'text-blue-200' : 'text-slate-400';
-                const summaryText = isSelected ? 'text-blue-100' : 'text-slate-500';
+                const titleText = isSelected ? 'text-white' : 'text-slate-800 dark:text-slate-200';
+                const idText = isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500';
+                const summaryText = isSelected ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400';
                 const pinActiveColor = 'text-white';
                 const pinInactiveColor = isSelected ? 'text-blue-300' : 'text-slate-400';
                 const catClasses = isSelected 
                   ? 'bg-blue-500 text-white border-blue-400'
-                  : 'bg-slate-50 text-slate-600 border-slate-200';
+                  : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600';
                 
                 return (
                   <div 
@@ -1835,7 +1880,7 @@ Documents:\n${contextText}` }] }
                       <div className="mt-2 space-y-1">
                         {entry.referencedIds?.slice(0, 3).map(id => {
                           const ref = entries.find(e => e.id === id);
-                          return ref ? <div key={id} className={`text-base truncate border-l-2 pl-1.5 transition-colors ${isSelected ? 'text-blue-100 border-blue-400' : 'text-slate-600 border-slate-300'}`}>{ref.numericId}: {ref.title}</div> : null;
+                          return ref ? <div key={id} className={`text-base truncate border-l-2 pl-1.5 transition-colors ${isSelected ? 'text-blue-100 border-blue-400' : 'text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600'}`}>{ref.numericId}: {ref.title}</div> : null;
                         })}
                         {entry.referencedIds?.length > 3 && <div className={`text-base opacity-70 italic ${isSelected ? 'text-blue-200' : 'text-slate-500'}`}>+{entry.referencedIds.length - 3} more notes</div>}
                       </div>
@@ -1848,49 +1893,49 @@ Documents:\n${contextText}` }] }
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-slate-50 relative z-0">
+          <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-slate-50 dark:bg-slate-950 relative z-0">
             {error && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg"><p className="text-base mr-4">{error}</p><button onClick={() => setError(null)}><i className="fa-solid fa-xmark"></i></button></div>
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 px-4 py-3 rounded-lg shadow-lg"><p className="text-base mr-4">{error}</p><button onClick={() => setError(null)}><i className="fa-solid fa-xmark"></i></button></div>
             )}
 
             {/* CONTENT AREA */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
               {isCombinedView && (
-                 <div className="w-full bg-amber-50 p-6 border-b border-amber-100 flex justify-between items-center shrink-0 shadow-sm z-10">
+                 <div className="w-full bg-amber-50 dark:bg-amber-900/20 p-6 border-b border-amber-100 dark:border-amber-800/50 flex justify-between items-center shrink-0 shadow-sm z-10">
                      <div className="flex-1 mr-4">
-                         <div className="text-xs font-bold uppercase tracking-wider text-amber-600 mb-1"><i className="fa-solid fa-layer-group mr-1"></i> Combined Query Session</div>
+                         <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500 mb-1"><i className="fa-solid fa-layer-group mr-1"></i> Combined Query Session</div>
                          {editingTitleId === activeSingleEntry.id ? (
                            <input
                              autoFocus
                              value={tempTitle}
                              onChange={e => setTempTitle(e.target.value)}
                              onBlur={() => {
-                               setEntries(prev => prev.map(e => e.id === activeSingleEntry.id ? {...e, title: tempTitle} : e));
+                               setEntries(prev => prev.map(e => e.id === activeSingleEntry.id ? {...e, title: tempTitle, updatedAt: Date.now()} : e));
                                setEditingTitleId(null);
                              }}
                              onKeyDown={e => {
                                if (e.key === 'Enter') e.target.blur();
                              }}
-                             className="text-xl font-bold text-amber-900 bg-white border border-amber-300 rounded px-2 py-1 outline-none w-full shadow-sm"
+                             className="text-xl font-bold text-amber-900 dark:text-amber-100 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded px-2 py-1 outline-none w-full shadow-sm"
                            />
                          ) : (
                            <h2 
-                             className="text-xl font-bold text-amber-900 cursor-pointer hover:bg-amber-100 p-1 -ml-1 rounded transition-colors inline-block"
+                             className="text-xl font-bold text-amber-900 dark:text-amber-100 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-800/30 p-1 -ml-1 rounded transition-colors inline-block"
                              onClick={() => { setTempTitle(activeSingleEntry.title); setEditingTitleId(activeSingleEntry.id); }}
                              title="Click to rename"
                            >
                              {activeSingleEntry.title} <i className="fa-solid fa-pen text-base ml-2 opacity-50"></i>
                            </h2>
                          )}
-                         <p className="text-base text-amber-800 mt-1">{activeSingleEntry.summary}</p>
+                         <p className="text-base text-amber-800 dark:text-amber-300 mt-1">{activeSingleEntry.summary}</p>
                      </div>
-                     <button onClick={() => deleteEntry(activeSingleEntry.id)} className="text-amber-600 hover:bg-amber-200 p-2 rounded transition-colors shrink-0" title="Delete Session"><i className="fa-solid fa-trash-can"></i></button>
+                     <button onClick={() => deleteEntry(activeSingleEntry.id)} className="text-amber-600 dark:text-amber-500 hover:bg-amber-200 dark:hover:bg-amber-800/50 p-2 rounded transition-colors shrink-0" title="Delete Session"><i className="fa-solid fa-trash-can"></i></button>
                  </div>
               )}
               
               <div className="flex-1 flex overflow-x-auto min-w-0">
                 {!selectedEntryIds.length ? (
-                  <div className="flex-1 flex items-center justify-center text-slate-400 flex-col w-full"><i className="fa-solid fa-file-lines text-5xl mb-4 opacity-20"></i><p className="text-base">Select an entry</p></div>
+                  <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-600 flex-col w-full"><i className="fa-solid fa-file-lines text-5xl mb-4 opacity-20"></i><p className="text-base">Select an entry</p></div>
                 ) : (
                   entriesToDisplay.map((entry) => {
                     const isEditing = editingEntries[entry.id];
@@ -1901,70 +1946,70 @@ Documents:\n${contextText}` }] }
                     return (
                     <div 
                       key={entry.id} 
-                      className={`flex-1 min-w-[500px] p-4 md:p-6 lg:p-8 overflow-y-auto relative transition-colors ${dragOverEntryId === entry.id ? 'bg-indigo-50/50' : ''}`}
+                      className={`flex-1 min-w-[500px] p-4 md:p-6 lg:p-8 overflow-y-auto relative transition-colors ${dragOverEntryId === entry.id ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
                       onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
                       onDragLeave={() => setDragOverEntryId(null)}
                       onDrop={(e) => handleEntryDrop(e, entry.id)}
                     >
                       {isEditing ? (
-                        <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 pb-32 min-h-full">
+                        <div className="max-w-5xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 pb-32 min-h-full">
                           <div className="space-y-6">
                             <div className="flex justify-between items-center mb-6">
-                              <h2 className="text-2xl font-bold">Edit Note #{entry.numericId}</h2>
+                              <h2 className="text-2xl font-bold dark:text-white">Edit Note #{entry.numericId}</h2>
                               <div className="flex gap-2">
-                                <button onClick={() => cancelEdit(entry.id)} className="px-4 py-2 text-base font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button onClick={() => cancelEdit(entry.id)} className="px-4 py-2 text-base font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
                                 <button onClick={() => saveNote(entry.id)} className="px-4 py-2 text-base font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Save Note</button>
                               </div>
                             </div>
                             
                             <div>
                               <div className="flex justify-between items-center mb-1">
-                                <label className="block text-xs font-semibold text-slate-500">Title</label>
-                                <button type="button" onClick={() => handleSuggestTitle(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Title</label>
+                                <button type="button" onClick={() => handleSuggestTitle(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors">
                                   <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Suggest Title
                                 </button>
                               </div>
-                              <input type="text" value={data.title} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], title: e.target.value}}))} className="w-full px-4 py-2 text-lg font-bold border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Note Title" />
+                              <input type="text" value={data.title} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], title: e.target.value}}))} className="w-full px-4 py-2 text-lg font-bold border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white" placeholder="Note Title" />
                             </div>
 
                             <div>
                               <div className="flex justify-between items-center mb-1">
-                                <label className="block text-xs font-semibold text-slate-500">Summary</label>
-                                <button type="button" onClick={() => handleGenerateTLDR(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Summary</label>
+                                <button type="button" onClick={() => handleGenerateTLDR(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors">
                                   <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate TL;DR
                                 </button>
                               </div>
-                              <input type="text" value={data.summary} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], summary: e.target.value}}))} className="w-full px-4 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Brief summary..." />
+                              <input type="text" value={data.summary} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], summary: e.target.value}}))} className="w-full px-4 py-2 text-base border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white" placeholder="Brief summary..." />
                             </div>
 
                             <div>
                               <div className="flex justify-between items-center mb-1">
-                                <label className="block text-xs font-semibold text-slate-500">Key Takeaways (One per line)</label>
-                                <button type="button" onClick={() => handleGenerateTakeaways(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors">
+                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Key Takeaways (One per line)</label>
+                                <button type="button" onClick={() => handleGenerateTakeaways(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors">
                                   <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Extract Points
                                 </button>
                               </div>
-                              <textarea value={data.shortVersion} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], shortVersion: e.target.value}}))} className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed" placeholder="Point 1&#10;Point 2..."></textarea>
+                              <textarea value={data.shortVersion} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], shortVersion: e.target.value}}))} className="w-full h-32 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed bg-white dark:bg-slate-800 dark:text-white" placeholder="Point 1&#10;Point 2..."></textarea>
                             </div>
 
                             <div>
-                              <label className="block text-xs font-semibold text-slate-500 mb-1">Source URL</label>
-                              <input type="text" value={data.sourceUrl} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], sourceUrl: e.target.value}}))} className="w-full px-4 py-2 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/source-url" />
+                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Source URL</label>
+                              <input type="text" value={data.sourceUrl} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], sourceUrl: e.target.value}}))} className="w-full px-4 py-2 text-base border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white" placeholder="https://example.com/source-url" />
                             </div>
 
-                            <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/50">
                               <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-base font-bold text-indigo-900">Taxonomies</h3>
-                                <button type="button" onClick={() => handleGenerateTaxonomies(entry.id)} disabled={isAnalyzing} className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-50">
+                                <h3 className="text-base font-bold text-indigo-900 dark:text-indigo-300">Taxonomies</h3>
+                                <button type="button" onClick={() => handleGenerateTaxonomies(entry.id)} disabled={isAnalyzing} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-slate-700 rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-50">
                                   {isAnalyzing ? <i className="fa-solid fa-spinner fa-spin mr-1"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-1"></i>} Auto-Tag
                                 </button>
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <label className="block text-xs font-semibold text-indigo-500 mb-1">Categories</label>
+                                  <label className="block text-xs font-semibold text-indigo-500 dark:text-indigo-400 mb-1">Categories</label>
                                   <div className="flex flex-wrap gap-1 mb-2">
                                     {data.categories.map(c => (
-                                      <span key={c} className="group relative flex items-center px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-medium lowercase rounded-full shadow-sm">
+                                      <span key={c} className="group relative flex items-center px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 text-[10px] font-medium lowercase rounded-full shadow-sm">
                                         {c}
                                         <button type="button" onClick={() => removeEditCategory(entry.id, c)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
                                           <i className="fa-solid fa-xmark"></i>
@@ -1979,17 +2024,17 @@ Documents:\n${contextText}` }] }
                                     onChange={e => setEditCatInput(prev => ({...prev, [entry.id]: e.target.value}))}
                                     onKeyDown={(e) => handleAddEditCategory(entry.id, e)}
                                     placeholder="Add category (Enter or comma)"
-                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white lowercase"
+                                    className="w-full px-3 py-2 border border-indigo-200 dark:border-indigo-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white dark:bg-slate-800 dark:text-white lowercase"
                                   />
                                   <datalist id="cat-suggestions">
                                     {Array.from(allCategories).map(c => <option key={c} value={c} />)}
                                   </datalist>
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-indigo-500 mb-1">Tags</label>
+                                  <label className="block text-xs font-semibold text-indigo-500 dark:text-indigo-400 mb-1">Tags</label>
                                   <div className="flex flex-wrap gap-1 mb-2">
                                     {data.tags.map(t => (
-                                      <span key={t} className="group relative flex items-center px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-medium lowercase rounded-full shadow-sm">
+                                      <span key={t} className="group relative flex items-center px-2.5 py-1 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-[10px] font-medium lowercase rounded-full shadow-sm">
                                         {t}
                                         <button type="button" onClick={() => removeEditTag(entry.id, t)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
                                           <i className="fa-solid fa-xmark"></i>
@@ -2004,7 +2049,7 @@ Documents:\n${contextText}` }] }
                                     onChange={e => setEditTagInput(prev => ({...prev, [entry.id]: e.target.value}))}
                                     onKeyDown={(e) => handleAddEditTag(entry.id, e)}
                                     placeholder="Add tag (Enter or comma)"
-                                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white lowercase"
+                                    className="w-full px-3 py-2 border border-indigo-200 dark:border-indigo-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white dark:bg-slate-800 dark:text-white lowercase"
                                   />
                                   <datalist id="tag-suggestions">
                                     {Array.from(allTags).map(t => <option key={t} value={t} />)}
@@ -2014,7 +2059,7 @@ Documents:\n${contextText}` }] }
                             </div>
 
                             <div>
-                              <label className="block text-xs font-semibold text-slate-500 mb-1">Expanded Summary (Markdown)</label>
+                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Expanded Summary (Markdown)</label>
                               <textarea 
                                 value={data.fullContent} 
                                 onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], fullContent: e.target.value}}))} 
@@ -2039,23 +2084,23 @@ Documents:\n${contextText}` }] }
                                     }, 50);
                                   }
                                 }}
-                                className="w-full h-96 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed" 
+                                className="w-full h-96 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed bg-white dark:bg-slate-800 dark:text-white" 
                                 placeholder="Start writing Expanded Summary in Markdown...&#10;&#10;(Tip: You can drag and drop other notes directly into this text box to create inline references!)"
                               ></textarea>
                             </div>
 
                             {data.references && data.references.length > 0 && (
-                              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                <h3 className="text-base font-bold text-slate-700 mb-3">Linked References</h3>
+                              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">Linked References</h3>
                                 <div className="space-y-2">
                                   {data.references.map(refId => {
                                     const refEnt = entries.find(e => e.id === refId);
                                     if (!refEnt) return null;
                                     const isMediaRef = isMediaSource(refEnt.sourceUrl);
                                     return (
-                                      <div key={refId} className={`flex justify-between items-center text-base p-3 rounded-lg border shadow-sm ${isMediaRef ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
-                                        <span className={`font-medium truncate mr-4 ${isMediaRef ? 'text-red-900' : 'text-slate-700'}`}><span className={`font-normal mr-1 ${isMediaRef ? 'text-red-500' : 'text-slate-400'}`}>{refEnt.numericId}:</span>{refEnt.title}</span>
-                                        <button type="button" onClick={() => removeReferenceFromEdit(entry.id, refId)} className="text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors text-xs font-semibold uppercase tracking-wide">Remove</button>
+                                      <div key={refId} className={`flex justify-between items-center text-base p-3 rounded-lg border shadow-sm ${isMediaRef ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                                        <span className={`font-medium truncate mr-4 ${isMediaRef ? 'text-red-900 dark:text-red-300' : 'text-slate-700 dark:text-slate-300'}`}><span className={`font-normal mr-1 ${isMediaRef ? 'text-red-500' : 'text-slate-500'}`}>{refEnt.numericId}:</span>{refEnt.title}</span>
+                                        <button type="button" onClick={() => removeReferenceFromEdit(entry.id, refId)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 px-2 py-1 rounded transition-colors text-xs font-semibold uppercase tracking-wide">Remove</button>
                                       </div>
                                     );
                                   })}
@@ -2065,69 +2110,69 @@ Documents:\n${contextText}` }] }
                           </div>
                         </div>
                       ) : (
-                        <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 pb-32 min-h-full">
+                        <div className="max-w-5xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 pb-32 min-h-full">
                           <div className="flex justify-between items-start mb-6">
                             <div className="flex flex-wrap items-center gap-2">
-                              {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full lowercase">{c}</span>)}
-                              {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full lowercase">#{t}</span>)}
+                              {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-2.5 py-1 rounded-full lowercase">{c}</span>)}
+                              {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-full lowercase">#{t}</span>)}
                               {entry.sourceUrl && <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-sm"><i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Source</a>}
                             </div>
                             {(!isCombinedView || selectedEntryIds.length > 1) && (
                               <div className="flex gap-2">
-                                <button onClick={() => startEditing(entry)} className="text-slate-400 hover:text-indigo-600 p-2 rounded hover:bg-indigo-50 transition-colors" title="Edit Note"><i className="fa-solid fa-pen"></i></button>
-                                <button onClick={() => deleteEntry(entry.id)} className="text-slate-400 hover:text-red-500 p-2 rounded hover:bg-red-50 transition-colors" title="Delete Note"><i className="fa-solid fa-trash-can"></i></button>
+                                <button onClick={() => startEditing(entry)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-2 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors" title="Edit Note"><i className="fa-solid fa-pen"></i></button>
+                                <button onClick={() => deleteEntry(entry.id)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Delete Note"><i className="fa-solid fa-trash-can"></i></button>
                               </div>
                             )}
                           </div>
-                          <h1 className="text-3xl font-bold mb-4">
-                            <span className="text-slate-400 font-normal mr-2">{entry.numericId}:</span>
+                          <h1 className="text-3xl font-bold mb-4 dark:text-white">
+                            <span className="text-slate-400 dark:text-slate-500 font-normal mr-2">{entry.numericId}:</span>
                             {entry.title || 'Untitled'}
                           </h1>
-                          <p className="text-lg text-slate-500 mb-8">{entry.summary}</p>
+                          <p className="text-lg text-slate-500 dark:text-slate-400 mb-8">{entry.summary}</p>
                           
                           {Array.isArray(entry.shortVersion) && entry.shortVersion.length > 0 && (
-                            <div className="bg-slate-50 rounded-xl p-6 mb-8 border border-slate-100">
-                              <h3 className="text-xs font-bold uppercase text-slate-400 mb-4">Key Takeaways</h3>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 mb-8 border border-slate-100 dark:border-slate-700/50">
+                              <h3 className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 mb-4">Key Takeaways</h3>
                               <ul className="space-y-2">
                                 {entry.shortVersion.map((point, idx) => (
-                                  <li key={idx} className="flex"><i className="fa-solid fa-chevron-right text-indigo-400 mt-1 mr-2 text-base"></i><span className="text-base text-slate-700 prose-a:text-indigo-600 prose-a:underline" dangerouslySetInnerHTML={{ __html: parseMarkdownInline(point) }}></span></li>
+                                  <li key={idx} className="flex"><i className="fa-solid fa-chevron-right text-indigo-400 dark:text-indigo-500 mt-1 mr-2 text-base"></i><span className="text-base text-slate-700 dark:text-slate-300 prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:underline" dangerouslySetInnerHTML={{ __html: parseMarkdownInline(point) }}></span></li>
                                 ))}
                               </ul>
                             </div>
                           )}
 
-                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-8 space-y-4">
+                          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 mb-8 space-y-4">
                             <div>
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Research & Analysis</h4>
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Research & Analysis</h4>
                               <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleAITool(entry.id, 'link')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors shadow-sm disabled:opacity-50">✨ Find Links</button>
-                                <button onClick={() => handleAITool(entry.id, 'gaps')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors shadow-sm disabled:opacity-50">✨ Find Gaps</button>
-                                <button onClick={() => handleAITool(entry.id, 'bias')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors shadow-sm disabled:opacity-50">✨ Bias/Tone</button>
-                                <button onClick={() => handleAITool(entry.id, 'citations')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors shadow-sm disabled:opacity-50">✨ Citations</button>
-                                <button onClick={() => handleAITool(entry.id, 'counter')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors shadow-sm disabled:opacity-50">✨ Counter-Args</button>
+                                <button onClick={() => handleAITool(entry.id, 'link')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Find Links</button>
+                                <button onClick={() => handleAITool(entry.id, 'gaps')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Find Gaps</button>
+                                <button onClick={() => handleAITool(entry.id, 'bias')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Bias/Tone</button>
+                                <button onClick={() => handleAITool(entry.id, 'citations')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Citations</button>
+                                <button onClick={() => handleAITool(entry.id, 'counter')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Counter-Args</button>
                               </div>
                             </div>
                             <div>
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Writing & Ideation</h4>
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Writing & Ideation</h4>
                               <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleAITool(entry.id, 'eli5')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors shadow-sm disabled:opacity-50">✨ Simplify (ELI5)</button>
-                                <button onClick={() => handleAITool(entry.id, 'brainstorm')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors shadow-sm disabled:opacity-50">✨ Brainstorm</button>
-                                <button onClick={() => handleAITool(entry.id, 'rewrite')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors shadow-sm disabled:opacity-50">✨ Rewrite</button>
-                                <button onClick={() => handleAITool(entry.id, 'essay')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors shadow-sm disabled:opacity-50">✨ Essay Draft</button>
+                                <button onClick={() => handleAITool(entry.id, 'eli5')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Simplify (ELI5)</button>
+                                <button onClick={() => handleAITool(entry.id, 'brainstorm')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Brainstorm</button>
+                                <button onClick={() => handleAITool(entry.id, 'rewrite')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Rewrite</button>
+                                <button onClick={() => handleAITool(entry.id, 'essay')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Essay Draft</button>
                               </div>
                             </div>
                             <div>
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Productivity</h4>
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Productivity</h4>
                               <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleAITool(entry.id, 'actions')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-sm disabled:opacity-50">✨ Action Items</button>
-                                <button onClick={() => handleAITool(entry.id, 'quiz')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-sm disabled:opacity-50">✨ Study Quiz</button>
+                                <button onClick={() => handleAITool(entry.id, 'actions')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors shadow-sm disabled:opacity-50">✨ Action Items</button>
+                                <button onClick={() => handleAITool(entry.id, 'quiz')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors shadow-sm disabled:opacity-50">✨ Study Quiz</button>
                               </div>
                             </div>
                           </div>
 
-                          <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 border-t border-slate-100 pt-6">Expanded Summary</h3>
+                          <h3 className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 mb-4 border-t border-slate-100 dark:border-slate-800 pt-6">Expanded Summary</h3>
                           <div 
-                            className="prose prose-slate prose-base max-w-none text-slate-800 pb-8" 
+                            className="prose prose-slate dark:prose-invert prose-base max-w-none text-slate-800 dark:text-slate-300 pb-8" 
                             dangerouslySetInnerHTML={{ __html: parseMarkdown(injectReferences(entry.fullContent || '', entries)) }} 
                             onClick={handleContentClick}
                             onDragOver={(e) => { e.preventDefault(); }}
@@ -2135,8 +2180,8 @@ Documents:\n${contextText}` }] }
                           />
                           
                           {Array.isArray(entry.references) && entry.references.length > 0 && (
-                            <div className="mt-12 pt-8 border-t border-slate-100">
-                              <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 flex items-center"><i className="fa-solid fa-link mr-2"></i> Linked References</h3>
+                            <div className="mt-12 pt-8 border-t border-slate-100 dark:border-slate-800">
+                              <h3 className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 mb-4 flex items-center"><i className="fa-solid fa-link mr-2"></i> Linked References</h3>
                               <div className="grid grid-cols-1 gap-3">
                                 {entry.references.map(refId => {
                                   const refEntry = entries.find(e => e.id === refId);
@@ -2146,13 +2191,13 @@ Documents:\n${contextText}` }] }
                                     <div 
                                       key={refId} 
                                       onClick={() => setSelectedEntryIds(prev => prev.includes(refId) ? prev : [...prev, refId])} 
-                                      className={`p-4 border rounded-xl cursor-pointer hover:shadow-md transition-all flex justify-between items-center group ${isMediaRef ? 'bg-red-50 border-red-200 hover:border-red-400' : 'bg-white border-slate-200 hover:border-indigo-300'}`}
+                                      className={`p-4 border rounded-xl cursor-pointer hover:shadow-md transition-all flex justify-between items-center group ${isMediaRef ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}
                                     >
                                       <div>
-                                        <h4 className={`text-base font-semibold mb-1 transition-colors ${isMediaRef ? 'text-red-900 group-hover:text-red-700' : 'text-slate-800 group-hover:text-indigo-700'}`}><span className={`font-normal mr-1 ${isMediaRef ? 'text-red-500' : 'text-slate-400'}`}>{refEntry.numericId}:</span>{refEntry.title}</h4>
-                                        <p className={`text-base line-clamp-1 ${isMediaRef ? 'text-red-700' : 'text-slate-500'}`}>{refEntry.summary}</p>
+                                        <h4 className={`text-base font-semibold mb-1 transition-colors ${isMediaRef ? 'text-red-900 dark:text-red-300 group-hover:text-red-700 dark:group-hover:text-red-200' : 'text-slate-800 dark:text-slate-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-400'}`}><span className={`font-normal mr-1 ${isMediaRef ? 'text-red-500' : 'text-slate-500'}`}>{refEntry.numericId}:</span>{refEntry.title}</h4>
+                                        <p className={`text-base line-clamp-1 ${isMediaRef ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>{refEntry.summary}</p>
                                       </div>
-                                      <i className={`fa-solid fa-arrow-right transition-colors ml-4 ${isMediaRef ? 'text-red-300 group-hover:text-red-500' : 'text-slate-300 group-hover:text-indigo-400'}`}></i>
+                                      <i className={`fa-solid fa-arrow-right transition-colors ml-4 ${isMediaRef ? 'text-red-300 dark:text-red-700 group-hover:text-red-500 dark:group-hover:text-red-500' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-400'}`}></i>
                                     </div>
                                   );
                                 })}
@@ -2180,10 +2225,10 @@ Documents:\n${contextText}` }] }
 
             {/* CHAT AREA */}
             {isChatOpen && Object.keys(editingEntries).length === 0 && (
-              <div className="border-t min-[1500px]:border-t-0 min-[1500px]:border-l border-slate-200 bg-slate-100 min-[1500px]:w-[400px] flex flex-col flex-shrink-0 h-[50vh] min-[1500px]:h-full transition-all absolute min-[1500px]:relative bottom-0 left-0 right-0 z-30 shadow-2xl min-[1500px]:shadow-none">
-                 <div className="flex justify-between items-center bg-white border-b border-slate-200 px-4 py-3 shrink-0">
-                    <h3 className="font-bold text-slate-800 text-sm"><i className="fa-solid fa-sparkles text-indigo-600 mr-2"></i> Document Chat</h3>
-                    <button onClick={() => setIsChatOpen(false)} className="text-slate-400 hover:text-slate-700"><i className="fa-solid fa-xmark text-lg"></i></button>
+              <div className="border-t min-[1500px]:border-t-0 min-[1500px]:border-l border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 min-[1500px]:w-[400px] flex flex-col flex-shrink-0 h-[50vh] min-[1500px]:h-full transition-all absolute min-[1500px]:relative bottom-0 left-0 right-0 z-30 shadow-2xl min-[1500px]:shadow-none">
+                 <div className="flex justify-between items-center bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shrink-0">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm"><i className="fa-solid fa-sparkles text-indigo-600 dark:text-indigo-400 mr-2"></i> Document Chat</h3>
+                    <button onClick={() => setIsChatOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"><i className="fa-solid fa-xmark text-lg"></i></button>
                  </div>
                  
                  <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 pb-4 pt-4 space-y-4">
@@ -2195,18 +2240,18 @@ Documents:\n${contextText}` }] }
                           </div>
                         ) : (
                           <div 
-                            className="max-w-[90%] rounded-2xl px-4 py-3 text-base bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm prose prose-slate max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 prose-a:text-indigo-600"
+                            className="max-w-[90%] rounded-2xl px-4 py-3 text-base bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm prose prose-slate dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 prose-a:text-indigo-600 dark:prose-a:text-indigo-400"
                             dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.text) }}
                           />
                         )}
                       </div>
                     ))}
-                    {isChatting && <div className="text-slate-400 text-base italic ml-2"><i className="fa-solid fa-circle-notch fa-spin mr-2"></i>AI is processing...</div>}
+                    {isChatting && <div className="text-slate-400 dark:text-slate-500 text-base italic ml-2"><i className="fa-solid fa-circle-notch fa-spin mr-2"></i>AI is processing...</div>}
                  </div>
 
-                 <form onSubmit={handleSendMessage} className="p-4 bg-slate-100 border-t border-slate-200 relative shrink-0">
-                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask about selected documents..." className="w-full pl-4 pr-12 py-3 text-base border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white shadow-sm" />
-                    <button type="submit" disabled={isChatting} className="absolute right-6 top-6 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"><i className="fa-solid fa-paper-plane"></i></button>
+                 <form onSubmit={handleSendMessage} className="p-4 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 relative shrink-0">
+                    <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask about selected documents..." className="w-full pl-4 pr-12 py-3 text-base border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white shadow-sm" />
+                    <button type="submit" disabled={isChatting} className="absolute right-6 top-6 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50"><i className="fa-solid fa-paper-plane"></i></button>
                  </form>
               </div>
             )}
