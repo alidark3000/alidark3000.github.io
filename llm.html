@@ -47,7 +47,7 @@
     .dark .markdown-body a:hover { color: #a5b4fc; }
   </style>
 </head>
-<body class="h-full bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans antialiased overflow-hidden select-none transition-colors duration-200">
+<body class="h-full bg-white dark:bg-slate-955 text-slate-800 dark:text-slate-100 flex flex-col font-sans antialiased overflow-hidden select-none transition-colors duration-200">
 
   <!-- Main Container -->
   <div class="flex-1 flex overflow-hidden">
@@ -148,7 +148,7 @@
         <button onclick="closeModal('apiKey')" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="space-y-4">
-        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Saved locally inside your browser's private local storage.</p>
+        <p class="text-xs text-slate-505 dark:text-slate-400 leading-relaxed">Saved locally inside your browser's private local storage.</p>
         <div>
           <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Gemini Developer Key</label>
           <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500 font-mono" />
@@ -205,7 +205,7 @@
         <div class="flex items-center space-x-2"><i class="fa-solid fa-file-circle-plus text-indigo-600 dark:text-indigo-500 text-lg"></i><h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Attach Sources to Chat</h3></div>
         <button onclick="closeChatSourcesModal()" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">Select source documents to inject directly into the dynamic context queries.</p>
+      <p class="text-xs text-slate-505 dark:text-slate-400 mb-4 leading-relaxed">Select source documents to inject directly into the dynamic context queries.</p>
       <div id="sourcesChecklist" class="flex-1 overflow-y-auto space-y-2 mb-4"></div>
       <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4">
         <button onclick="closeChatSourcesModal(); openManageSourcesModal()" class="text-indigo-600 dark:text-indigo-400 text-xs font-semibold"><i class="fa-solid fa-sliders mr-1"></i> Manage Sources</button>
@@ -221,7 +221,7 @@
         <button onclick="closeModal('githubSync')" class="text-slate-400 hover:text-slate-200 dark:hover:text-slate-200 transition"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="space-y-4 text-xs">
-        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">Syncing to a Gist creates a private cloud backup of your chats, keys, Gems, and sources.</p>
+        <p class="text-slate-550 dark:text-slate-400 leading-relaxed">Syncing to a Gist creates a private cloud backup of your chats, keys, Gems, and sources.</p>
         <div class="space-y-3">
           <div>
             <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">GitHub Personal Access Token (PAT)</label>
@@ -747,7 +747,7 @@
         `;
       } else {
         badge.innerHTML = `
-          <span class="inline-flex items-center space-x-1 text-slate-400 dark:text-slate-500" title="Workspace configured locally.">
+          <span class="inline-flex items-center space-x-1 text-slate-400 dark:text-slate-505" title="Workspace configured locally.">
             <i class="fa-solid fa-cloud text-[10px]"></i>
             <span class="text-[9px] font-bold">Local</span>
           </span>
@@ -1099,11 +1099,11 @@
       container.innerHTML = `
         <div class="flex-1 flex flex-col space-y-3 min-h-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Source Name</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1">Source Name</label>
             <input type="text" id="editSourceName" value="${escapeHTML(s.name)}" class="w-full bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div class="flex-1 flex flex-col min-h-0 font-sans">
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider mb-1">Content Reference Text</label>
             <textarea id="editSourceContent" class="flex-1 w-full bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto">${escapeHTML(s.content)}</textarea>
           </div>
           <div class="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-3">
@@ -1127,11 +1127,11 @@
       container.innerHTML = `
         <div class="flex-1 flex flex-col space-y-3 min-h-0 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Source Title</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1">Source Title</label>
             <input type="text" id="editSourceName" placeholder="e.g. Project Specifications" class="w-full bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div class="flex-1 flex flex-col min-h-0">
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Content Reference Text</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1">Content Reference Text</label>
             <textarea id="editSourceContent" placeholder="Paste guidelines or material logs..." class="flex-1 w-full bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-mono resize-none overflow-y-auto"></textarea>
           </div>
           <div class="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
@@ -1231,7 +1231,7 @@
               <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="chat-source-checkbox rounded bg-white dark:bg-slate-955 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-100 dark:focus:ring-offset-slate-900" />
               <div class="flex flex-col truncate">
                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200">${escapeHTML(s.name)}</span>
-                <span class="text-[9px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${escapeHTML(s.content.substring(0, 90))}...</span>
+                <span class="text-[9px] text-slate-505 dark:text-slate-400 truncate mt-0.5">${escapeHTML(s.content.substring(0, 90))}...</span>
               </div>
             </div>
           `;
@@ -1277,7 +1277,7 @@
       container.innerHTML = '';
       state.gems.forEach(g => {
         const btn = document.createElement('button');
-        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300' : 'bg-slate-55 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
+        btn.className = `w-full text-left p-2.5 rounded-lg text-xs font-semibold truncate block border ${state.editingGemId === g.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-505 text-indigo-600 dark:text-indigo-300' : 'bg-slate-55 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
         btn.innerHTML = `<i class="fa-solid fa-gem mr-1.5 text-indigo-500 dark:text-indigo-400"></i>${escapeHTML(g.name)}`;
         btn.onclick = () => selectGemForEditing(g.id);
         container.appendChild(btn);
@@ -1295,7 +1295,7 @@
         const isChecked = gem.baseSourceIds && gem.baseSourceIds.includes(s.id);
         sourceHTML += `
           <label class="flex items-center space-x-2 p-2 bg-slate-55 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
-            <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="gem-source-checkbox rounded bg-white dark:bg-slate-955 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} class="gem-source-checkbox rounded bg-white dark:bg-slate-955 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-505" />
             <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
           </label>
         `;
@@ -1306,19 +1306,19 @@
       container.innerHTML = `
         <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1">Gem Name</label>
             <input type="text" id="editGemName" value="${escapeHTML(gem.name)}" class="w-full bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Mission Profile Description</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1">Gem Mission Profile Description</label>
             <input type="text" id="editGemDesc" value="${escapeHTML(gem.description || '')}" class="w-full bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behaviors</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider mb-1">System Instructions / Behaviors</label>
             <textarea id="editGemInstruction" class="w-full bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans">${escapeHTML(gem.systemInstruction)}</textarea>
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
             <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-55 dark:bg-slate-955/40 max-h-28 overflow-y-auto">
               ${sourceHTML}
             </div>
@@ -1339,7 +1339,7 @@
       state.sources.forEach(s => {
         sourceHTML += `
           <label class="flex items-center space-x-2 p-2 bg-slate-55 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition">
-            <input type="checkbox" value="${s.id}" class="gem-source-checkbox rounded bg-white dark:bg-slate-955 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500" />
+            <input type="checkbox" value="${s.id}" class="gem-source-checkbox rounded bg-white dark:bg-slate-955 border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-505" />
             <span class="text-xs text-slate-700 dark:text-slate-300 truncate">${escapeHTML(s.name)}</span>
           </label>
         `;
@@ -1350,19 +1350,19 @@
       container.innerHTML = `
         <div class="flex-1 flex flex-col space-y-3 min-h-0 overflow-y-auto pr-1">
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Gem Name</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1">Gem Name</label>
             <input type="text" id="editGemName" placeholder="e.g. Copywriter, Code Optimizer" class="w-full bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Mission Profile Description</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1">Mission Profile Description</label>
             <input type="text" id="editGemDesc" placeholder="Helpful summary statement..." class="w-full bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">System Instructions / Behavior Profile</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider mb-1">System Instructions / Behavior Profile</label>
             <textarea id="editGemInstruction" placeholder="You are an elegant assistant..." class="w-full bg-slate-55 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg p-3 text-xs text-slate-700 dark:text-slate-200 focus:outline-none h-24 resize-none overflow-y-auto font-sans"></textarea>
           </div>
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
+            <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-1.5">Baseline Attached Sources</label>
             <div class="grid grid-cols-1 gap-2 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg bg-slate-55 dark:bg-slate-955/40 max-h-28 overflow-y-auto">
               ${sourceHTML}
             </div>
@@ -1521,7 +1521,7 @@
       });
       const tags = Object.keys(tagsMap).sort();
       if (tags.length === 0) {
-        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-500 italic px-3 py-1">No tags active.</div>`;
+        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-505 italic px-3 py-1">No tags active.</div>`;
         return;
       }
       tags.forEach(tag => {
@@ -1570,7 +1570,7 @@
         container.appendChild(div);
       });
       if (state.gems.length === 0) {
-        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-500 italic px-3 py-1">No custom Gems.</div>`;
+        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-505 italic px-3 py-1">No custom Gems.</div>`;
       }
     }
 
@@ -1593,7 +1593,7 @@
         container.appendChild(div);
       });
       if (state.sources.length === 0) {
-        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-500 italic px-3 py-1">No reference sources.</div>`;
+        container.innerHTML = `<div class="text-[10px] text-slate-400 dark:text-slate-505 italic px-3 py-1">No reference sources.</div>`;
       }
     }
 
@@ -1644,9 +1644,9 @@
         div.innerHTML = `
           <div class="flex justify-between items-start">
             <h4 class="font-bold text-xs text-slate-700 dark:text-slate-200 truncate flex-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition pr-2">${escapeHTML(chat.title || 'Untitled Note')}</h4>
-            <span class="text-[9px] text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">${dateStr}</span>
+            <span class="text-[9px] text-slate-400 dark:text-slate-505 font-mono flex-shrink-0">${dateStr}</span>
           </div>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 h-8 leading-relaxed">${escapeHTML(lastMsg) || '<span class="italic text-slate-400 dark:text-slate-600">Blank note discussion</span>'}</p>
+          <p class="text-[11px] text-slate-505 dark:text-slate-400 line-clamp-2 h-8 leading-relaxed">${escapeHTML(lastMsg) || '<span class="italic text-slate-400 dark:text-slate-600">Blank note discussion</span>'}</p>
           <div class="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-800/60 min-h-[22px]">
             <div class="flex flex-wrap gap-1 items-center">
               ${folderBadge}
@@ -1701,7 +1701,7 @@
             <i class="fa-solid fa-book-open text-2xl text-indigo-500 dark:text-indigo-400"></i>
           </div>
           <h2 class="text-lg font-bold text-slate-700 dark:text-slate-200 mb-1.5">No Conversation Loaded</h2>
-          <p class="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-6 leading-relaxed">Select a notes chat session from the list, or launch a new workspace to start configuring models and querying documents.</p>
+          <p class="text-slate-550 dark:text-slate-400 text-xs max-w-sm mb-6 leading-relaxed">Select a notes chat session from the list, or launch a new workspace to start configuring models and querying documents.</p>
           <button onclick="createNewChat()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition">Create New Note Chat</button>
         </div>
       `;
@@ -1742,13 +1742,13 @@
               <div class="flex items-center justify-between">
                 <input type="text" id="chatTitleInput" value="${escapeHTML(chat.title || '')}" onblur="saveChatTitle()" onkeydown="handleChatTitleKeyDown(event)" class="flex-1 bg-transparent text-slate-800 dark:text-slate-100 font-extrabold text-base focus:outline-none focus:bg-slate-200/50 dark:focus:bg-slate-855 px-2 py-1 rounded border border-transparent focus:border-indigo-500/40 transition truncate mr-4" />
                 <div class="flex items-center space-x-3 flex-shrink-0">
-                  <button onclick="toggleWebSearch()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${chat.enableSearch ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-750'}" title="Enables Google Search Grounding to research live web & YouTube transcripts natively">
+                  <button onclick="toggleWebSearch()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${chat.enableSearch ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-755'}" title="Enables Google Search Grounding to research live web & YouTube transcripts natively">
                     <i class="fa-solid fa-globe"></i>
                     <span>Live Search: ${chat.enableSearch ? 'ON' : 'OFF'}</span>
                   </button>
-                  <button onclick="openChatSourcesModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition" title="Attach knowledge sources to this chat note"><i class="fa-solid fa-file-invoice text-indigo-500 dark:text-indigo-400"></i><span>Sources (${chat.attachedSourceIds ? chat.attachedSourceIds.length : 0})</span></button>
+                  <button onclick="openChatSourcesModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-755 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition" title="Attach knowledge sources to this chat note"><i class="fa-solid fa-file-invoice text-indigo-500 dark:text-indigo-400"></i><span>Sources (${chat.attachedSourceIds ? chat.attachedSourceIds.length : 0})</span></button>
                   <div class="flex flex-col items-end" title="Accumulated approximate cost. Rates estimated per character counts.">
-                    <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Estimated Cost</span>
+                    <span class="text-[9px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider">Estimated Cost</span>
                     <span id="chatTotalCostSpan" class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 dark:border-emerald-400/10">$0.000000</span>
                   </div>
                 </div>
@@ -1756,7 +1756,7 @@
               <div class="flex flex-wrap gap-2 items-center justify-between text-xs pt-1">
                 <div class="flex flex-wrap gap-2 items-center">
                   <div class="flex items-center space-x-1 bg-white dark:bg-slate-955/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
-                    <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold">MODEL:</span>
+                    <span class="text-[9px] text-slate-400 dark:text-slate-505 font-bold">MODEL:</span>
                     <select onchange="updateChatModel(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">${modelOptions}</select>
                   </div>
                   <div class="flex items-center space-x-1 bg-white dark:bg-slate-955/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
@@ -1764,7 +1764,7 @@
                     <select onchange="updateChatGem(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">${gemOptions}</select>
                   </div>
                   <div class="flex items-center space-x-1 bg-white dark:bg-slate-955/60 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-lg">
-                    <span class="text-[9px] text-yellow-600 dark:text-yellow-500 font-bold"><i class="fa-solid fa-folder mr-1"></i>FOLDER:</span>
+                    <span class="text-[9px] text-yellow-600 dark:text-yellow-505 font-bold"><i class="fa-solid fa-folder mr-1"></i>FOLDER:</span>
                     <select onchange="updateChatFolder(this.value)" class="bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer">${folderOptions}</select>
                   </div>
                 </div>
@@ -1777,9 +1777,9 @@
             <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-5 bg-white dark:bg-slate-900"></div>
             <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-2 flex-shrink-0">
               <div class="relative flex items-end bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-2 transition">
-                <textarea id="chatInput" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
+                <textarea id="chatInput" placeholder="Write prompt, request code, or ask sources..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-505 py-2 pl-3 pr-24 h-10 max-h-48 resize-none focus:ring-0" rows="1"></textarea>
                 <div class="absolute right-3 bottom-2.5 flex items-center space-x-2">
-                  <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
+                  <label class="p-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-755 text-slate-400 hover:text-slate-200 rounded-lg cursor-pointer transition" title="Attach local text document file to active sources">
                     <i class="fa-solid fa-paperclip"></i>
                     <input type="file" id="tempFileInput" class="hidden" onchange="handleTempFileUpload(event)" accept=".txt,.md,.js,.py,.json,.html,.css" />
                   </label>
@@ -1827,7 +1827,7 @@
       container.innerHTML = '';
       if (chat.messages.length === 0) {
         container.innerHTML = `
-          <div class="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 space-y-2 py-16">
+          <div class="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-505 space-y-2 py-16">
             <i class="fa-solid fa-comments text-3xl opacity-40"></i>
             <p class="text-xs">Discussion empty. Send a prompt to query models.</p>
           </div>
@@ -1842,9 +1842,9 @@
         const costStr = cost > 0 ? `• Est. $${cost.toFixed(6)}` : '';
         const roleLabel = isUser ? 'You' : getSenderName(chat);
         const renderedText = isUser ? escapeHTML(msg.content) : compileMarkdown(msg.content);
-        const copyBtnHTML = '<button onclick="copyMessageText(\'' + chat.id + '\', ' + idx + ')" class="hover:text-indigo-500 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-500 transition px-1" title="Copy to Clipboard"><i class="fa-regular fa-copy"></i></button>';
+        const copyBtnHTML = '<button onclick="copyMessageText(\'' + chat.id + '\', ' + idx + ')" class="hover:text-indigo-500 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-505 transition px-1" title="Copy to Clipboard"><i class="fa-regular fa-copy"></i></button>';
         const hasCode = msg.content && msg.content.includes('```');
-        const canvasBtnHTML = (!isUser && hasCode) ? '<button onclick="sendToCanvas(\'' + chat.id + '\', ' + idx + ')" class="hover:text-indigo-500 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-500 transition px-1" title="Open inside Collaborative Canvas"><i class="fa-solid fa-laptop-code"></i></button>' : '';
+        const canvasBtnHTML = (!isUser && hasCode) ? '<button onclick="sendToCanvas(\'' + chat.id + '\', ' + idx + ')" class="hover:text-indigo-500 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-505 transition px-1" title="Open inside Collaborative Canvas"><i class="fa-solid fa-laptop-code"></i></button>' : '';
         let groundingHTML = "";
         if (msg.groundingMetadata) {
           const chunks = msg.groundingMetadata.groundingChunks || [];
@@ -1875,7 +1875,7 @@
         }
         msgDiv.innerHTML = `
           <div class="max-w-[85%] flex flex-col">
-            <div class="flex items-center space-x-2 text-[10px] text-slate-400 dark:text-slate-500 mb-1 px-1.5 ${isUser ? 'justify-end' : 'justify-start'}">
+            <div class="flex items-center space-x-2 text-[10px] text-slate-400 dark:text-slate-505 mb-1 px-1.5 ${isUser ? 'justify-end' : 'justify-start'}">
               <span class="font-bold text-slate-600 dark:text-slate-300">${roleLabel}</span>
               <span>•</span>
               <span>${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -1913,7 +1913,7 @@
           }
         }
         if (activeIds.size > 0) {
-          sourcesBar.innerHTML = `<span class="font-bold text-slate-400 dark:text-slate-500 text-[9px] uppercase tracking-wider mr-1">Active Sources context:</span>`;
+          sourcesBar.innerHTML = `<span class="font-bold text-slate-400 dark:text-slate-505 text-[9px] uppercase tracking-wider mr-1">Active Sources context:</span>`;
           activeIds.forEach(id => {
             const s = state.sources.find(src => src.id === id);
             if (s) {
