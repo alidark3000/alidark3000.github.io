@@ -2027,7 +2027,8 @@
       if (tools.length > 0) {
         payload.tools = tools;
       }
-      const url = '[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + modelName + ':streamGenerateContent?alt=sse&key=' + state.apiKey;
+      const baseUrl = 'https://generativelanguage.googleapis.com';
+      const url = baseUrl + '/v1beta/models/' + modelName + ':streamGenerateContent?alt=sse&key=' + state.apiKey;
       try {
         currentAbortController = new AbortController();
         const response = await fetch(url, {
