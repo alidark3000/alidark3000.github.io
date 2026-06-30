@@ -8,12 +8,20 @@
     <title>Ali Dark | Creative Technologist</title>
     <style>
         :root {
-            --color-bg: #f8f9fa;
-            --color-text: #212529;
-            --color-accent: #e65100;
-            --color-muted: #6c757d;
-            --color-link: #ff6d00;
-            --color-link-hover: #e65100;
+            --color-bg-screen: #000000;
+            --color-bg-window: #0000AA;
+            --color-text: #AAAAAA;
+            --color-text-bright: #FFFFFF;
+            --color-link: #55FFFF;
+            --color-link-hover: #FFFF55;
+            --color-border: #AAAAAA;
+        }
+
+        @font-face {
+            font-family: 'Fixedsys Excelsior';
+            src: url('fsex300.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
         }
 
         * {
@@ -22,57 +30,149 @@
 
         body {
             margin: 0;
-            padding: 2em 1em;
+            padding: 3em 1em;
             min-height: 100vh;
-            background-color: var(--color-bg);
+            background-color: var(--color-bg-screen);
+            font-family: 'Fixedsys Excelsior', 'Perfect DOS VGA 437', 'Fixedsys', 'Terminal', 'Courier New', monospace;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-size: 1.2rem;
+            line-height: 1.4;
             color: var(--color-text);
-            font-family: Menlo, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
-            font-size: 1.1rem;
-            line-height: 1.6;
+        }
+
+        .menu-bar {
+            background-color: var(--color-text);
+            color: var(--color-bg-screen);
+            padding: 0.2em 1em;
+            display: flex;
+            gap: 2em;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+        
+        .menu-bar span::first-letter {
+            color: #AA0000;
+            font-weight: bold;
+        }
+
+        .menu-item {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: -0.5em;
+            background-color: var(--color-text);
+            color: var(--color-bg-screen);
+            border: 6px double var(--color-bg-screen);
+            padding: 0.5em 1em;
+            min-width: max-content;
+            z-index: 200;
+        }
+
+        .menu-item:hover .dropdown {
+            display: block;
+        }
+
+        .dropdown a {
+            display: block;
+            color: var(--color-bg-screen);
+            text-decoration: none;
+        }
+
+        .dropdown a:hover {
+            background-color: var(--color-bg-screen);
+            color: var(--color-text-bright);
+        }
+
+        .status-bar {
+            background-color: var(--color-text-bright);
+            color: var(--color-bg-screen);
+            padding: 0.2em 1em;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: right;
+            z-index: 100;
         }
 
         .container {
             max-width: 800px;
             margin: 0 auto;
+            background-color: var(--color-bg-window);
+            border: 6px double var(--color-border);
+            padding: 2em;
+            position: relative;
+        }
+
+        .container::before {
+            content: " Ali Dark | Creative Technologist ";
+            position: absolute;
+            top: -0.8em;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--color-bg-window);
+            color: var(--color-text-bright);
+            padding: 0 10px;
+            font-weight: bold;
         }
 
         h1, h2, h3, h4 {
-            color: var(--color-accent);
+            color: var(--color-text-bright);
             font-weight: normal;
             font-size: 1em;
+            text-transform: uppercase;
         }
 
-        h1 { margin-bottom: 0.5em; text-transform: uppercase; text-decoration: underline; font-weight: bold; }
-        h2 { margin-top: 3em; margin-bottom: 1em; text-transform: uppercase; font-weight: bold; }
-        h3 { margin-top: 1.5em; margin-bottom: 0; font-weight: bold; }
+        h1 { margin-bottom: 1.5em; text-align: center; }
+        h1::before, h1::after { content: " *** "; color: var(--color-link); }
+
+        h2 { margin-top: 2em; margin-bottom: 1em; border-bottom: 1px dashed var(--color-text); padding-bottom: 0.5em; }
+        h3 { margin-top: 1.5em; margin-bottom: 0; }
         h3 + p { margin-top: 0; }
 
         a, a:visited {
             color: var(--color-link);
             text-decoration: none;
-            border-bottom: 1px solid transparent;
-            transition: border-bottom 0.2s ease;
         }
 
-        a:hover {
-            color: var(--color-link-hover);
-            border-bottom: 1px solid var(--color-link-hover);
+        a:hover, a:focus {
+            color: var(--color-bg-window);
+            background-color: var(--color-link-hover);
         }
 
         ul {
             list-style-type: none;
             padding: 0;
             margin: 1em 0;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1em;
         }
 
         li {
-            flex: 1 1 25%;
-            background-color: #f1f3f5;
-            padding: 1em;
+            margin-top: 1.5em;
+            margin-bottom: 1.5em;
+            padding: 1.5em 1em 1em 1em;
+            border: 1px solid var(--color-border);
+            position: relative;
         }
+
+        li > h3 {
+            position: absolute;
+            top: -0.8em;
+            left: 1em;
+            margin: 0;
+            background-color: var(--color-bg-window);
+            padding: 0 10px;
+        }
+        
+        li > h3 + p { margin-top: -0.5em; }
 
         li > :first-child { margin-top: 0; }
         li > :last-child { margin-bottom: 0; }
@@ -81,7 +181,7 @@
             display: inline-block;
             width: 10px;
             height: 1.1em;
-            background-color: var(--color-accent);
+            background-color: var(--color-text-bright);
             vertical-align: middle;
             animation: blink 1s step-end infinite;
             margin-left: 5px;
@@ -94,18 +194,30 @@
         }
 
         @media (max-width: 768px) {
-            body { font-size: 1rem; }
+            body { font-size: 1rem; padding: 3em 0.5em; }
+            .container { padding: 1em; }
         }
     </style>
 </head>
 
 <body>
+    <div class="menu-bar">
+        <div class="menu-item">
+            <span>File</span>
+            <div class="dropdown">
+                <a href="mailto:ali@alidark.com">ali@alidark</a>
+            </div>
+        </div>
+        <div class="menu-item"><span>Edit</span></div>
+        <div class="menu-item"><span>Search</span></div>
+        <div class="menu-item"><span>Options</span></div>
+        <div class="menu-item"><span>Help</span></div>
+    </div>
 
     <main class="container">
         <header>
-            <h1>Ali Dark<span class="cursor"></span></h1>
-            <p>Creative technologist based in Brisbane Australia. </p>
             <p>I empower people to to fearlessly explore potential and to find fulfilment and self-actualisation. I work for a society that supports self-actualisation, and thus the co-creation of a flourishing future. <a href="https://cls.alidark.com/about">More about me</a>.</p>
+            <p>Based in Brisbane Australia.</p>
         </header>
 
         <section>
@@ -136,12 +248,12 @@
                     dropdown).</p>
                 <ul>
                     <li>
-                        <h3><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to Structure</a></h3>
-                        <p>Brain dump here and get some clarity.</p>
+                        <h3>Chaos to Structure</h3>
+                        <p><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to Structure</a> - Brain dump here and get some clarity.</p>
                     </li>
                     <li>
-                        <h3><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction Finder</a></h3>
-                        <p>Answer some questions to get ideas for the future.</p>
+                        <h3>Direction Finder</h3>
+                        <p><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction Finder</a> - Answer some questions to get ideas for the future.</p>
                     </li>
                 </ul>
 
@@ -150,7 +262,32 @@
             <h2>Apps</h2>
             <p>OK no one downloaded these so I stopped paying for an Apple developer account. Story of my life, but marketing is not my thing. TL,DR: you win!</p>
             <ul>
-                <li> <p><b>Base Player</b> - A frontend for your music files. <a href="https://alidark.com/apps/baseplayer1.4.zip">Download Base Player</a></p>
-            <li> <p>A simple <a href="/brain.html">AI powered knowledge management tool</a> with local storage. Requires a <a href="https://aistudio.google.com/app/api-keys?project=gen-lang-client-0206510866">Google AI Studio API key</a>. With this tool you can manage a local file that contians notes you've entered, or summaries of links or vids you've dropped in. You can chat with the docs and cross eference them with each other.</p>
+                <li>
+                    <h3>Base Player</h3>
+                    <p>A frontend for your music files. <a href="https://alidark.com/apps/baseplayer1.4.zip">Download Base Player</a></p>
+                </li>
+                <li>
+                    <h3>Brain</h3>
+                    <p>A simple <a href="/brain.html">AI powered knowledge management tool</a> with local storage. Requires a <a href="https://aistudio.google.com/app/api-keys?project=gen-lang-client-0206510866">Google AI Studio API key</a>. With this tool you can manage a local file that contians notes you've entered, or summaries of links or vids you've dropped in. You can chat with the docs and cross eference them with each other.</p>
+                </li>
             </ul>
-        </
+        </section>
+
+        <section>
+            <h2>Music</h2>
+            <p>I have made a few tracks I'm proud of. Check out <a
+                    href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">Caravan</a>
+                and <a
+                    href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">How
+                    We Do It</a> on soundcloud.</p>
+        </section>
+
+        <div style="margin-top: 2em; color: var(--color-text-bright);">C:\&gt;<span class="cursor"></span></div>
+    </main>
+
+    <div class="status-bar">
+        F1=Help &nbsp;&nbsp; Line:1 &nbsp;&nbsp; Col:1
+    </div>
+</body>
+
+</html>
