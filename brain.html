@@ -114,7 +114,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v2.0.2";
+    const APP_VERSION = "v2.0.4";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -125,7 +125,7 @@
       if (!url) return null;
       let match;
       match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
-      if (match && match[1]) return `https://www.youtube.com/embed/${match[1]}`;
+      if (match && match[1]) return `https://www.youtube-nocookie.com/embed/${match[1]}?origin=https://localhost`;
       match = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
       if (match && match[1]) return `https://player.vimeo.com/video/${match[1]}`;
       return null;
@@ -1155,13 +1155,16 @@
         setIsTaxonomyProcessing(true);
         try {
           const prompt = `You are a careful database taxonomy manager.
+          Current Projects: ${JSON.stringify(Array.from(allProjects))}
           Current Categories: ${JSON.stringify(Array.from(allCategories))}
           Current Tags: ${JSON.stringify(Array.from(allTags))}
           Command: "${taxonomyInput}"
 
-          Safety Rule: Deleting multiple categories/tags is high-risk. Only delete if explicitly requested by the user. Do not delete broad categories unless the user is certain.
+          Safety Rule: Deleting multiple items is high-risk. Only delete if explicitly requested by the user. Do not delete broad topics unless the user is certain.
           Return JSON matching (ensure all new values are lowercase):
           {
+            "projectChanges": [{"old": "OldName", "new": "NewName"}],
+            "projectDeletions": ["NameToRemove"],
             "categoryChanges": [{"old": "OldName", "new": "NewName"}],
             "categoryDeletions": ["NameToRemove"],
             "tagChanges": [{"old": "OldName", "new": "NewName"}],
@@ -1171,6 +1174,8 @@
           const schema = {
             type: "OBJECT",
             properties: {
+              projectChanges: { type: "ARRAY", items: { type: "OBJECT", properties: { old: { type: "STRING" }, new: { type: "STRING" } } } },
+              projectDeletions: { type: "ARRAY", items: { type: "STRING" } },
               categoryChanges: { type: "ARRAY", items: { type: "OBJECT", properties: { old: { type: "STRING" }, new: { type: "STRING" } } } },
               categoryDeletions: { type: "ARRAY", items: { type: "STRING" } },
               tagChanges: { type: "ARRAY", items: { type: "OBJECT", properties: { old: { type: "STRING" }, new: { type: "STRING" } } } },
@@ -1187,9 +1192,25 @@
           const data = JSON.parse(result.candidates[0].content.parts[0].text);
 
           setEntries(prev => prev.map(entry => {
+            let newProjs = [...(Array.isArray(entry.projects) ? entry.projects : [])];
             let newCats = [...(Array.isArray(entry.categories) ? entry.categories : [])];
             let newTags = [...(Array.isArray(entry.tags) ? entry.tags : [])];
             let wasModified = false;
+
+            if (data.projectChanges) {
+              data.projectChanges.forEach(change => {
+                if (newProjs.includes(change.old)) {
+                  newProjs = newProjs.filter(p => p !== change.old);
+                  if (change.new && !newProjs.includes(change.new)) newProjs.push(change.new.toLowerCase());
+                  wasModified = true;
+                }
+              });
+            }
+            if (data.projectDeletions && data.projectDeletions.length > 0) {
+              const startLen = newProjs.length;
+              newProjs = newProjs.filter(p => !data.projectDeletions.includes(p));
+              if (newProjs.length !== startLen) wasModified = true;
+            }
 
             if (data.categoryChanges) {
               data.categoryChanges.forEach(change => {
@@ -1224,6 +1245,7 @@
             if (wasModified) {
                 return { 
                   ...entry, 
+                  projects: [...new Set(newProjs.map(p => p.toLowerCase()))],
                   categories: [...new Set(newCats.map(c => c.toLowerCase()))], 
                   tags: [...new Set(newTags.map(t => t.toLowerCase()))],
                   updatedAt: Date.now()
@@ -2240,9 +2262,6 @@ Documents:\n${contextText}` }] }
                   <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 border-none shadow-sm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white/70 dark:bg-slate-900/70 backdrop-blur dark:text-white transition-all" />
                 </div>
 
-                <button onClick={handleNewNote} className="text-white bg-indigo-600 hover:bg-indigo-700 p-2 rounded-lg shadow-sm transition-colors flex-shrink-0 w-9 h-9 flex items-center justify-center" title="New Note">
-                  <i className="fa-solid fa-plus"></i>
-                </button>
                 <button onClick={() => setIsListSidebarOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex-shrink-0 bg-white/50 dark:bg-slate-900/50 shadow-sm w-9 h-9 flex items-center justify-center hidden lg:flex" title="Hide List"><i className="fa-solid fa-angles-left"></i></button>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); if (addInput.trim()) processInput(addInput.trim()); }} className="relative flex-1">
@@ -2260,6 +2279,16 @@ Documents:\n${contextText}` }] }
             </div>
             <div className="flex-1 overflow-y-auto p-3 pt-1 space-y-3">
               <p className="text-[10px] text-slate-400 text-center mb-2 uppercase tracking-wider font-semibold">Cmd/Ctrl + Click to select multiple</p>
+              <div className="flex gap-2 mb-4">
+                <button 
+                  onClick={handleNewNote} 
+                  className="flex-1 text-center relative py-3 px-3 cursor-pointer transition-all duration-200 border border-amber-200 dark:border-amber-800 rounded-lg shadow-sm bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                >
+                  <h4 className="text-sm font-bold text-amber-700 dark:text-amber-400 flex items-center justify-center">
+                    <i className="fa-solid fa-file-pen mr-2"></i> New Note
+                  </h4>
+                </button>
+              </div>
               <div className="flex gap-2 mb-4">
                 <button 
                   onClick={handleNewGlobalChat} 
@@ -2592,7 +2621,7 @@ Documents:\n${contextText}` }] }
                               <input type="text" value={data.sourceUrl} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], sourceUrl: e.target.value}}))} className="w-full px-4 py-2 text-base border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white" placeholder="https://example.com/source-url" />
                               {getEmbedUrl(data.sourceUrl) && (
                                 <div className="mt-4 aspect-video w-full rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
-                                  <iframe src={getEmbedUrl(data.sourceUrl)} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                                  <iframe src={getEmbedUrl(data.sourceUrl)} className="w-full h-full" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
                                 </div>
                               )}
                             </div>
@@ -2772,7 +2801,7 @@ Documents:\n${contextText}` }] }
 
                           {getEmbedUrl(entry.sourceUrl) && (
                             <div className="mb-8 aspect-video w-full rounded-xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-700 bg-black">
-                              <iframe src={getEmbedUrl(entry.sourceUrl)} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                              <iframe src={getEmbedUrl(entry.sourceUrl)} className="w-full h-full" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
                             </div>
                           )}
 
@@ -2864,7 +2893,7 @@ Documents:\n${contextText}` }] }
             </div>
 
             {/* Floating Chat Button */}
-            {!isChatOpen && selectedEntryIds.length > 0 && Object.keys(editingEntries).length === 0 && (
+            {!isChatOpen && selectedEntryIds.length > 0 && !activeSingleEntry?.isGlobalChat && Object.keys(editingEntries).length === 0 && (
                <button 
                   onClick={() => setIsChatOpen(true)} 
                   className="absolute bottom-6 right-6 bg-indigo-600 text-white shadow-xl hover:bg-indigo-700 transition-all rounded-full h-14 px-6 font-bold flex items-center gap-3 z-40"
