@@ -6,8 +6,70 @@
   <title>KnowledgeBase AI</title>
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+
   <!-- Consolidated Tailwind CSS (Single CDN loading to prevent configuration conflicts) -->
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['"Source Serif 4"', 'Georgia', 'serif'],
+          },
+          colors: {
+            claude: {
+              bg: '#FAF9F6',
+              bgdark: '#1C1B1A',
+              surface: '#F2F0ED',
+              surfacedark: '#252422',
+              accent: '#D47A57',
+              accentdark: '#C76541',
+            }
+          },
+          typography: (theme) => ({
+            claude: {
+              css: {
+                '--tw-prose-body': theme('colors.stone[800]'),
+                '--tw-prose-headings': theme('colors.stone[900]'),
+                'font-family': theme('fontFamily.serif')[0],
+                '--tw-prose-links': theme('colors.orange[700]'),
+                '--tw-prose-bold': theme('colors.stone[900]'),
+                '--tw-prose-counters': theme('colors.stone[500]'),
+                '--tw-prose-bullets': theme('colors.stone[300]'),
+                '--tw-prose-quotes': theme('colors.stone[900]'),
+                '--tw-prose-quote-borders': theme('colors.orange[200]'),
+                '--tw-prose-captions': theme('colors.stone[500]'),
+                '--tw-prose-code': theme('colors.stone[900]'),
+                '--tw-prose-pre-code': theme('colors.stone[200]'),
+                '--tw-prose-pre-bg': theme('colors.stone[800]'),
+                '--tw-prose-th-borders': theme('colors.stone[300]'),
+                '--tw-prose-td-borders': theme('colors.stone[200]'),
+                '--tw-prose-invert-body': theme('colors.stone[300]'),
+                '--tw-prose-invert-headings': theme('colors.white'),
+                '--tw-prose-invert-links': theme('colors.orange[400]'),
+                '--tw-prose-invert-bold': theme('colors.white'),
+                '--tw-prose-invert-counters': theme('colors.stone[400]'),
+                '--tw-prose-invert-bullets': theme('colors.stone[600]'),
+                '--tw-prose-invert-quotes': theme('colors.stone[100]'),
+                '--tw-prose-invert-quote-borders': theme('colors.orange[700]'),
+                '--tw-prose-invert-captions': theme('colors.stone[400]'),
+                '--tw-prose-invert-code': theme('colors.white'),
+                '--tw-prose-invert-pre-code': theme('colors.stone[300]'),
+                '--tw-prose-invert-pre-bg': 'rgb(0 0 0 / 50%)',
+                '--tw-prose-invert-th-borders': theme('colors.stone[600]'),
+                '--tw-prose-invert-td-borders': theme('colors.stone[700]'),
+              },
+            },
+          }),
+        }
+      }
+    }
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -18,7 +80,7 @@
   <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden transition-colors duration-200">
+<body class="bg-claude-bg dark:bg-claude-bgdark text-stone-800 dark:text-stone-300 font-sans overflow-hidden transition-colors duration-200 antialiased selection:bg-orange-500/30">
   
   <!-- Global Diagnostic Screen -->
   <div id="error-fallback" class="hidden fixed inset-0 bg-slate-900 text-white p-8 flex flex-col items-center justify-center z-[9999]">
@@ -52,7 +114,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v1.8.0";
+    const APP_VERSION = "v2.0.2";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -93,21 +155,7 @@
         if (!refEntry) return `<span class="text-red-500 dark:text-red-400 text-xs font-semibold bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 px-2 py-1 rounded">[Broken Link: ${entryId}]</span>`;
 
         const isMedia = isMediaSource(refEntry.sourceUrl);
-        const bgClass = isMedia ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 hover:border-red-400 dark:hover:border-red-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500';
-        const titleClass = isMedia ? 'text-red-900 dark:text-red-300 group-hover:text-red-700 dark:group-hover:text-red-200' : 'text-slate-800 dark:text-slate-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-400';
-        const idClass = isMedia ? 'text-red-500 dark:text-red-500' : 'text-slate-400 dark:text-slate-500';
-        const iconClass = isMedia ? 'text-red-300 dark:text-red-700 group-hover:text-red-500 dark:group-hover:text-red-400' : 'text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400';
-        const summaryClass = isMedia ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400';
-
-        return `\n\n<div class="kb-embedded-ref not-prose my-5 p-4 border rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-all group select-none flex items-center justify-between ${bgClass}" data-id="${refEntry.id}" title="Click to open note">
-          <div>
-            <h4 class="text-base font-semibold mb-1 transition-colors ${titleClass}">
-              <span class="font-normal mr-1 ${idClass}">${refEntry.numericId}:</span>${refEntry.title}
-            </h4>
-            <p class="text-base line-clamp-2 ${summaryClass}">${refEntry.summary}</p>
-          </div>
-          <i class="fa-solid fa-arrow-right transition-colors ml-4 shrink-0 text-lg ${iconClass}"></i>
-        </div>\n\n`;
+        return `<span class="kb-embedded-ref cursor-pointer text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold px-1 mx-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 rounded transition-colors" data-id="${refEntry.id}" title="${refEntry.title}">[Ref: ${refEntry.numericId}]</span>`;
       });
     };
 
@@ -124,6 +172,7 @@
       fullContent: 'Welcome! This version runs entirely in your browser and syncs directly to a file on your hard drive.\n\n### Markdown Support\n* Use **Markdown** to edit your notes.\n* Drag and drop URLs; the scraper will automatically convert web pages into clean Markdown for you.',
       categories: ['getting started'],
       tags: ['tutorial'],
+      projects: [],
       numericId: 1,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -136,7 +185,8 @@
       return entries.map(e => ({
         ...e,
         categories: Array.isArray(e.categories) ? [...new Set(e.categories.map(c => c.toLowerCase()))] : [],
-        tags: Array.isArray(e.tags) ? [...new Set(e.tags.map(t => t.toLowerCase()))] : []
+        tags: Array.isArray(e.tags) ? [...new Set(e.tags.map(t => t.toLowerCase()))] : [],
+        projects: Array.isArray(e.projects) ? [...new Set(e.projects.map(p => p.toLowerCase()))] : []
       }));
     };
 
@@ -253,8 +303,33 @@
       }, []);
 
       const [chats, setChats] = useState({});
-      const [apiKey, setApiKey] = useState('');
-      const [model, setModel] = useState('gemini-3.1-flash-lite');
+      const [apiKeys, setApiKeys] = useState([]);
+      const [model, setModel] = useState('gemini-3.5-flash');
+      const [availableModels, setAvailableModels] = useState([
+        { id: 'gemini-3.5-pro', name: 'Gemini 3.5 Pro', group: 'Advanced Reasoning (Pro / Thinking)' },
+        { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', group: 'Fast & Versatile (Flash)' },
+        { id: 'gemini-3.1-pro', name: 'Gemini 3.1 Pro', group: 'Advanced Reasoning (Pro / Thinking)' },
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', group: 'Advanced Reasoning (Pro / Thinking)' },
+        { id: 'gemini-2.0-flash-thinking-exp-01-21', name: 'Gemini 2.0 Flash Thinking', group: 'Advanced Reasoning (Pro / Thinking)' },
+        { id: 'gemini-3.1-flash', name: 'Gemini 3.1 Flash', group: 'Fast & Versatile (Flash)' },
+        { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', group: 'Fast & Versatile (Flash)' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', group: 'Fast & Versatile (Flash)' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', group: 'Fast & Versatile (Flash)' }
+      ]);
+
+      const ensureModelInList = (modelId) => {
+        if (!modelId) return;
+        setAvailableModels(prev => {
+          if (prev.some(m => m.id === modelId)) return prev;
+          const isPro = modelId.includes('pro') || modelId.includes('thinking');
+          const group = isPro ? 'Advanced Reasoning (Pro / Thinking)' : 'Fast & Versatile (Flash)';
+          const name = modelId
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          return [...prev, { id: modelId, name, group }];
+        });
+      };
       const [apiUsage, setApiUsage] = useState({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
       
       const [showKeyModal, setShowKeyModal] = useState(false);
@@ -262,19 +337,24 @@
       const [showUsageModal, setShowUsageModal] = useState(false);
       const [isChatOpen, setIsChatOpen] = useState(false);
       
-      const [tempKey, setTempKey] = useState('');
+      const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
+      const [isListSidebarOpen, setIsListSidebarOpen] = useState(true);
+      const [tempKeys, setTempKeys] = useState([]);
       const [tempModel, setTempModel] = useState('');
       
+      const [activeProjects, setActiveProjects] = useState([]);
       const [activeCategories, setActiveCategories] = useState([]);
       const [activeTags, setActiveTags] = useState([]);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
-      const [chatScope, setChatScope] = useState('selected'); 
+      const [chatScope, setChatScope] = useState('selected');
+      const [showAIChats, setShowAIChats] = useState(true);
       
       const [editingEntries, setEditingEntries] = useState({});
       const [editData, setEditData] = useState({});
       const [editCatInput, setEditCatInput] = useState({});
       const [editTagInput, setEditTagInput] = useState({});
+      const [editProjectInput, setEditProjectInput] = useState({});
 
       const [addInput, setAddInput] = useState('');
       const [isDragging, setIsDragging] = useState(false);
@@ -292,13 +372,18 @@
       const [dragOverEntryId, setDragOverEntryId] = useState(null);
       const [editingTitleId, setEditingTitleId] = useState(null);
       const [tempTitle, setTempTitle] = useState('');
+      const [showAIActionsId, setShowAIActionsId] = useState(null);
+      const [showTaxonomyManager, setShowTaxonomyManager] = useState(false);
+      const [showWorkspaceOptions, setShowWorkspaceOptions] = useState(false);
+      const [workspaceOverview, setWorkspaceOverview] = useState({ content: '', lastUpdated: 0 });
+      const [hoveredRef, setHoveredRef] = useState(null);
 
       const handleGeminiCall = async (payload, customModel) => {
-         const keys = apiKey.split(',').map(k => k.trim()).filter(Boolean);
-         if (keys.length === 0) throw new Error("Please set your Gemini API key in Settings.");
+         if (!apiKeys || apiKeys.length === 0) throw new Error("Please set your Gemini API key in Settings.");
          
-         const keyIndex = apiUsage.requests % keys.length;
-         const selectedKey = keys[keyIndex];
+         const keyIndex = apiUsage.requests % apiKeys.length;
+         const selectedKeyObj = apiKeys[keyIndex];
+         const selectedKey = selectedKeyObj.key;
          const activeModel = customModel || model;
          
          const payloadStr = JSON.stringify(payload);
@@ -310,7 +395,7 @@
          const estTokensOut = Math.ceil(responseStr.length / 4);
          
          setApiUsage(prev => {
-             const newLog = { time: new Date().toLocaleTimeString(), model: activeModel, tokensIn: estTokensIn, tokensOut: estTokensOut };
+             const newLog = { time: new Date().toLocaleTimeString(), model: activeModel, keyName: selectedKeyObj.name, tokensIn: estTokensIn, tokensOut: estTokensOut };
              return {
                  ...prev,
                  requests: prev.requests + 1,
@@ -319,6 +404,13 @@
                  logs: [newLog, ...(prev.logs || [])].slice(0, 100)
              };
          });
+         
+         setApiKeys(prev => prev.map(k => k.id === selectedKeyObj.id ? {
+             ...k,
+             requests: (k.requests || 0) + 1,
+             tokensIn: (k.tokensIn || 0) + estTokensIn,
+             tokensOut: (k.tokensOut || 0) + estTokensOut
+         } : k));
          
          return result;
       };
@@ -338,6 +430,42 @@
       }, []);
 
       useEffect(() => {
+         if (appState !== 'workspace' || !apiKeys || apiKeys.length === 0) return;
+         if (entries.length === 0) return;
+
+         const maxEntryUpdate = Math.max(...entries.map(e => e.updatedAt || e.createdAt || 0));
+         
+         if (maxEntryUpdate > workspaceOverview.lastUpdated) {
+             const timer = setTimeout(async () => {
+                 try {
+                     const candidateEntries = entries.filter(e => !e.isCombined && !e.isGlobalChat);
+                     if (candidateEntries.length === 0) return;
+                     
+                     const summariesText = candidateEntries.map(e => `[kb-ref:${e.id}]\nTitle: ${e.title}\nSummary: ${e.summary}`).join('\n\n');
+                     
+                     const payload = {
+                         contents: [{ role: 'user', parts: [{ text: `Analyze these knowledge base summaries and provide a high-level "Snapshot Overview" of the entire database. Identify the top 3 most prominent topics or threads. Draw interesting connections between them. Write in short, poignant paragraphs (2-3 sentences max per paragraph). You MUST reference specific notes inline using the syntax [[kb-ref:ID]] when you mention them.\n\nSummaries:\n${summariesText}` }] }],
+                         systemInstruction: { parts: [{ text: `You are an AI generating a high-level dashboard overview for the user. Be concise, poignant, and highlight what's interesting. Draw connections between concepts. Use short paragraphs. CRITICAL: Use [[kb-ref:ID]] syntax for all references.` }] },
+                         generationConfig: { temperature: 0.5 }
+                     };
+                     
+                     const result = await handleGeminiCall(payload, model);
+                     const content = result.candidates[0].content.parts[0].text;
+                     
+                     setWorkspaceOverview({
+                         content: content,
+                         lastUpdated: Date.now()
+                     });
+                 } catch (err) {
+                     console.error("Failed to generate workspace overview", err);
+                 }
+             }, 5000);
+             
+             return () => clearTimeout(timer);
+         }
+      }, [appState, apiKeys, entries, workspaceOverview.lastUpdated, model]);
+
+      useEffect(() => {
         if (appState !== 'workspace' || !fileHandle) return;
         const timer = setTimeout(async () => {
           try {
@@ -347,7 +475,7 @@
             const file = await fileHandle.getFile();
             const currentDiskModified = file.lastModified;
 
-            let dataToWrite = { entries, chats, apiKey, model, apiUsage };
+            let dataToWrite = { entries, chats, apiKeys, model, apiUsage, workspaceOverview };
             let stateMerged = false;
 
             if (currentDiskModified > lastSyncTime) {
@@ -396,7 +524,7 @@
           }
         }, 1500);
         return () => clearTimeout(timer);
-      }, [entries, chats, apiKey, model, apiUsage, appState, fileHandle]);
+      }, [entries, chats, apiKeys, model, apiUsage, appState, fileHandle]);
 
       const ensureNumericIds = (loadedEntries) => {
         let maxId = loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0);
@@ -433,13 +561,18 @@
             logs: Array.isArray(data.apiUsage.logs) ? data.apiUsage.logs : []
           };
         }
+        let parsedKeys = data.apiKeys || [];
+        if (!parsedKeys.length && data.apiKey) {
+          parsedKeys = data.apiKey.split(',').map((k, i) => ({ id: 'k'+Date.now()+i, name: 'Key '+(i+1), key: k.trim(), requests: 0, tokensIn: 0, tokensOut: 0 })).filter(k => k.key);
+        }
 
         return {
           entries: migratedEntries,
           chats: data.chats || {},
-          apiKey: data.apiKey || '',
-          model: data.model || 'gemini-3.1-flash-lite',
-          apiUsage: safeUsage
+          apiKeys: parsedKeys,
+          model: data.model || 'gemini-3.5-flash',
+          apiUsage: safeUsage,
+          workspaceOverview: data.workspaceOverview || { content: '', lastUpdated: 0 }
         };
       };
 
@@ -456,12 +589,14 @@
           const migrated = migrateWorkspaceData(data);
           
           setHistoryState({ past: [], present: migrated.entries });
-          setSelectedEntryIds([migrated.entries[0]?.id || INITIAL_ENTRY.id]);
+          setSelectedEntryIds([]);
           
           setChats(migrated.chats);
-          setApiKey(migrated.apiKey);
+          setApiKeys(migrated.apiKeys);
           setModel(migrated.model);
+          ensureModelInList(migrated.model);
           setApiUsage(migrated.apiUsage);
+          setWorkspaceOverview(migrated.workspaceOverview);
           
           setFileHandle(handle);
           setFileName(file.name);
@@ -502,8 +637,10 @@
           setHistoryState({ past: [], present: [INITIAL_ENTRY] });
           setChats({});
           setApiKey('');
-          setModel('gemini-3.1-flash-lite');
+          setModel('gemini-3.5-flash');
+          ensureModelInList('gemini-3.5-flash');
           setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
+          setWorkspaceOverview({ content: '', lastUpdated: 0 });
           setSelectedEntryIds([INITIAL_ENTRY.id]);
           
           const file = await handle.getFile();
@@ -528,10 +665,11 @@
             const migrated = migrateWorkspaceData(data);
 
             setHistoryState({ past: [], present: migrated.entries });
-            setSelectedEntryIds([migrated.entries[0]?.id || INITIAL_ENTRY.id]);
+            setSelectedEntryIds([]);
             setChats(migrated.chats);
-            setApiKey(migrated.apiKey);
+            setApiKeys(migrated.apiKeys);
             setModel(migrated.model);
+            ensureModelInList(migrated.model);
             setApiUsage(migrated.apiUsage);
             
             setFileName(file.name);
@@ -554,11 +692,19 @@
         setApiUsage({ requests: 0, tokensInTotal: 0, tokensOutTotal: 0, logs: [] });
       };
 
+      const projectCounts = {};
       const categoryCounts = {};
       const tagCounts = {};
+      const allProjects = new Set();
       const allCategories = new Set();
       const allTags = new Set();
       entries.forEach(e => {
+        if (Array.isArray(e.projects)) {
+          e.projects.forEach(p => {
+            allProjects.add(p);
+            projectCounts[p] = (projectCounts[p] || 0) + 1;
+          });
+        }
         if (Array.isArray(e.categories)) {
           e.categories.forEach(c => {
             allCategories.add(c);
@@ -572,6 +718,7 @@
             });
         }
       });
+      const sortedProjects = Array.from(allProjects).sort((a, b) => a.localeCompare(b));
       const sortedCategories = Array.from(allCategories).sort((a, b) => a.localeCompare(b));
 
       const availableTags = new Set();
@@ -589,11 +736,17 @@
       const currentChatKey = selectedEntryIds.slice().sort().join(',');
 
       useEffect(() => {
+        if (selectedEntryIds.includes('GLOBAL_CHAT')) {
+           setIsLeftSidebarOpen(false);
+        }
+      }, [selectedEntryIds]);
+
+      useEffect(() => {
         if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
       }, [chats, currentChatKey, isChatting]);
 
       const processInput = async (textContent, file = null) => {
-        if (!apiKey) return setError("Please set your Gemini API key first.");
+        if (!apiKeys || apiKeys.length === 0) return setError("Please set your Gemini API key first.");
         setIsAnalyzing(true);
         try {
           let sourceUrl = null;
@@ -610,14 +763,16 @@
               shortVersion: { type: "ARRAY", items: { type: "STRING" } },
               fullContent: { type: "STRING" },
               categories: { type: "ARRAY", items: { type: "STRING" } },
-              tags: { type: "ARRAY", items: { type: "STRING" } }
+              tags: { type: "ARRAY", items: { type: "STRING" } },
+              projects: { type: "ARRAY", items: { type: "STRING" } }
             },
-            required: ["title", "summary", "shortVersion", "fullContent", "categories", "tags"]
+            required: ["title", "summary", "shortVersion", "fullContent", "categories", "tags", "projects"]
           };
 
           const taxonomyRules = `
-          5. Categories: Assign 1-2 SUPER BROAD domain categories. Review these existing categories: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse an existing category if it is a PERFECT fit. Create a new accurate domain if needed. Return strictly in lowercase.
-          6. Tags: Assign 3-5 highly specific concept tags. Include the author's name as a tag. Review existing tags: ${JSON.stringify(Array.from(allTags))}. ONLY reuse existing tags if they are highly relevant. Create new ones otherwise. Return strictly in lowercase.`;
+          5. Projects: Assign 0-1 PROJECTS. A project represents a specific, scoped initiative or workspace area (e.g., "Website Redesign", "Q3 Marketing"). Review existing projects: ${JSON.stringify(Array.from(allProjects))}. ONLY assign a project if the content directly relates to an existing project or clearly warrants a new specific project. Do NOT hallucinate broad topics as projects. Return in lowercase.
+          6. Categories: Assign 1-2 SUPER BROAD domain categories. Review these existing categories: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse an existing category if it is a PERFECT fit. Create a new accurate domain if needed. Return strictly in lowercase.
+          7. Tags: Assign 3-5 highly specific concept tags. Include the author's name as a tag. Review existing tags: ${JSON.stringify(Array.from(allTags))}. ONLY reuse existing tags if they are highly relevant. Create new ones otherwise. Return strictly in lowercase.`;
           
           const summaryRules = `4. fullContent string: Create an expanded summary. Succinctly summarize each point of the source, regardless of its length. Format with clean Markdown. Do NOT include any external links or 'Read more' text.`;
 
@@ -699,8 +854,11 @@
               autoTags.push('text');
           }
           
+          parsedResult.summary = parsedResult.summary;
+          parsedResult.shortVersion = parsedResult.shortVersion || [];
           parsedResult.categories = (parsedResult.categories || []).map(c => c.toLowerCase());
           parsedResult.tags = [...new Set([...(parsedResult.tags || []).map(t => t.toLowerCase()), ...autoTags])];
+          parsedResult.projects = (parsedResult.projects || []).map(p => p.toLowerCase());
 
           const newEntry = { 
             ...parsedResult, 
@@ -764,12 +922,37 @@
         const newId = 'entry-' + Date.now();
         const newEntry = {
           id: newId, title: 'Untitled Note', numericId: nextNumericId, summary: '', shortVersion: [], fullContent: '',
-          categories: [], tags: [], createdAt: Date.now(), updatedAt: Date.now(), sourceUrl: null, references: [], pinned: false
+          categories: [], tags: [], projects: [], createdAt: Date.now(), updatedAt: Date.now(), sourceUrl: null, references: [], pinned: false
         };
         setEntries(prev => [newEntry, ...prev]);
         setSelectedEntryIds(prev => [...prev.filter(id => id !== newId), newId]);
-        setEditData(prev => ({ ...prev, [newId]: { title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] } }));
+        setEditData(prev => ({ ...prev, [newId]: { title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], projects: [], sourceUrl: '', references: [] } }));
         setEditingEntries(prev => ({ ...prev, [newId]: true }));
+      };
+
+      const handleNewGlobalChat = () => {
+        const nextNumericId = entries.reduce((max, ent) => Math.max(max, ent.numericId || 0), 0) + 1;
+        const newId = 'entry-' + Date.now();
+        const newEntry = {
+          id: newId,
+          title: `Workspace Chat ${nextNumericId}`,
+          summary: 'A global AI chat session.',
+          numericId: nextNumericId,
+          shortVersion: [],
+          fullContent: '',
+          categories: ['ai chat'],
+          tags: [],
+          projects: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          sourceUrl: null,
+          isGlobalChat: true,
+          chatHistory: [],
+          pinned: false
+        };
+        setEntries(prev => [newEntry, ...prev]);
+        setSelectedEntryIds([newId]);
+        if (window.innerWidth < 1024) setIsLeftSidebarOpen(false);
       };
 
       const startEditing = (entry) => {
@@ -778,6 +961,7 @@
           shortVersion: (Array.isArray(entry.shortVersion) ? entry.shortVersion : []).join('\n'),
           categories: Array.isArray(entry.categories) ? [...entry.categories] : [], 
           tags: Array.isArray(entry.tags) ? [...entry.tags] : [], 
+          projects: Array.isArray(entry.projects) ? [...entry.projects] : [],
           sourceUrl: entry.sourceUrl || '',
           references: Array.isArray(entry.references) ? entry.references : []
         }}));
@@ -798,6 +982,7 @@
               sourceUrl: data.sourceUrl || null,
               categories: data.categories.map(c => c.toLowerCase()),
               tags: data.tags.map(t => t.toLowerCase()),
+              projects: data.projects.map(p => p.toLowerCase()),
               references: data.references || [],
               updatedAt: Date.now()
             };
@@ -813,6 +998,7 @@
 
       const removeEditCategory = (id, cat) => setEditData(prev => ({ ...prev, [id]: { ...prev[id], categories: prev[id].categories.filter(c => c !== cat) } }));
       const removeEditTag = (id, tag) => setEditData(prev => ({ ...prev, [id]: { ...prev[id], tags: prev[id].tags.filter(t => t !== tag) } }));
+      const removeEditProject = (id, proj) => setEditData(prev => ({ ...prev, [id]: { ...prev[id], projects: prev[id].projects.filter(p => p !== proj) } }));
 
       const handleAddEditCategory = (id, e) => {
         if (e.key === 'Enter' || e.key === ',') {
@@ -822,6 +1008,17 @@
             setEditData(prev => ({ ...prev, [id]: { ...prev[id], categories: [...prev[id].categories, val] } }));
           }
           setEditCatInput(prev => ({ ...prev, [id]: '' }));
+        }
+      };
+
+      const handleAddEditProject = (id, e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          const val = (editProjectInput[id] || '').trim().replace(/^,|,$/g, '').toLowerCase();
+          if (val && !editData[id].projects.includes(val)) {
+            setEditData(prev => ({ ...prev, [id]: { ...prev[id], projects: [...prev[id].projects, val] } }));
+          }
+          setEditProjectInput(prev => ({ ...prev, [id]: '' }));
         }
       };
 
@@ -841,13 +1038,14 @@
           if (ent.id === entryId) {
             if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val), updatedAt: Date.now() };
             if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val), updatedAt: Date.now() };
+            if (type === 'proj') return { ...ent, projects: (ent.projects || []).filter(p => p !== val), updatedAt: Date.now() };
           }
           return ent;
         }));
       };
 
       const handleSuggestTitle = async (id) => {
-        if (!apiKey) return setError("Set your API key first.");
+        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
           const data = editData[id];
@@ -869,7 +1067,7 @@
       };
 
       const handleGenerateTLDR = async (id) => {
-        if (!apiKey) return setError("Set your API key first.");
+        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
           const data = editData[id];
@@ -891,7 +1089,7 @@
       };
 
       const handleGenerateTakeaways = async (id) => {
-        if (!apiKey) return setError("Set your API key first.");
+        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
           const data = editData[id];
@@ -913,18 +1111,20 @@
       };
 
       const handleGenerateTaxonomies = async (id) => {
-        if (!apiKey) return setError("Set your API key first.");
+        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
           const data = editData[id];
-          const prompt = `Analyze this note. Return strictly JSON matching this schema: {"categories": ["Category"], "tags": ["tag1", "tag2"]}.
-          Rules: 1. Categories: Assign 1-2 SUPER BROAD domain categories. Review existing: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse if perfect match. Return in lowercase.
-          2. Tags: Assign 3-5 highly specific concept keywords. Review existing: ${JSON.stringify(Array.from(allTags))}. ONLY reuse if highly relevant. Return in lowercase.
+          const prompt = `Analyze this note. Return strictly JSON matching this schema: {"projects": ["project1"], "categories": ["Category"], "tags": ["tag1", "tag2"]}.
+          Rules:
+          1. Projects: Assign 0-1 PROJECTS. A project represents a specific, scoped initiative. Review existing: ${JSON.stringify(Array.from(allProjects))}. ONLY assign if highly relevant. Return in lowercase.
+          2. Categories: Assign 1-2 SUPER BROAD domain categories. Review existing: ${JSON.stringify(Array.from(allCategories))}. ONLY reuse if perfect match. Return in lowercase.
+          3. Tags: Assign 3-5 highly specific concept keywords. Review existing: ${JSON.stringify(Array.from(allTags))}. ONLY reuse if highly relevant. Return in lowercase.
           Title: ${data.title}\nContent: ${data.fullContent}`;
 
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } } }
+            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { projects: { type: "ARRAY", items: { type: "STRING" } }, categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } } }
           };
           
           const result = await handleGeminiCall(payload, model);
@@ -933,6 +1133,7 @@
             ...prev, 
             [id]: {
               ...prev[id],
+              projects: Array.isArray(resData.projects) ? resData.projects.map(p => p.toLowerCase()) : prev[id].projects,
               categories: Array.isArray(resData.categories) ? resData.categories.map(c => c.toLowerCase()) : prev[id].categories, 
               tags: Array.isArray(resData.tags) ? resData.tags.map(t => t.toLowerCase()) : prev[id].tags 
             }
@@ -946,8 +1147,8 @@
 
       const handleTaxonomyCommand = async (e) => {
         e.preventDefault();
-        if (!taxonomyInput.trim() || !apiKey) {
-          if (!apiKey) setError("Set your API key first.");
+        if (!taxonomyInput.trim() || (!apiKeys || apiKeys.length === 0)) {
+          if (!apiKeys || apiKeys.length === 0) setError("Set your API key first.");
           return;
         }
 
@@ -1040,7 +1241,7 @@
       };
 
       const handleAITool = async (id, toolType) => {
-        if (!apiKey) return setError("Set your API key first.");
+        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first.");
         setIsAnalyzing(true);
         try {
             const entry = editData[id] || entries.find(e => e.id === id);
@@ -1185,10 +1386,128 @@
         }
       };
 
+      const handleGlobalChatMessage = async (e, entryId) => {
+        e.preventDefault();
+        if (!chatInput.trim()) return;
+        
+        const entryIndex = entries.findIndex(e => e.id === entryId);
+        if (entryIndex === -1) return;
+        const entry = entries[entryIndex];
+        const currentHistory = entry.chatHistory || [];
+
+        if (!apiKeys || apiKeys.length === 0) {
+            const errHistory = [...currentHistory, { role: 'model', text: "⚠️ Please set your Gemini API key first." }];
+            setEntries(prev => prev.map(e => e.id === entryId ? { ...e, chatHistory: errHistory, updatedAt: Date.now() } : e));
+            return;
+        }
+
+        const userMessage = chatInput.trim();
+        setChatInput('');
+        setIsChatting(true);
+        setChatScope(entryId); // track which chat is loading
+
+        const updatedHistory = [...currentHistory, { role: 'user', text: userMessage }];
+        setEntries(prev => prev.map(e => e.id === entryId ? { ...e, chatHistory: updatedHistory, updatedAt: Date.now() } : e));
+
+        if (currentHistory.length === 0) {
+            const titlePayload = {
+              contents: [{ role: 'user', parts: [{ text: `Based on this first query: "${userMessage}", generate a short 3-5 word title for this chat session, and extract 0-1 projects, 1-2 categories, and 2-4 tags. Return ONLY a valid JSON object: {"title": "...", "projects": ["..."], "categories": ["..."], "tags": ["..."]}` }] }],
+              generationConfig: {
+                 responseMimeType: "application/json",
+                 responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                       title: { type: "STRING" },
+                       projects: { type: "ARRAY", items: { type: "STRING" } },
+                       categories: { type: "ARRAY", items: { type: "STRING" } },
+                       tags: { type: "ARRAY", items: { type: "STRING" } }
+                    }
+                 }
+              }
+            };
+            handleGeminiCall(titlePayload, model).then(res => {
+               try {
+                 let jsonText = res.candidates[0].content.parts[0].text.trim();
+                 if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7, jsonText.length - 3).trim();
+                 if (jsonText.startsWith('```')) jsonText = jsonText.substring(3, jsonText.length - 3).trim();
+                 const data = JSON.parse(jsonText);
+                 setEntries(prev => prev.map(e => e.id === entryId ? { ...e, title: data.title || e.title, projects: data.projects || e.projects, categories: data.categories || e.categories, tags: data.tags || e.tags } : e));
+               } catch(err) { console.error('Failed to gen chat metadata', err); }
+            }).catch(e => console.error(e));
+        }
+
+        try {
+          // PASS 1: Identify Relevant Entries
+          const candidateEntries = entries.filter(e => !e.isCombined && (!e.isGlobalChat || selectedEntryIds.includes(e.id)) && e.id !== entryId);
+          const summariesText = candidateEntries.map(e => `[kb-ref:${e.id}]\nTitle: ${e.title}\nSummary: ${e.summary}`).join('\n\n');
+          
+          const pass1Payload = {
+            contents: [{ role: 'user', parts: [{ text: `User query: "${userMessage}"\n\nBased on the following knowledge base summaries, identify the exact entry IDs (in the format entry-123456) whose full content you need to answer the query comprehensively. Return ONLY a valid JSON array of strings (e.g. ["entry-123", "entry-456"]). If none are needed, return []. Do not include markdown formatting.\n\nSummaries:\n${summariesText}` }] }],
+            systemInstruction: { parts: [{ text: 'You are an internal routing agent. Output ONLY a raw JSON array of entry IDs.' }] },
+            generationConfig: { temperature: 0.1 }
+          };
+          
+          let neededIds = [];
+          try {
+             const pass1Result = await handleGeminiCall(pass1Payload, model);
+             let jsonText = pass1Result.candidates[0].content.parts[0].text.trim();
+             if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7, jsonText.length - 3).trim();
+             if (jsonText.startsWith('```')) jsonText = jsonText.substring(3, jsonText.length - 3).trim();
+             neededIds = JSON.parse(jsonText);
+             if (!Array.isArray(neededIds)) neededIds = [];
+          } catch(e) {
+             console.warn("Pass 1 failed to parse JSON, falling back to summaries only", e);
+          }
+          
+          // Fetch required full contents
+          const fullContextEntries = candidateEntries.filter(e => neededIds.includes(e.id));
+          
+          let contextText = `Knowledge Base Context:\n\n`;
+          if (fullContextEntries.length > 0) {
+              contextText += fullContextEntries.map(ent => `--- START [kb-ref:${ent.id}] ---\nTitle: ${ent.title}\nSummary: ${ent.summary}\nFull Content: ${ent.fullContent}\n--- END [kb-ref:${ent.id}] ---`).join('\n\n');
+          }
+          
+          // Also provide summaries of everything else as fallback
+          const otherEntries = candidateEntries.filter(e => !neededIds.includes(e.id));
+          if (otherEntries.length > 0) {
+              contextText += `\n\nOther Available Notes (Summaries Only):\n` + otherEntries.map(e => `[kb-ref:${e.id}] Title: ${e.title} - ${e.summary}`).join('\n');
+          }
+
+          // PASS 2: Generate Answer
+          const payload = {
+            contents: [...currentHistory.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })), { role: 'user', parts: [{ text: userMessage }] }],
+            systemInstruction: { parts: [{ text: `You are an overarching Workspace Assistant with access to the user's entire knowledge base.
+            
+CRITICAL RULES:
+- When citing or referring to any entry, you MUST use the exact syntax: [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234567]]). This creates clickable links for the user.
+- You have been provided with the full text of highly relevant entries, and summaries of everything else.
+- If you use the Google Search tool to find external information, weave it naturally into your answer.
+- Be concise but highly factual and contextual.
+
+Context:\n${contextText}` }] },
+            tools: [{ google_search: {} }]
+          };
+
+          const result = await handleGeminiCall(payload, model);
+          let responseText = result.candidates[0].content.parts[0].text;
+          
+          if (!responseText.includes(APP_VERSION)) {
+              responseText += `\n\n*(via ${APP_VERSION} Global Chat)*`;
+          }
+
+          setEntries(prev => prev.map(e => e.id === entryId ? { ...e, chatHistory: [...updatedHistory, { role: 'model', text: responseText }], updatedAt: Date.now() } : e));
+        } catch (err) {
+          setEntries(prev => prev.map(e => e.id === entryId ? { ...e, chatHistory: [...updatedHistory, { role: 'model', text: `⚠️ Error: ${err.message}` }], updatedAt: Date.now() } : e));
+        } finally {
+          setIsChatting(false);
+          setChatScope('selected');
+        }
+      };
+
       const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!chatInput.trim() || (!selectedEntryIds.length && chatScope === 'selected')) return;
-        if (!apiKey) return setChats(prev => ({ ...prev, [currentChatKey]: [...(chats[currentChatKey] || []), { role: 'model', text: "⚠️ Please set your Gemini API key first." }] }));
+        if (!apiKeys || apiKeys.length === 0) return setChats(prev => ({ ...prev, [currentChatKey]: [...(chats[currentChatKey] || []), { role: 'model', text: "⚠️ Please set your Gemini API key first." }] }));
 
         const userMessage = chatInput.trim();
         setChatInput('');
@@ -1325,13 +1644,13 @@ Documents:\n${contextText}` }] }
       };
 
       const openSettings = () => {
-        setTempKey(apiKey);
+        setTempKeys([...apiKeys]);
         setTempModel(model);
         setShowKeyModal(true);
       };
 
       const saveSettings = () => {
-        setApiKey(tempKey);
+        setApiKeys(tempKeys.filter(k => k.key.trim() !== ''));
         setModel(tempModel);
         setShowKeyModal(false);
       };
@@ -1341,6 +1660,16 @@ Documents:\n${contextText}` }] }
           setActiveCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
         } else {
           setActiveCategories([cat]);
+        }
+      };
+
+
+
+      const handleProjectClick = (proj, e) => {
+        if (e.ctrlKey || e.metaKey) {
+          setActiveProjects(prev => prev.includes(proj) ? prev.filter(p => p !== proj) : [...prev, proj]);
+        } else {
+          setActiveProjects([proj]);
         }
       };
 
@@ -1364,6 +1693,24 @@ Documents:\n${contextText}` }] }
           if (refId && !selectedEntryIds.includes(refId)) {
             setSelectedEntryIds(prev => [...prev, refId]);
           }
+        }
+      };
+
+      const handleContentMouseOver = (e) => {
+        const refEl = e.target.closest('.kb-embedded-ref');
+        if (refEl) {
+          const refId = refEl.getAttribute('data-id');
+          if (refId) {
+            const rect = refEl.getBoundingClientRect();
+            setHoveredRef({ id: refId, x: rect.left + rect.width / 2, y: rect.top });
+          }
+        }
+      };
+
+      const handleContentMouseOut = (e) => {
+        const refEl = e.target.closest('.kb-embedded-ref');
+        if (refEl) {
+          setHoveredRef(null);
         }
       };
 
@@ -1392,6 +1739,7 @@ Documents:\n${contextText}` }] }
             if (ent.id === targetId) {
               if (type === 'cat' && !(ent.categories || []).includes(val)) return { ...ent, categories: [...(ent.categories || []), val.toLowerCase()], updatedAt: Date.now() };
               if (type === 'tag' && !(ent.tags || []).includes(val)) return { ...ent, tags: [...(ent.tags || []), val.toLowerCase()], updatedAt: Date.now() };
+              if (type === 'proj' && !(ent.projects || []).includes(val)) return { ...ent, projects: [...(ent.projects || []), val.toLowerCase()], updatedAt: Date.now() };
             }
             return ent;
           }));
@@ -1406,6 +1754,7 @@ Documents:\n${contextText}` }] }
               if (ent.id === entryId) {
                 if (type === 'cat') return { ...ent, categories: (ent.categories || []).filter(c => c !== val), updatedAt: Date.now() };
                 if (type === 'tag') return { ...ent, tags: (ent.tags || []).filter(t => t !== val), updatedAt: Date.now() };
+                if (type === 'proj') return { ...ent, projects: (ent.projects || []).filter(p => p !== val), updatedAt: Date.now() };
               }
               return ent;
             }));
@@ -1470,7 +1819,7 @@ Documents:\n${contextText}` }] }
                     <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100"><i className="fa-solid fa-book text-indigo-600 dark:text-indigo-400 mr-2"></i> KnowledgeBase AI Manual</h2>
                     <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
                   </div>
-                  <div className="p-8 overflow-y-auto prose prose-slate dark:prose-invert prose-base max-w-none text-slate-700 dark:text-slate-300">
+                  <div className="p-8 overflow-y-auto prose prose-slate dark:prose-invert prose-base max-w-none text-slate-700 dark:text-slate-300 prose-headings:font-semibold prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-50/50 dark:prose-blockquote:bg-indigo-900/20 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg leading-relaxed">
                     <h3>1. Welcome to your Workspace</h3>
                     <p>This application is designed to be <strong>offline-first</strong>. All your notes, categories, and settings are saved directly to a local JSON file on your computer. You retain complete ownership of your data.</p>
                     
@@ -1513,13 +1862,15 @@ Documents:\n${contextText}` }] }
 
       const filteredEntries = entries.filter(entry => {
         if (!entry) return false;
+        if (!showAIChats && entry.isGlobalChat) return false;
+        const matchesProject = activeProjects.length === 0 || (Array.isArray(entry.projects) && entry.projects.some(p => activeProjects.includes(p)));
         const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.includes(c)));
         const matchesTag = activeTags.length === 0 || (Array.isArray(entry.tags) && entry.tags.some(t => activeTags.includes(t)));
         const searchLower = searchQuery.toLowerCase();
         const matchesSearch = !searchQuery || 
                               (entry.title && entry.title.toLowerCase().includes(searchLower)) || 
                               (entry.summary && entry.summary.toLowerCase().includes(searchLower));
-        return matchesCat && matchesTag && matchesSearch;
+        return matchesProject && matchesCat && matchesTag && matchesSearch;
       }).sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
@@ -1533,7 +1884,21 @@ Documents:\n${contextText}` }] }
           : selectedEntries;
 
       return (
-        <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden relative transition-colors duration-200">
+        <div 
+          className="flex h-screen w-full bg-claude-bg dark:bg-claude-bgdark text-stone-800 dark:text-stone-200 font-sans overflow-hidden relative transition-colors duration-200"
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={(e) => { e.preventDefault(); if (e.relatedTarget === null) setIsDragging(false); }}
+          onDrop={(e) => { handleDrop(e); setIsDragging(false); }}
+        >
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-indigo-500/20 backdrop-blur-sm border-4 border-indigo-500 border-dashed rounded-xl m-4 pointer-events-none transition-all">
+              <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+                <i className="fa-solid fa-cloud-arrow-up text-5xl text-indigo-600 dark:text-indigo-400 mb-4"></i>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Drop to Add Entry</h2>
+                <p className="text-slate-500 dark:text-slate-400">Drag text, URL, or PDF here</p>
+              </div>
+            </div>
+          )}
           
           {showKeyModal && (
             <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60]">
@@ -1543,22 +1908,33 @@ Documents:\n${contextText}` }] }
                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Workspace Settings</h3>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">API Key(s) <span className="font-normal text-slate-400 dark:text-slate-500">- Comma separate for rotation</span></label>
-                  <input type="password" value={tempKey} onChange={e => setTempKey(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="AIzaSy..., AIzaSy..." />
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">API Keys</label>
+                    <button type="button" onClick={() => setTempKeys([...tempKeys, { id: 'k'+Date.now(), name: 'Key '+(tempKeys.length+1), key: '', requests: 0, tokensIn: 0, tokensOut: 0 }])} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"><i className="fa-solid fa-plus mr-1"></i> Add Key</button>
+                  </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {tempKeys.map((k, i) => (
+                      <div key={k.id} className="flex gap-2 items-center">
+                        <input type="text" value={k.name} onChange={e => { const newKeys = [...tempKeys]; newKeys[i].name = e.target.value; setTempKeys(newKeys); }} className="w-1/3 px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Name" />
+                        <input type="password" value={k.key} onChange={e => { const newKeys = [...tempKeys]; newKeys[i].key = e.target.value; setTempKeys(newKeys); }} className="flex-1 px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="AIzaSy..." />
+                        <button type="button" onClick={() => setTempKeys(tempKeys.filter(tk => tk.id !== k.id))} className="text-slate-400 hover:text-red-500 transition-colors p-1"><i className="fa-solid fa-trash-can"></i></button>
+                      </div>
+                    ))}
+                    {tempKeys.length === 0 && <div className="text-xs text-slate-500 dark:text-slate-400 text-center py-2 italic">No API keys. Add one to use AI features.</div>}
+                  </div>
                 </div>
                 <div className="mb-6">
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">AI Model</label>
-                  <select value={tempModel} onChange={e => setTempModel(e.target.value)} className="w-full px-3 py-2 text-base border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <select value={tempModel} onChange={e => { setTempModel(e.target.value); ensureModelInList(e.target.value); }} className="w-full px-3 py-2 text-base border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <optgroup label="Advanced Reasoning (Pro / Thinking)">
-                      <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
-                      <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                      <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini 2.0 Flash Thinking</option>
+                      {availableModels.filter(m => m.group.includes('Pro') || m.group.includes('Thinking')).map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
                     </optgroup>
                     <optgroup label="Fast & Versatile (Flash)">
-                      <option value="gemini-3.1-flash">Gemini 3.1 Flash</option>
-                      <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                      <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                      <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                      {availableModels.filter(m => !m.group.includes('Pro') && !m.group.includes('Thinking')).map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
                     </optgroup>
                   </select>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Select a "Pro" or "Thinking" model for complex tasks and deep analysis.</p>
@@ -1598,9 +1974,15 @@ Documents:\n${contextText}` }] }
                            <li><strong>Pro / Thinking:</strong><br/>2 Req/Min • 32K Tokens/Min • 50 Req/Day</li>
                          </ul>
                       </div>
-                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-xl shadow-sm">
-                         <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-2">How to Multi-Key (Key Rotation)</h3>
-                         <p className="text-sm text-slate-600 dark:text-slate-400">To double or triple your rate limits, go to Google AI Studio and create multiple distinct "Projects". Generate one API key per project. Paste them all into the API Key settings field, separated by commas. This app will automatically rotate through them to balance the load.</p>
+                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-xl shadow-sm space-y-3">
+                         <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-2">Per-Key Usage</h3>
+                         {apiKeys.length === 0 ? <p className="text-sm text-slate-500">No keys added.</p> : apiKeys.map(k => (
+                           <div key={k.id} className="bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800 p-2 text-xs">
+                             <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">{k.name || 'Unnamed Key'}</div>
+                             <div className="flex justify-between text-slate-500"><span className="text-slate-400">Reqs:</span> <span>{k.requests || 0}</span></div>
+                             <div className="flex justify-between text-slate-500"><span className="text-slate-400">Tokens:</span> <span>{((k.tokensIn || 0) + (k.tokensOut || 0)).toLocaleString()}</span></div>
+                           </div>
+                         ))}
                       </div>
                       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-xl shadow-sm">
                          <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-2">Local App Stats</h3>
@@ -1616,9 +1998,10 @@ Documents:\n${contextText}` }] }
                       </div>
                    </div>
                    <div className="w-full md:w-2/3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden flex flex-col">
-                       <div className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 px-4 py-2 grid grid-cols-5 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider gap-2">
+                       <div className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 px-4 py-2 grid grid-cols-6 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider gap-2">
                           <div>Time</div>
                           <div>Model</div>
+                          <div>Key</div>
                           <div className="text-right">In</div>
                           <div className="text-right">Out</div>
                           <div className="text-right">Est. Cost</div>
@@ -1627,9 +2010,10 @@ Documents:\n${contextText}` }] }
                           {apiUsage.logs && apiUsage.logs.length > 0 ? apiUsage.logs.map((log, i) => {
                               const cost = ((log.tokensIn / 1000000) * 0.075) + ((log.tokensOut / 1000000) * 0.30);
                               return (
-                                  <div key={i} className="grid grid-cols-5 text-sm px-2 py-2 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 text-slate-700 dark:text-slate-300 items-center gap-2">
+                                  <div key={i} className="grid grid-cols-6 text-sm px-2 py-2 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 text-slate-700 dark:text-slate-300 items-center gap-2">
                                      <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500">{log.time}</div>
                                      <div className="truncate font-medium text-xs" title={log.model}>{log.model.replace('gemini-', '')}</div>
+                                     <div className="truncate text-xs text-slate-500 dark:text-slate-400" title={log.keyName}>{log.keyName || '-'}</div>
                                      <div className="text-right font-mono text-slate-500 dark:text-slate-400 text-xs">{log.tokensIn}</div>
                                      <div className="text-right font-mono text-indigo-500 dark:text-indigo-400 text-xs">+{log.tokensOut}</div>
                                      <div className="text-right font-mono text-green-600 dark:text-green-400 text-xs">${cost.toFixed(5)}</div>
@@ -1650,12 +2034,12 @@ Documents:\n${contextText}` }] }
                   <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100"><i className="fa-solid fa-book text-indigo-600 dark:text-indigo-400 mr-2"></i> KnowledgeBase AI Manual</h2>
                   <button onClick={() => setShowManual(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
                 </div>
-                <div className="p-8 overflow-y-auto prose prose-slate dark:prose-invert prose-base max-w-none text-slate-700 dark:text-slate-300">
+                <div className="p-8 overflow-y-auto prose prose-slate dark:prose-invert prose-base max-w-none text-slate-700 dark:text-slate-300 prose-headings:font-semibold prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-50/50 dark:prose-blockquote:bg-indigo-900/20 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg leading-relaxed">
                   <h3>1. Welcome to your Workspace</h3>
                   <p>This application is designed to be <strong>offline-first</strong>. All your notes, categories, and settings are saved directly to a local JSON file on your computer. You retain complete ownership of your data.</p>
                   
                   <h3>2. Getting Started & API Key</h3>
-                  <p>To use the AI features (summarizing links, generating tags, and chatting), you must provide a <strong>Google Gemini API Key</strong>. Click the gear icon <i className="fa-solid fa-gear"></i> in the top left sidebar to enter your key.</p>
+                  <p>To use the AI features (summarizing links, generating tags, and chatting), you must provide a <strong>Google Gemini API Key</strong>. You can get one for free at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Click the gear icon <i className="fa-solid fa-gear"></i> in the top left sidebar to enter your key.</p>
 
                   <h3>3. Adding Content</h3>
                   <p>The fastest way to add content is to drag and drop text, a URL, or a PDF file directly into the <strong>"Add New Entry"</strong> cloud area in the left sidebar, or paste a link into the input field below it.</p>
@@ -1688,39 +2072,88 @@ Documents:\n${contextText}` }] }
             </div>
           )}
 
-          <div className="w-72 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col hidden md:flex z-10 relative">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
-               <div className="flex items-center text-base font-semibold text-slate-600 dark:text-slate-300 truncate">
-                 <i className="fa-solid fa-file-code mr-2 text-indigo-500 dark:text-indigo-400"></i> <span className="truncate max-w-[120px]">{fileName}</span>
-                 <button onClick={openSettings} className={`ml-2 px-1.5 py-0.5 rounded transition-colors flex-shrink-0 ${apiKey ? 'text-green-500 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30' : 'text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400'}`} title="Settings"><i className="fa-solid fa-gear"></i></button>
+          {isLeftSidebarOpen && (
+            <div className="w-40 flex-shrink-0 border-r border-stone-200/60 dark:border-stone-800/60 bg-claude-surface/70 dark:bg-claude-surfacedark/80 backdrop-blur-md flex flex-col hidden md:flex z-10 relative transition-colors duration-300">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-transparent relative">
+               <div className="flex items-center text-base font-semibold text-slate-600 dark:text-slate-300 truncate relative">
+                 <i className="fa-solid fa-file-code mr-2 text-indigo-500 dark:text-indigo-400"></i> <span className="truncate max-w-[100px]">{fileName}</span>
+                 <button onClick={openSettings} className={`ml-2 px-1.5 py-0.5 rounded transition-colors flex-shrink-0 ${apiKeys && apiKeys.length > 0 ? 'text-green-500 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30' : 'text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400'}`} title="Settings"><i className="fa-solid fa-gear text-sm"></i></button>
+                 
+                 <button onClick={() => setShowWorkspaceOptions(!showWorkspaceOptions)} className="ml-1 px-1.5 py-0.5 rounded text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors" title="Workspace Options">
+                   <i className="fa-solid fa-ellipsis-vertical text-sm"></i>
+                 </button>
+                 
+                 {showWorkspaceOptions && (
+                   <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 py-2">
+                     <div className="px-3 pb-2 mb-2 border-b border-slate-100 dark:border-slate-700">
+                       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Status</div>
+                       <div className="flex items-center text-xs font-medium">
+                         {fileHandle ? (
+                           <><div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div> <span className="text-slate-600 dark:text-slate-300">Auto-saving</span></>
+                         ) : (
+                           <><div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div> <span className="text-slate-600 dark:text-slate-300">Not Synced</span></>
+                         )}
+                       </div>
+                     </div>
+                     <button 
+                       onClick={() => { undoEntries(); setShowWorkspaceOptions(false); }} 
+                       disabled={historyState.past.length === 0} 
+                       className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50 flex items-center"
+                     >
+                       <i className="fa-solid fa-rotate-left w-5"></i> Undo (Cmd+Z)
+                     </button>
+                     <button 
+                       onClick={() => {
+                         const dataStr = JSON.stringify({ entries, chats, apiKeys, model, apiUsage }, null, 2);
+                         const blob = new Blob([dataStr], { type: "application/json" });
+                         const url = URL.createObjectURL(blob);
+                         const a = document.createElement('a');
+                         a.href = url;
+                         a.download = fileName || 'knowledge-base-backup.json';
+                         a.click();
+                         URL.revokeObjectURL(url);
+                         setShowWorkspaceOptions(false);
+                       }}
+                       className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center"
+                     >
+                       <i className="fa-solid fa-download w-5"></i> Manual Export
+                     </button>
+                   </div>
+                 )}
                </div>
-               <button onClick={handleCloseWorkspace} className="text-base text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex-shrink-0" title="Switch Workspace"><i className="fa-solid fa-right-from-bracket"></i></button>
+               <div className="flex items-center gap-1">
+                 <button onClick={handleCloseWorkspace} className="text-sm text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex-shrink-0" title="Switch Workspace"><i className="fa-solid fa-right-from-bracket"></i></button>
+                 <button onClick={() => setIsLeftSidebarOpen(false)} className="text-sm text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex-shrink-0" title="Hide Sidebar"><i className="fa-solid fa-angles-left"></i></button>
+               </div>
             </div>
             
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800">
-              <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} className={`relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all text-center ${isDragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800'} ${isAnalyzing ? 'opacity-75 pointer-events-none' : ''}`}>
-                {isAnalyzing ? <i className="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 dark:text-indigo-400 mb-2"></i> : <i className={`fa-solid fa-cloud-arrow-up text-3xl mb-2 ${isDragging ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}></i>}
-                <h3 className="font-semibold text-base mb-1">{isAnalyzing ? 'Analyzing...' : 'Add New Entry'}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Drag text, URL, or PDF here</p>
-              </div>
-              <form onSubmit={(e) => { e.preventDefault(); if (addInput.trim()) processInput(addInput.trim()); }} className="mt-3 relative">
-                <input 
-                  type="text" 
-                  value={addInput} 
-                  onChange={e => setAddInput(e.target.value)} 
-                  disabled={isAnalyzing} 
-                  placeholder="Paste link or text..." 
-                  className="w-full pl-3 pr-8 py-2 text-base border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white shadow-sm disabled:opacity-50" 
-                />
-                <button type="submit" disabled={isAnalyzing || !addInput.trim()} className="absolute right-2 top-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 p-1 transition-colors"><i className="fa-solid fa-arrow-right"></i></button>
-              </form>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            <div className="flex-1 overflow-y-auto p-2 space-y-8">
+              <div>
+                <div className="flex items-center text-sm font-semibold text-amber-500 dark:text-amber-600 uppercase tracking-wider mb-3"><i className="fa-solid fa-folder-open mr-2"></i>Projects</div>
+                <div className="flex flex-col space-y-0.5 mb-8">
+                  <button onClick={() => setActiveProjects([])} className={`text-left px-2 py-1 rounded-md text-sm transition-colors ${activeProjects.length === 0 ? 'bg-stone-200/50 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>All Projects</button>
+                  {sortedProjects.map(proj => (
+                    <button 
+                      key={proj} 
+                      draggable 
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('kb-tax', JSON.stringify({type: 'proj', val: proj}));
+                        e.dataTransfer.effectAllowed = 'copyMove';
+                      }} 
+                      onClick={(e) => handleProjectClick(proj, e)} 
+                      className={`flex items-center justify-between w-full px-2 py-1 rounded-md text-sm transition-colors ${activeProjects.includes(proj) ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-100 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
+                    >
+                      <span className="truncate mr-2">{proj}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono font-medium ${activeProjects.includes(proj) ? 'bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>{projectCounts[proj]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <div className="flex items-center text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Categories</div>
-                <div className="flex flex-col space-y-1">
-                  <button onClick={() => setActiveCategories([])} className={`text-left px-3 py-1.5 rounded-md text-base transition-colors ${activeCategories.length === 0 ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>All Categories</button>
+                <div className="flex flex-col space-y-0.5">
+                  <button onClick={() => setActiveCategories([])} className={`text-left px-2 py-1 rounded-md text-sm transition-colors ${activeCategories.length === 0 ? 'bg-stone-200/50 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>All Categories</button>
                   {sortedCategories.map(cat => (
                     <button 
                       key={cat} 
@@ -1730,18 +2163,18 @@ Documents:\n${contextText}` }] }
                         e.dataTransfer.effectAllowed = 'copyMove';
                       }} 
                       onClick={(e) => handleCategoryClick(cat, e)} 
-                      className={`flex items-center justify-between w-full px-3 py-1.5 rounded-md text-base transition-colors ${activeCategories.includes(cat) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
+                      className={`flex items-center justify-between w-full px-2 py-1 rounded-md text-sm transition-colors ${activeCategories.includes(cat) ? 'bg-stone-200/50 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
                     >
                       <span className="truncate mr-2">{cat}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono font-medium ${activeCategories.includes(cat) ? 'bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>{categoryCounts[cat]}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono font-medium ${activeCategories.includes(cat) ? 'bg-stone-300 dark:bg-stone-700 text-stone-900 dark:text-stone-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>{categoryCounts[cat]}</span>
                     </button>
                   ))}
                 </div>
               </div>
               <div>
                 <div className="flex items-center text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Tags</div>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setActiveTags([])} className={`px-3 py-1 rounded-full text-sm border transition-colors ${activeTags.length === 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}>All</button>
+                <div className="flex flex-col space-y-0.5">
+                  <button onClick={() => setActiveTags([])} className={`text-left px-2 py-1 rounded-md text-sm transition-colors ${activeTags.length === 0 ? 'bg-stone-200/50 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>All Tags</button>
                   {sortedTags.map(tag => (
                     <button 
                       key={tag} 
@@ -1751,79 +2184,99 @@ Documents:\n${contextText}` }] }
                         e.dataTransfer.effectAllowed = 'copyMove';
                       }} 
                       onClick={(e) => handleTagClick(tag, e)} 
-                      className={`px-3 py-1 rounded-full text-sm border transition-colors ${activeTags.includes(tag) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
+                      className={`flex items-center justify-between w-full px-2 py-1 rounded-md text-sm transition-colors ${activeTags.includes(tag) ? 'bg-stone-200/50 dark:bg-stone-800/50 text-stone-900 dark:text-stone-100 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
                     >
-                      {tag}
+                      <span className="truncate mr-2">#{tag}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono font-medium ${activeTags.includes(tag) ? 'bg-stone-300 dark:bg-stone-700 text-stone-900 dark:text-stone-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>{tagCounts[tag]}</span>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-              <div className="flex items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                <i className="fa-solid fa-robot mr-1.5"></i> Manage Taxonomies
+            {showTaxonomyManager ? (
+              <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 relative">
+                <button onClick={() => setShowTaxonomyManager(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+                <div className="flex items-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
+                  <i className="fa-solid fa-robot mr-1.5"></i> Manage Taxonomies
+                </div>
+                <form onSubmit={handleTaxonomyCommand} className="relative">
+                  <input 
+                    type="text" 
+                    value={taxonomyInput} 
+                    onChange={(e) => setTaxonomyInput(e.target.value)} 
+                    placeholder="Merge tags, rename..." 
+                    className="w-full pl-3 pr-8 py-2 text-sm border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white"
+                    disabled={isTaxonomyProcessing}
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={isTaxonomyProcessing || !taxonomyInput.trim()} 
+                    className="absolute right-2 top-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors"
+                  >
+                    {isTaxonomyProcessing ? <i className="fa-solid fa-spinner fa-spin text-sm"></i> : <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>}
+                  </button>
+                </form>
               </div>
-              <form onSubmit={handleTaxonomyCommand} className="relative">
+            ) : (
+              <button 
+                onClick={() => setShowTaxonomyManager(true)}
+                className="m-3 mt-0 py-2 px-3 text-xs font-medium text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-robot"></i> Manage Taxonomies
+              </button>
+            )}
+          </div>
+          )}
+
+          {isListSidebarOpen && (
+            <div className="w-[340px] flex-shrink-0 bg-claude-surface/70 dark:bg-claude-surfacedark/80 backdrop-blur-md flex flex-col hidden lg:flex z-10 relative border-r border-stone-200/60 dark:border-stone-800/60 transition-colors duration-300">
+            <div className="p-4 pb-2 bg-transparent relative flex flex-col gap-2">
+              <div className="flex gap-2 items-center">
+                <div className="relative flex-1 flex items-center">
+                  <i className="fa-solid fa-magnifying-glass absolute left-3 text-slate-400"></i>
+                  <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 border-none shadow-sm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white/70 dark:bg-slate-900/70 backdrop-blur dark:text-white transition-all" />
+                </div>
+
+                <button onClick={handleNewNote} className="text-white bg-indigo-600 hover:bg-indigo-700 p-2 rounded-lg shadow-sm transition-colors flex-shrink-0 w-9 h-9 flex items-center justify-center" title="New Note">
+                  <i className="fa-solid fa-plus"></i>
+                </button>
+                <button onClick={() => setIsListSidebarOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex-shrink-0 bg-white/50 dark:bg-slate-900/50 shadow-sm w-9 h-9 flex items-center justify-center hidden lg:flex" title="Hide List"><i className="fa-solid fa-angles-left"></i></button>
+              </div>
+              <form onSubmit={(e) => { e.preventDefault(); if (addInput.trim()) processInput(addInput.trim()); }} className="relative flex-1">
+                <i className="fa-solid fa-link absolute left-3 top-2.5 text-slate-400 text-sm"></i>
                 <input 
                   type="text" 
-                  value={taxonomyInput} 
-                  onChange={(e) => setTaxonomyInput(e.target.value)} 
-                  placeholder="Merge tags, rename..." 
-                  className="w-full pl-3 pr-8 py-2 text-base border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800 dark:text-white"
-                  disabled={isTaxonomyProcessing}
+                  value={addInput} 
+                  onChange={e => setAddInput(e.target.value)} 
+                  disabled={isAnalyzing} 
+                  placeholder="Paste URL or text to add..." 
+                  className="w-full pl-8 pr-8 py-2 text-sm border-none shadow-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white/70 dark:bg-slate-900/70 backdrop-blur dark:text-white transition-all disabled:opacity-50" 
                 />
-                <button 
-                  type="submit" 
-                  disabled={isTaxonomyProcessing || !taxonomyInput.trim()} 
-                  className="absolute right-2 top-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors"
-                >
-                  {isTaxonomyProcessing ? <i className="fa-solid fa-spinner fa-spin text-base"></i> : <i className="fa-solid fa-wand-magic-sparkles text-base"></i>}
-                </button>
+                <button type="submit" disabled={isAnalyzing || !addInput.trim()} className="absolute right-2 top-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 p-1 transition-colors"><i className="fa-solid fa-arrow-right text-sm"></i></button>
               </form>
-            </div>
-            <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-[10px] uppercase font-medium tracking-wider">
-              <div className="flex items-center">
-                <button 
-                   onClick={undoEntries} 
-                   disabled={historyState.past.length === 0} 
-                   className="mr-3 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors" 
-                   title="Undo (Cmd/Ctrl+Z)"
-                >
-                   <i className="fa-solid fa-rotate-left text-sm"></i>
-                </button>
-                {fileHandle ? (
-                  <><div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div> <span className="text-slate-400">Auto-saving</span> <span className="ml-2 text-[10px] text-slate-400 font-mono opacity-50">{APP_VERSION}</span></>
-                ) : (
-                  <button 
-                    onClick={() => {
-                      const dataStr = JSON.stringify({ entries, chats, apiKey, model, apiUsage }, null, 2);
-                      const blob = new Blob([dataStr], { type: "application/json" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = fileName || 'knowledge-base-backup.json';
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors flex items-center"
-                  >
-                    <i className="fa-solid fa-download mr-2"></i> Manual Export
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="w-80 flex-shrink-0 bg-slate-50 dark:bg-slate-950 flex flex-col hidden lg:flex z-10 relative">
-            <div className="p-4 pb-2 bg-slate-50 dark:bg-slate-950">
-              <input type="text" placeholder="Search knowledge base..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 border-none shadow-sm rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white dark:bg-slate-900 dark:text-white" />
-              <button onClick={handleNewNote} className="w-full mt-3 py-2 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-slate-700 shadow-sm rounded-lg text-base font-medium transition-colors flex items-center justify-center">
-                <i className="fa-solid fa-plus mr-2"></i> New Note
-              </button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 pt-1 space-y-3">
               <p className="text-[10px] text-slate-400 text-center mb-2 uppercase tracking-wider font-semibold">Cmd/Ctrl + Click to select multiple</p>
+              <div className="flex gap-2 mb-4">
+                <button 
+                  onClick={handleNewGlobalChat} 
+                  className="flex-1 text-center relative py-3 px-3 cursor-pointer transition-all duration-200 border border-purple-200 dark:border-purple-800 rounded-lg shadow-sm bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40"
+                >
+                  <h4 className="text-sm font-bold text-purple-700 dark:text-purple-400 flex items-center justify-center">
+                    <i className="fa-solid fa-sparkles mr-2"></i> New Workspace Chat
+                  </h4>
+                </button>
+                <button 
+                  onClick={() => setShowAIChats(!showAIChats)} 
+                  className={`flex-shrink-0 w-12 flex items-center justify-center rounded-lg transition-colors border shadow-sm ${showAIChats ? 'border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-400' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 opacity-50'}`} 
+                  title={showAIChats ? "Hide AI Chats" : "Show AI Chats"}
+                >
+                  <i className={`fa-solid ${showAIChats ? 'fa-eye' : 'fa-eye-slash'} text-lg`}></i>
+                </button>
+              </div>
               {filteredEntries.map(entry => {
                 const isSelected = selectedEntryIds.includes(entry.id);
                 const isCombined = entry.isCombined;
@@ -1833,22 +2286,25 @@ Documents:\n${contextText}` }] }
                 const isPinned = entry.pinned;
                 
                 let typeIndicator = 'border-l-slate-300 dark:border-l-slate-700';
-                if (isCombined) typeIndicator = 'border-l-purple-500 dark:border-l-purple-400';
+                if (entry.isGlobalChat) typeIndicator = 'border-l-purple-500 dark:border-l-purple-400';
+                else if (isCombined) typeIndicator = 'border-l-fuchsia-500 dark:border-l-fuchsia-400';
                 else if (isPdf) typeIndicator = 'border-l-blue-400 dark:border-l-blue-500';
                 else if (isMedia) typeIndicator = 'border-l-red-500 dark:border-l-red-400';
                 else if (isManual) typeIndicator = 'border-l-yellow-400 dark:border-l-yellow-500';
                 
-                const bgClass = isSelected ? 'bg-blue-600 dark:bg-blue-600' : 'bg-white dark:bg-slate-800';
-                const shadowClass = isSelected ? 'shadow-md ring-1 ring-blue-600/30' : 'shadow-sm hover:shadow-md';
+                const bgClass = isSelected ? 'bg-stone-200/50 dark:bg-stone-800/50' : 'hover:bg-stone-100/50 dark:hover:bg-stone-800/30';
+                const shadowClass = '';
                 
-                const titleText = isSelected ? 'text-white' : 'text-slate-800 dark:text-slate-200';
-                const idText = isSelected ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500';
-                const summaryText = isSelected ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400';
-                const pinActiveColor = 'text-white';
-                const pinInactiveColor = isSelected ? 'text-blue-300' : 'text-slate-400';
-                const catClasses = isSelected 
-                  ? 'bg-blue-500 text-white border-blue-400'
-                  : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600';
+                const titleText = isSelected ? 'text-stone-900 dark:text-stone-100' : 'text-stone-700 dark:text-stone-300';
+                const idText = isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-stone-400 dark:text-stone-500';
+                const pinActiveColor = 'text-stone-900 dark:text-white';
+                const pinInactiveColor = isSelected ? 'text-stone-500' : 'text-stone-300';
+                
+                let ytVideoId = null;
+                if (entry.sourceUrl) {
+                  const ytMatch = entry.sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
+                  if (ytMatch && ytMatch[1]) ytVideoId = ytMatch[1];
+                }
                 
                 return (
                   <div 
@@ -1862,66 +2318,95 @@ Documents:\n${contextText}` }] }
                     onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
                     onDragLeave={() => setDragOverEntryId(null)}
                     onDrop={(e) => handleEntryDrop(e, entry.id)}
-                    className={`relative p-4 rounded-xl cursor-pointer transition-all duration-200 group border-l-[4px] border-y border-r border-y-transparent border-r-transparent ${typeIndicator} ${bgClass} ${shadowClass} ${dragOverEntryId === entry.id ? 'opacity-80 scale-[0.98]' : ''}`}
+                    className={`relative py-2 pl-3 pr-2 my-3 cursor-pointer transition-all duration-200 group border-l-2 rounded-r-lg ${typeIndicator} ${bgClass} ${shadowClass} ${dragOverEntryId === entry.id ? 'opacity-80 scale-[0.98]' : ''}`}
                   >
                     <button onClick={(e) => togglePin(e, entry.id)} className={`absolute top-3 right-3 transition-all duration-200 z-10 ${isPinned ? `${pinActiveColor} opacity-100` : `${pinInactiveColor} opacity-0 group-hover:opacity-60 hover:!opacity-100`}`}>
-                      <i className="fa-solid fa-thumbtack"></i>
+                      <i className="fa-solid fa-thumbtack shadow-sm"></i>
                     </button>
-                    <h4 className={`text-base font-semibold mb-1 pr-6 line-clamp-2 transition-colors ${titleText}`}>
-                      <span className={`font-normal mr-1 ${idText}`}>{entry.numericId}:</span>
-                      {entry.title}
-                    </h4>
                     
-                    {Array.isArray(entry.categories) && entry.categories.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2 mt-1.5">
-                        {entry.categories.map(c => (
-                          <span 
-                            key={c} 
-                            draggable
-                            onDragStart={(e) => {
-                              e.stopPropagation();
-                              e.dataTransfer.setData('kb-tax', JSON.stringify({ type: 'cat', val: c }));
-                              e.dataTransfer.setData('kb-tax-remove', JSON.stringify({ entryId: entry.id, type: 'cat', val: c }));
-                              e.dataTransfer.effectAllowed = 'copyMove';
-                            }}
-                            onDragEnd={(e) => {
-                              if (e.dataTransfer.dropEffect === 'none') {
-                                removeTaxonomyFromEntry(entry.id, 'cat', c);
-                              }
-                            }}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium lowercase border cursor-grab active:cursor-grabbing transition-colors ${catClasses}`}
-                            title="Drag to another card, or drag away to remove"
-                          >
-                            {c}
-                          </span>
-                        ))}
+                    {ytVideoId ? (
+                      <div className="relative w-full aspect-video rounded-md overflow-hidden mb-1 group-hover:opacity-90 transition-opacity ring-1 ring-black/5 dark:ring-white/10">
+                        <img src={`https://img.youtube.com/vi/${ytVideoId}/hqdefault.jpg`} alt={entry.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3">
+                          <h4 className="text-sm font-semibold text-white line-clamp-2 leading-tight">
+                            <span className="font-normal mr-1.5 inline-flex items-center justify-center w-4 opacity-80 text-orange-400">
+                              <span className="group-hover:hidden"><i className="fa-solid fa-play text-[10px]"></i></span>
+                              <span className="hidden group-hover:inline text-[10px]">{entry.numericId}</span>
+                            </span>
+                            {entry.title}
+                          </h4>
+                        </div>
                       </div>
+                    ) : (
+                      <h4 className={`text-base font-semibold mb-1 pr-6 line-clamp-2 transition-colors ${titleText}`}>
+                        <span className={`font-normal mr-1.5 inline-flex items-center justify-center w-4 opacity-70 ${idText}`} title={`ID: ${entry.numericId}`}>
+                          <span className="group-hover:hidden">
+                            {entry.isGlobalChat ? <i className="fa-solid fa-sparkles text-sm"></i> :
+                             isCombined ? <i className="fa-solid fa-layer-group text-sm"></i> :
+                             isPdf ? <i className="fa-solid fa-file-pdf text-sm"></i> :
+                             isMedia ? <i className="fa-solid fa-play text-sm"></i> :
+                             isManual ? <i className="fa-solid fa-file-lines text-sm"></i> :
+                             <i className="fa-solid fa-link text-sm"></i>}
+                          </span>
+                          <span className="hidden group-hover:inline text-xs">{entry.numericId}</span>
+                        </span>
+                        {entry.title}
+                      </h4>
                     )}
+                    
+
 
                     {isCombined ? (
                       <div className="mt-2 space-y-1">
                         {entry.referencedIds?.slice(0, 3).map(id => {
                           const ref = entries.find(e => e.id === id);
-                          return ref ? <div key={id} className={`text-base truncate border-l-2 pl-1.5 transition-colors ${isSelected ? 'text-blue-100 border-blue-400' : 'text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600'}`}>{ref.numericId}: {ref.title}</div> : null;
+                          if (!ref) return null;
+                          const refIsPdf = !ref.sourceUrl && ref.title?.toLowerCase().endsWith('.pdf');
+                          const refIsMedia = !refIsPdf && isMediaSource(ref.sourceUrl);
+                          const refIsManual = !ref.sourceUrl && !ref.isCombined && !refIsPdf;
+                          return <div key={id} className={`text-base truncate border-l-2 pl-1.5 transition-colors group/ref relative ${isSelected ? 'text-blue-100 border-blue-400' : 'text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600'}`}>
+                            <span className="inline-flex items-center justify-center w-4 opacity-70 mr-1">
+                              <span className="group-hover/ref:hidden">
+                                {ref.isCombined ? <i className="fa-solid fa-layer-group text-[10px]"></i> :
+                                 refIsPdf ? <i className="fa-solid fa-file-pdf text-[10px]"></i> :
+                                 refIsMedia ? <i className="fa-solid fa-play text-[10px]"></i> :
+                                 refIsManual ? <i className="fa-solid fa-file-lines text-[10px]"></i> :
+                                 <i className="fa-solid fa-link text-[10px]"></i>}
+                              </span>
+                              <span className="hidden group-hover/ref:inline text-[10px]">{ref.numericId}</span>
+                            </span>
+                            {ref.title}
+                          </div>;
                         })}
                         {entry.referencedIds?.length > 3 && <div className={`text-base opacity-70 italic ${isSelected ? 'text-blue-200' : 'text-slate-500'}`}>+{entry.referencedIds.length - 3} more notes</div>}
                       </div>
-                    ) : (
-                      <p className={`text-base line-clamp-2 transition-colors ${summaryText}`}>{entry.summary}</p>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
             </div>
           </div>
+          )}
 
-          <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-slate-50 dark:bg-slate-950 relative z-0">
+          <div className="flex-1 flex flex-col min-[1500px]:flex-row min-w-0 bg-slate-50 dark:bg-[#0B0F19] relative z-0">
             {error && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 px-4 py-3 rounded-lg shadow-lg"><p className="text-base mr-4">{error}</p><button onClick={() => setError(null)}><i className="fa-solid fa-xmark"></i></button></div>
             )}
 
             {/* CONTENT AREA */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+              <div className="absolute top-4 left-4 z-20 flex gap-2">
+                {!isLeftSidebarOpen && (
+                  <button onClick={() => setIsLeftSidebarOpen(true)} className="p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm border border-slate-200/50 dark:border-slate-700/50 transition-all" title="Open Taxonomy Sidebar">
+                    <i className="fa-solid fa-folder-tree"></i>
+                  </button>
+                )}
+                {!isListSidebarOpen && (
+                  <button onClick={() => setIsListSidebarOpen(true)} className="p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm border border-slate-200/50 dark:border-slate-700/50 transition-all" title="Open Notes List">
+                    <i className="fa-solid fa-list"></i>
+                  </button>
+                )}
+              </div>
               {isCombinedView && (
                  <div className="w-full bg-amber-50 dark:bg-amber-900/20 p-6 border-b border-amber-100 dark:border-amber-800/50 flex justify-between items-center shrink-0 shadow-sm z-10">
                      <div className="flex-1 mr-4">
@@ -1955,26 +2440,110 @@ Documents:\n${contextText}` }] }
                  </div>
               )}
               
-              <div className="flex-1 flex overflow-x-auto min-w-0">
-                {!selectedEntryIds.length ? (
-                  <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-600 flex-col w-full"><i className="fa-solid fa-file-lines text-5xl mb-4 opacity-20"></i><p className="text-base">Select an entry</p></div>
-                ) : (
-                  entriesToDisplay.map((entry) => {
-                    const isEditing = editingEntries[entry.id];
-                    const data = editData[entry.id] || { title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] };
-                    const catInput = editCatInput[entry.id] || '';
-                    const tagInput = editTagInput[entry.id] || '';
+              <div className="flex-1 flex min-h-0 w-full">
+                <div className="flex-1 flex overflow-x-auto min-w-0 bg-white dark:bg-slate-900">
+                  {!selectedEntryIds.length ? (
+                    <div className="flex-1 flex flex-col items-center p-8 lg:p-16 w-full max-w-4xl mx-auto overflow-y-auto" onClick={handleContentClick} onMouseOver={handleContentMouseOver} onMouseOut={handleContentMouseOut}>
+                       {!workspaceOverview.content ? (
+                          <div className="text-slate-400 dark:text-slate-600 flex flex-col items-center justify-center h-full">
+                            <i className="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-indigo-500/50"></i>
+                            <p className="text-base font-medium">Analyzing workspace for insights...</p>
+                          </div>
+                       ) : (
+                          <div className="w-full bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 md:p-12 mb-8 mt-4">
+                             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
+                                <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100"><i className="fa-solid fa-chart-pie text-indigo-500 mr-3"></i> Workspace Snapshot</h1>
+                                {(() => {
+                                  const maxEntryUpdate = entries.length ? Math.max(...entries.map(e => e.updatedAt || e.createdAt || 0)) : 0;
+                                  return maxEntryUpdate > workspaceOverview.lastUpdated ? (
+                                     <span className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full"><i className="fa-solid fa-arrows-rotate fa-spin mr-2"></i> Refreshing insights...</span>
+                                  ) : (
+                                     <span className="text-xs font-medium text-slate-400 dark:text-slate-500 flex items-center"><i className="fa-regular fa-clock mr-1"></i> Up to date</span>
+                                  );
+                                })()}
+                             </div>
+                             <div className="prose prose-slate dark:prose-invert prose-lg max-w-none prose-p:leading-relaxed prose-headings:font-bold" dangerouslySetInnerHTML={{__html: injectReferences(parseMarkdown(workspaceOverview.content), entries)}}></div>
+                          </div>
+                       )}
+                    </div>
+                  ) : (
+                    <>
+                    {entriesToDisplay.map((entry) => {
+                      const isEditing = editingEntries[entry.id];
+                      const data = editData[entry.id] || { title: '', summary: '', shortVersion: '', fullContent: '', categories: [], tags: [], sourceUrl: '', references: [] };
+                      const catInput = editCatInput[entry.id] || '';
+                      const tagInput = editTagInput[entry.id] || '';
+
+                      if (entry.isGlobalChat && !isEditing) {
+                        return (
+                          <div key={entry.id} className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-900 w-full min-w-[500px] shrink-0 border-r border-slate-200 dark:border-slate-800 last:border-0 relative">
+                            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-start bg-white dark:bg-slate-800">
+                               <div className="flex-1 pr-4">
+                                 <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-300"><i className="fa-solid fa-sparkles mr-2"></i>{entry.title}</h2>
+                                 <div className="flex flex-wrap items-center gap-2 mt-2">
+                                   {Array.isArray(entry.projects) && entry.projects.map(p => <span key={p} className="text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-800 px-2.5 py-1 rounded-full lowercase"><i className="fa-solid fa-folder-open mr-1"></i>{p}</span>)}
+                                   {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-2.5 py-1 rounded-full lowercase">{c}</span>)}
+                                   {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-full lowercase">#{t}</span>)}
+                                 </div>
+                               </div>
+                               <div className="flex gap-2 flex-shrink-0">
+                                 <button onClick={() => startEditing(entry)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-2 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors" title="Edit Note"><i className="fa-solid fa-pen"></i></button>
+                                 <button onClick={() => deleteEntry(entry.id)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded transition-colors" title="Delete Chat"><i className="fa-solid fa-trash-can"></i></button>
+                               </div>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4" ref={el => { if (el && el.dataset.msgCount !== String(entry.chatHistory?.length || 0)) { el.scrollTop = el.scrollHeight; el.dataset.msgCount = String(entry.chatHistory?.length || 0); } }} onClick={handleContentClick} onMouseOver={handleContentMouseOver} onMouseOut={handleContentMouseOut}>
+                              {(entry.chatHistory || []).map((msg, i) => (
+                                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-800 dark:text-slate-200'}`}>
+                                      <div className={`prose prose-sm max-w-none ${msg.role === 'user' ? 'prose-invert' : 'dark:prose-invert'} prose-p:leading-snug prose-pre:bg-slate-800/50 prose-pre:border prose-pre:border-slate-700`} dangerouslySetInnerHTML={{__html: injectReferences(parseMarkdown(msg.text), entries)}}></div>
+                                    </div>
+                                 </div>
+                              ))}
+                              {!(entry.chatHistory || []).length && (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 p-8 text-center space-y-4 opacity-50">
+                                   <i className="fa-solid fa-earth-americas text-6xl"></i>
+                                   <p className="text-lg font-medium">Workspace Chat</p>
+                                   <p className="text-sm max-w-md">Ask anything about your entire knowledge base. The AI will search through your notes and intelligently reference them.</p>
+                                </div>
+                              )}
+                              {isChatting && chatScope === entry.id && (
+                                 <div className="flex justify-start">
+                                    <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3 text-slate-500">
+                                       <i className="fa-solid fa-circle-notch fa-spin text-emerald-500"></i> Researching...
+                                    </div>
+                                 </div>
+                              )}
+                            </div>
+                            
+                            <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+                              <form onSubmit={(e) => handleGlobalChatMessage(e, entry.id)} className="relative">
+                                <textarea 
+                                  value={chatInput} 
+                                  onChange={e => setChatInput(e.target.value)} 
+                                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGlobalChatMessage(e, entry.id); } }}
+                                  placeholder="Ask across all your notes..." 
+                                  className="w-full pl-4 pr-12 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm shadow-inner"
+                                  rows="2"
+                                  disabled={isChatting}
+                                ></textarea>
+                                <button type="submit" disabled={isChatting || !chatInput.trim()} className="absolute right-3 bottom-3 text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 disabled:opacity-30 transition-colors p-2"><i className="fa-solid fa-paper-plane text-xl"></i></button>
+                              </form>
+                            </div>
+                          </div>
+                        );
+                      }
 
                     return (
                     <div 
                       key={entry.id} 
-                      className={`flex-1 min-w-[500px] p-4 md:p-6 lg:p-8 overflow-y-auto relative transition-colors ${dragOverEntryId === entry.id ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
+                      className={`flex-1 min-w-[500px] py-8 px-6 lg:px-10 overflow-y-auto overflow-x-hidden relative transition-colors ${dragOverEntryId === entry.id ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}
                       onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
                       onDragLeave={() => setDragOverEntryId(null)}
                       onDrop={(e) => handleEntryDrop(e, entry.id)}
                     >
                       {isEditing ? (
-                        <div className="max-w-5xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 pb-32 min-h-full">
+                        <div className="max-w-5xl min-w-[500px] mx-auto p-4 md:p-8 pb-32 min-h-full">
                           <div className="space-y-6">
                             <div className="flex justify-between items-center mb-6">
                               <h2 className="text-2xl font-bold dark:text-white">Edit Note #{entry.numericId}</h2>
@@ -2005,13 +2574,17 @@ Documents:\n${contextText}` }] }
                             </div>
 
                             <div>
-                              <div className="flex justify-between items-center mb-1">
-                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Key Takeaways (One per line)</label>
-                                <button type="button" onClick={() => handleGenerateTakeaways(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors">
-                                  <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Extract Points
-                                </button>
-                              </div>
-                              <textarea value={data.shortVersion} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], shortVersion: e.target.value}}))} className="w-full h-32 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed bg-white dark:bg-slate-800 dark:text-white" placeholder="Point 1&#10;Point 2..."></textarea>
+                              {!entry.isGlobalChat && (
+                                <>
+                                  <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Key Takeaways (One per line)</label>
+                                    <button type="button" onClick={() => handleGenerateTakeaways(entry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50 transition-colors">
+                                      <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Extract Points
+                                    </button>
+                                  </div>
+                                  <textarea value={data.shortVersion} onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], shortVersion: e.target.value}}))} className="w-full h-32 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed bg-white dark:bg-slate-800 dark:text-white" placeholder="Point 1&#10;Point 2..."></textarea>
+                                </>
+                              )}
                             </div>
 
                             <div>
@@ -2057,6 +2630,31 @@ Documents:\n${contextText}` }] }
                                     {Array.from(allCategories).map(c => <option key={c} value={c} />)}
                                   </datalist>
                                 </div>
+                                <div className="col-span-2">
+                                  <label className="block text-xs font-semibold text-amber-500 dark:text-amber-400 mb-1">Projects</label>
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {data.projects && data.projects.map(p => (
+                                      <span key={p} className="group relative flex items-center px-2.5 py-1 bg-amber-50 dark:bg-amber-900/50 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-[10px] font-medium lowercase rounded-full shadow-sm">
+                                        <i className="fa-solid fa-folder-open mr-1 opacity-70"></i>{p}
+                                        <button type="button" onClick={() => removeEditProject(entry.id, p)} className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400">
+                                          <i className="fa-solid fa-xmark"></i>
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <input 
+                                    type="text"
+                                    list="proj-suggestions"
+                                    value={editProjectInput[entry.id] || ''}
+                                    onChange={e => setEditProjectInput(prev => ({...prev, [entry.id]: e.target.value}))}
+                                    onKeyDown={(e) => handleAddEditProject(entry.id, e)}
+                                    placeholder="Add project (Enter or comma)"
+                                    className="w-full px-3 py-2 border border-amber-200 dark:border-amber-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-base bg-white dark:bg-slate-800 dark:text-white lowercase"
+                                  />
+                                  <datalist id="proj-suggestions">
+                                    {Array.from(allProjects).map(p => <option key={p} value={p} />)}
+                                  </datalist>
+                                </div>
                                 <div>
                                   <label className="block text-xs font-semibold text-indigo-500 dark:text-indigo-400 mb-1">Tags</label>
                                   <div className="flex flex-wrap gap-1 mb-2">
@@ -2085,36 +2683,38 @@ Documents:\n${contextText}` }] }
                               </div>
                             </div>
 
-                            <div>
-                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Expanded Summary (Markdown)</label>
-                              <textarea 
-                                value={data.fullContent} 
-                                onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], fullContent: e.target.value}}))} 
-                                onDragOver={(e) => e.stopPropagation()}
-                                onDrop={(e) => {
-                                  e.stopPropagation();
-                                  const draggedId = e.dataTransfer.getData('kb-ref-id');
-                                  if (draggedId && draggedId !== entry.id) {
-                                    const el = e.target;
-                                    setTimeout(() => {
-                                      setEditData(prev => {
-                                        const currentEditData = prev[entry.id] || { fullContent: '', references: [] };
-                                        return {
-                                          ...prev,
-                                          [entry.id]: {
-                                            ...currentEditData,
-                                            fullContent: el.value,
-                                            references: currentEditData.references.includes(draggedId) ? currentEditData.references : [...currentEditData.references, draggedId]
-                                          }
-                                        };
-                                      });
-                                    }, 50);
-                                  }
-                                }}
-                                className="w-full h-96 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed bg-white dark:bg-slate-800 dark:text-white" 
-                                placeholder="Start writing Expanded Summary in Markdown...&#10;&#10;(Tip: You can drag and drop other notes directly into this text box to create inline references!)"
-                              ></textarea>
-                            </div>
+                            {!entry.isGlobalChat && (
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Expanded Summary (Markdown)</label>
+                                <textarea 
+                                  value={data.fullContent} 
+                                  onChange={e => setEditData(prev => ({...prev, [entry.id]: {...prev[entry.id], fullContent: e.target.value}}))} 
+                                  onDragOver={(e) => e.stopPropagation()}
+                                  onDrop={(e) => {
+                                    e.stopPropagation();
+                                    const draggedId = e.dataTransfer.getData('kb-ref-id');
+                                    if (draggedId && draggedId !== entry.id) {
+                                      const el = e.target;
+                                      setTimeout(() => {
+                                        setEditData(prev => {
+                                          const currentEditData = prev[entry.id] || { fullContent: '', references: [] };
+                                          return {
+                                            ...prev,
+                                            [entry.id]: {
+                                              ...currentEditData,
+                                              fullContent: el.value,
+                                              references: currentEditData.references.includes(draggedId) ? currentEditData.references : [...currentEditData.references, draggedId]
+                                            }
+                                          };
+                                        });
+                                      }, 50);
+                                    }
+                                  }}
+                                  className="w-full h-96 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-base leading-relaxed bg-white dark:bg-slate-800 dark:text-white" 
+                                  placeholder="Start writing Expanded Summary in Markdown...&#10;&#10;(Tip: You can drag and drop other notes directly into this text box to create inline references!)"
+                                ></textarea>
+                              </div>
+                            )}
 
                             {data.references && data.references.length > 0 && (
                               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -2137,25 +2737,27 @@ Documents:\n${contextText}` }] }
                           </div>
                         </div>
                       ) : (
-                        <div className="max-w-5xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 pb-32 min-h-full">
+                        <div className="max-w-3xl min-w-[500px] mx-auto p-4 md:p-8 pb-32 min-h-full">
                           <div className="flex justify-between items-start mb-6">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-2.5 py-1 rounded-full lowercase">{c}</span>)}
-                              {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-full lowercase">#{t}</span>)}
-                              {entry.sourceUrl && <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-sm"><i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Source</a>}
+                            <div className="flex-1 pr-4">
+                              <h1 className="text-4xl font-serif font-semibold mb-3 text-stone-900 dark:text-stone-100 tracking-tight leading-tight">
+                                {entry.title || 'Untitled'}
+                              </h1>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {Array.isArray(entry.projects) && entry.projects.map(p => <span key={p} className="text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-800 px-2.5 py-1 rounded-full lowercase"><i className="fa-solid fa-folder-open mr-1"></i>{p}</span>)}
+                                {Array.isArray(entry.categories) && entry.categories.map(c => <span key={c} className="text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-2.5 py-1 rounded-full lowercase">{c}</span>)}
+                                {Array.isArray(entry.tags) && entry.tags.map(t => <span key={t} className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-full lowercase">#{t}</span>)}
+                                {entry.sourceUrl && <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-sm"><i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Source</a>}
+                              </div>
                             </div>
                             {(!isCombinedView || selectedEntryIds.length > 1) && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 flex-shrink-0">
                                 <button onClick={() => startEditing(entry)} className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-2 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors" title="Edit Note"><i className="fa-solid fa-pen"></i></button>
                                 <button onClick={() => deleteEntry(entry.id)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Delete Note"><i className="fa-solid fa-trash-can"></i></button>
                               </div>
                             )}
                           </div>
-                          <h1 className="text-3xl font-bold mb-4 dark:text-white">
-                            <span className="text-slate-400 dark:text-slate-500 font-normal mr-2">{entry.numericId}:</span>
-                            {entry.title || 'Untitled'}
-                          </h1>
-                          <p className="text-lg text-slate-500 dark:text-slate-400 mb-8">{entry.summary}</p>
+                          <p className="text-xl text-stone-500 dark:text-stone-400 mb-14 font-serif leading-relaxed">{entry.summary}</p>
                           
                           {Array.isArray(entry.shortVersion) && entry.shortVersion.length > 0 && (
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 mb-8 border border-slate-100 dark:border-slate-700/50">
@@ -2174,40 +2776,53 @@ Documents:\n${contextText}` }] }
                             </div>
                           )}
 
-                          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 mb-8 space-y-4">
-                            <div>
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Research & Analysis</h4>
-                              <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleAITool(entry.id, 'link')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Find Links</button>
-                                <button onClick={() => handleAITool(entry.id, 'gaps')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Find Gaps</button>
-                                <button onClick={() => handleAITool(entry.id, 'bias')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Bias/Tone</button>
-                                <button onClick={() => handleAITool(entry.id, 'citations')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Citations</button>
-                                <button onClick={() => handleAITool(entry.id, 'counter')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors shadow-sm disabled:opacity-50">✨ Counter-Args</button>
+                          <div className="relative mb-8">
+                            <button 
+                              onClick={() => setShowAIActionsId(showAIActionsId === entry.id ? null : entry.id)}
+                              className="px-4 py-2 text-sm font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm flex items-center gap-2"
+                            >
+                              ✨ AI Actions <i className={`fa-solid fa-chevron-${showAIActionsId === entry.id ? 'up' : 'down'} text-xs`}></i>
+                            </button>
+                            
+                            {showAIActionsId === entry.id && (
+                              <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 p-4 space-y-4">
+                                <div>
+                                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Research & Analysis</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => { handleAITool(entry.id, 'link'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 transition-colors disabled:opacity-50">✨ Find Links</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'gaps'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 transition-colors disabled:opacity-50">✨ Find Gaps</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'bias'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 transition-colors disabled:opacity-50">✨ Bias/Tone</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'citations'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 transition-colors disabled:opacity-50">✨ Citations</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'counter'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 transition-colors disabled:opacity-50">✨ Counter-Args</button>
+                                  </div>
+                                </div>
+                                <div>
+                                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Writing & Ideation</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => { handleAITool(entry.id, 'eli5'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-blue-50 dark:hover:bg-blue-900/50 hover:text-blue-600 transition-colors disabled:opacity-50">✨ Simplify</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'brainstorm'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-blue-50 dark:hover:bg-blue-900/50 hover:text-blue-600 transition-colors disabled:opacity-50">✨ Brainstorm</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'rewrite'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-blue-50 dark:hover:bg-blue-900/50 hover:text-blue-600 transition-colors disabled:opacity-50">✨ Rewrite</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'essay'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-blue-50 dark:hover:bg-blue-900/50 hover:text-blue-600 transition-colors disabled:opacity-50">✨ Essay</button>
+                                  </div>
+                                </div>
+                                <div>
+                                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Productivity</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => { handleAITool(entry.id, 'actions'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/50 hover:text-emerald-600 transition-colors disabled:opacity-50">✨ Actions</button>
+                                    <button onClick={() => { handleAITool(entry.id, 'quiz'); setShowAIActionsId(null); }} disabled={isAnalyzing} className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/50 hover:text-emerald-600 transition-colors disabled:opacity-50">✨ Quiz</button>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            <div>
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Writing & Ideation</h4>
-                              <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleAITool(entry.id, 'eli5')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Simplify (ELI5)</button>
-                                <button onClick={() => handleAITool(entry.id, 'brainstorm')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Brainstorm</button>
-                                <button onClick={() => handleAITool(entry.id, 'rewrite')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Rewrite</button>
-                                <button onClick={() => handleAITool(entry.id, 'essay')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-700 transition-colors shadow-sm disabled:opacity-50">✨ Essay Draft</button>
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Productivity</h4>
-                              <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleAITool(entry.id, 'actions')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors shadow-sm disabled:opacity-50">✨ Action Items</button>
-                                <button onClick={() => handleAITool(entry.id, 'quiz')} disabled={isAnalyzing} className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors shadow-sm disabled:opacity-50">✨ Study Quiz</button>
-                              </div>
-                            </div>
+                            )}
                           </div>
 
-                          <h3 className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 mb-4 border-t border-slate-100 dark:border-slate-800 pt-6">Expanded Summary</h3>
+                          <div className="border-t border-stone-200/50 dark:border-stone-800/50 pt-12 mt-12"></div>
                           <div 
-                            className="prose prose-slate dark:prose-invert prose-base max-w-none text-slate-800 dark:text-slate-300 pb-8" 
-                            dangerouslySetInnerHTML={{ __html: parseMarkdown(injectReferences(entry.fullContent || '', entries)) }} 
+                            className="prose prose-claude dark:prose-invert prose-lg max-w-none text-stone-800 dark:text-stone-300 pb-12 prose-headings:font-serif prose-headings:font-semibold prose-a:text-claude-accent dark:prose-a:text-claude-accentdark prose-blockquote:border-l-claude-accent prose-blockquote:bg-stone-50 dark:prose-blockquote:bg-stone-900/50 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-xl prose-blockquote:text-stone-600 dark:prose-blockquote:text-stone-400 prose-blockquote:not-italic prose-li:marker:text-stone-400 leading-loose" 
+                            dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(entry.fullContent || ''), entries) }} 
                             onClick={handleContentClick}
+                            onMouseOver={handleContentMouseOver}
+                            onMouseOut={handleContentMouseOut}
                             onDragOver={(e) => { e.preventDefault(); }}
                             onDrop={(e) => handleContentDrop(e, entry)}
                           />
@@ -2241,9 +2856,11 @@ Documents:\n${contextText}` }] }
                       )}
                     </div>
                     );
-                  })
+                  })}
+                  </>
                 )}
               </div>
+            </div>
             </div>
 
             {/* Floating Chat Button */}
@@ -2274,7 +2891,7 @@ Documents:\n${contextText}` }] }
                         ) : (
                           <div 
                             className="max-w-[90%] rounded-2xl px-4 py-3 text-base bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm prose prose-slate dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 prose-a:text-indigo-600 dark:prose-a:text-indigo-400"
-                            dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.text) }}
+                            dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(msg.text), entries) }}
                           />
                         )}
                       </div>
@@ -2288,6 +2905,20 @@ Documents:\n${contextText}` }] }
                  </form>
               </div>
             )}
+
+            {hoveredRef && (() => {
+              const refEntry = entries.find(e => e.id === hoveredRef.id);
+              if (!refEntry) return null;
+              return (
+                <div 
+                  className="fixed z-[100] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl p-4 w-72 pointer-events-none transform -translate-x-1/2 -translate-y-full"
+                  style={{ top: hoveredRef.y - 10, left: hoveredRef.x }}
+                >
+                   <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-2">{refEntry.title}</h4>
+                   <p className="text-xs text-slate-500 dark:text-slate-400">{refEntry.summary || 'No summary available.'}</p>
+                </div>
+              );
+            })()}
 
           </div>
         </div>
