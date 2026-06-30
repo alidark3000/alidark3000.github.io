@@ -8,16 +8,12 @@
     <title>Ali Dark | Creative Technologist</title>
     <style>
         :root {
-            --color-cyan: #00E5FF;
-            --color-magenta: #FF00FF;
-            --color-green: #00FF00;
-            --color-yellow: #FFFF00;
-            --color-indigo: #1A237E;
-            --color-red: #FF1100;
-            --color-orange: #FF8800;
-            --color-bg: #333333;
-            --text-dark: #FFFFFF;
-            --text-muted: #BBBBBB;
+            --color-bg: #f8f9fa;
+            --color-text: #212529;
+            --color-accent: #e65100;
+            --color-muted: #6c757d;
+            --color-link: #ff6d00;
+            --color-link-hover: #e65100;
         }
 
         * {
@@ -26,112 +22,73 @@
 
         body {
             margin: 0;
+            padding: 2em 1em;
             min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
-            color: #fff;
-            background-color: #222;
-            font-size: 1.4rem;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-family: Menlo, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
+            font-size: 1.1rem;
+            line-height: 1.6;
         }
 
-        /* Animated Abstract Background */
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: -1;
-            overflow: hidden;
-            background-color: #222;
-        }
-
-        .bg-animation::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-color: hsl(0, 0%, 60%);
-            mix-blend-mode: darken;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .orb {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: min(32.5vw, 275px);
-            height: min(32.5vw, 275px);
-            opacity: 0.85;
-            mix-blend-mode: color-dodge;
-            transition: border-radius 1.2s cubic-bezier(0.25, 1, 0.5, 1);
-            will-change: transform, border-radius;
-        }
-
-        .orb-1 {
-            background: radial-gradient(circle at 30% 30%, hsl(205, 100%, 55%), hsl(215, 100%, 55%), hsl(225, 100%, 55%), hsl(235, 100%, 55%));
-        }
-
-        .orb-3 {
-            background: radial-gradient(circle at 30% 30%, hsl(10, 100%, 55%), hsl(15, 100%, 55%), hsl(20, 100%, 55%), hsl(25, 100%, 55%));
-        }
-
-        .orb-4 {
-            background: radial-gradient(circle at 20% 80%, hsl(110, 100%, 55%), hsl(115, 100%, 55%), hsl(120, 100%, 55%), hsl(125, 100%, 55%));
-        }
-
-        /* Container */
         .container {
-            margin: 1em;
-            position: relative;
-            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
-        section {
-            margin-top: 4em;
+        h1, h2, h3, h4 {
+            color: var(--color-accent);
+            font-weight: normal;
+            font-size: 1em;
         }
 
-        h3, h4 {
-            margin-bottom: 0;
-        }
+        h1 { margin-bottom: 0.5em; text-transform: uppercase; text-decoration: underline; font-weight: bold; }
+        h2 { margin-top: 3em; margin-bottom: 1em; text-transform: uppercase; font-weight: bold; }
+        h3 { margin-top: 1.5em; font-weight: bold; }
 
-        h3 + p,
-        h3 + ul,
-        h3 + ol {
-            margin-top: 0;
-        }
-
-        a,
-        a:visited {
-            color: var(--color-orange);
+        a, a:visited {
+            color: var(--color-link);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-bottom 0.2s ease;
         }
 
         a:hover {
-            color: var(--color-yellow);
+            color: var(--color-link-hover);
+            border-bottom: 1px solid var(--color-link-hover);
+        }
+
+        ul {
+            list-style-type: square;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.1em;
+            background-color: var(--color-accent);
+            vertical-align: middle;
+            animation: blink 1s step-end infinite;
+            margin-left: 5px;
+            margin-bottom: 2px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
         }
 
         @media (max-width: 768px) {
-            body {
-                font-size: 1.2rem;
-            }
-        }
-
-        @media (min-width: 768px) {
-            .orb { width: min(48vw, 412px); height: min(48vw, 412px); }
+            body { font-size: 1rem; }
         }
     </style>
 </head>
 
 <body>
-    <div class="bg-animation">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-3"></div>
-        <div class="orb orb-4"></div>
-    </div>
 
     <main class="container">
         <header>
-            <h1>Ali Dark</h1>
+            <h1>Ali Dark<span class="cursor"></span></h1>
             <p>Creative technologist based in Brisbane Australia. </p>
             <p>I empower people to to fearlessly explore potential and to find fulfilment and self-actualisation. I work for a society that supports self-actualisation, and thus the co-creation of a flourishing future. <a href="https://cls.alidark.com/about">More about me</a>.</p>
         </header>
@@ -172,7 +129,7 @@
             <h2>Apps</h2>
             <p>OK no one downloaded these so I stopped paying for an Apple developer account. Story of my life, but marketing is not my thing. TL,DR: you win!</p>
             <ul>
-                <li> <P><b>Base Player</b>A frontend for your music files. <a href="https://alidark.com/apps/baseplayer1.4.zip">Download Base Player</a></P>
+                <li> <p><b>Base Player</b> - A frontend for your music files. <a href="https://alidark.com/apps/baseplayer1.4.zip">Download Base Player</a></p>
             <li> <p>A simple <a href="/brain.html">AI powered knowledge management tool</a> with local storage. Requires a <a href="https://aistudio.google.com/app/api-keys?project=gen-lang-client-0206510866">Google AI Studio API key</a>. With this tool you can manage a local file that contians notes you've entered, or summaries of links or vids you've dropped in. You can chat with the docs and cross eference them with each other.</p>
             </ul>
         </section>
@@ -188,204 +145,6 @@
 
         
     </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const header = document.querySelector('header');
-            if (header) {
-                const introPara = document.createElement('p');
-                if (window.innerWidth >= 768) {
-                    introPara.innerHTML = "<em>There's a mini game build into this page - catch the balls with your mouse. Easy mode is to catch one. Hard mode is to catch two. glhf.</em>";
-                } else {
-                    introPara.innerHTML = "<em>Don't mind the balls.</em>";
-                }
-                introPara.style.color = "var(--text-muted)";
-                header.appendChild(introPara);
-            }
-
-            const orbs = document.querySelectorAll('.orb');
-            let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false };
-
-            window.addEventListener('mousemove', (e) => {
-                mouse.x = e.clientX;
-                mouse.y = e.clientY;
-                mouse.active = true;
-            });
-
-            window.addEventListener('mouseleave', () => {
-                mouse.active = false;
-            });
-
-            let lastScrollY = window.scrollY;
-            let scrollTimeout;
-            window.addEventListener('scroll', () => {
-                const currentScrollY = window.scrollY;
-                const deltaY = currentScrollY - lastScrollY;
-
-                particles.forEach(p => {
-                    p.vy -= deltaY * 0.05;
-
-                    if (Math.abs(deltaY) > 5 && !p.isDodging) {
-                        p.isDodging = true;
-                        p.el.style.borderRadius = randomShape(Math.min(Math.abs(deltaY) / 50, 0.8));
-                    }
-                });
-
-                lastScrollY = currentScrollY;
-
-                clearTimeout(scrollTimeout);
-                scrollTimeout = setTimeout(() => {
-                    particles.forEach(p => p.isDodging = false);
-                }, 150);
-            });
-
-            function randomShape() {
-                const min = 30;
-                const max = 75;
-                const r = () => Math.floor(Math.random() * (max - min + 1) + min);
-                return `${r()}% ${r()}% ${r()}% ${r()}% / ${r()}% ${r()}% ${r()}% ${r()}%`;
-            }
-
-            const particles = Array.from(orbs).map(orb => {
-                const rect = orb.getBoundingClientRect();
-                const initShape = randomShape();
-                orb.style.borderRadius = initShape;
-                return {
-                    el: orb,
-                    radius: rect.width / 2,
-                    x: Math.random() * (window.innerWidth - rect.width) + rect.width / 2,
-                    y: Math.random() * (window.innerHeight - rect.height) + rect.height / 2,
-                    vx: (Math.random() - 0.5) * 1.5,
-                    vy: (Math.random() - 0.5) * 1.5,
-                    mass: rect.width / 2,
-                    isDodging: false,
-                    impactJiggle: 0
-                };
-            });
-
-            window.addEventListener('resize', () => {
-                particles.forEach(p => {
-                    const width = parseFloat(getComputedStyle(p.el).width);
-                    p.radius = width / 2;
-                    p.mass = p.radius;
-                });
-            });
-
-            function animate() {
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-
-                particles.forEach((p, i) => {
-                    // Random gradual morphing while drifting
-                    if (Math.random() < 0.005) {
-                        p.el.style.borderRadius = randomShape();
-                    }
-
-                    if (mouse.active) {
-                        const dx = p.x - mouse.x;
-                        const dy = p.y - mouse.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < p.radius) {
-                            // Quadratic falloff so it's strong in center, almost zero at edges
-                            const intensity = Math.pow((p.radius - dist) / p.radius, 2);
-                            p.vx += (dx / dist) * intensity * 3.0;
-                            p.vy += (dy / dist) * intensity * 3.0;
-
-                            // Morph on mouse repel
-                            if (!p.isDodging) {
-                                p.isDodging = true;
-                                p.el.style.borderRadius = randomShape(0.5);
-                            }
-                        } else {
-                            p.isDodging = false;
-                        }
-                    } else {
-                        p.isDodging = false;
-                    }
-
-                    p.vx *= 0.98;
-                    p.vy *= 0.98;
-
-                    const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-                    if (speed < 0.05) {
-                        p.vx = 0;
-                        p.vy = 0;
-                    }
-
-                    const maxSpeed = 30;
-                    if (speed > maxSpeed) {
-                        p.vx = (p.vx / speed) * maxSpeed;
-                        p.vy = (p.vy / speed) * maxSpeed;
-                    }
-
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    let hitWall = false;
-                    const bounceCap = 10;
-                    const bounceBoost = 3;
-
-                    const preImpactSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-
-                    const isMobile = width < 768;
-                    const horizCoef = isMobile ? 0.5 : 1.0;
-
-                    if (p.x - p.radius < 0) {
-                        p.x = p.radius;
-                        p.vx = Math.min(Math.abs(p.vx) + bounceBoost, bounceCap) * horizCoef;
-                        hitWall = true;
-                    }
-                    if (p.x + p.radius > width) {
-                        p.x = width - p.radius;
-                        p.vx = -Math.min(Math.abs(p.vx) + bounceBoost, bounceCap) * horizCoef;
-                        hitWall = true;
-                    }
-                    if (p.y - p.radius < 0) {
-                        p.y = p.radius;
-                        p.vy = Math.min(Math.abs(p.vy) + bounceBoost, bounceCap);
-                        hitWall = true;
-                    }
-                    if (p.y + p.radius > height) {
-                        p.y = height - p.radius;
-                        p.vy = -Math.min(Math.abs(p.vy) + bounceBoost, bounceCap);
-                        hitWall = true;
-                    }
-
-                    if (hitWall) {
-                        p.impactJiggle = Math.floor(preImpactSpeed * 1.5);
-                        if (p.impactJiggle < 4) p.impactJiggle = 4;
-                        p.maxJiggle = p.impactJiggle;
-                        p.jiggleIntensity = Math.min(preImpactSpeed / 10, 1.0);
-                    }
-
-                    if (p.impactJiggle > 0) {
-                        p.impactJiggle--;
-
-                        const decayRatio = Math.max(p.impactJiggle / (p.maxJiggle || 1), 0);
-                        const currentIntensity = p.jiggleIntensity * Math.pow(decayRatio, 3.0);
-
-                        if (p.impactJiggle % 5 === 0) {
-                            const transTime = 0.08 + (0.25 * (1 - decayRatio));
-                            p.el.style.transitionDuration = `${transTime.toFixed(2)}s`;
-                            p.el.style.borderRadius = randomShape(currentIntensity);
-                        }
-
-                        if (p.impactJiggle === 0) {
-                            p.el.style.transitionDuration = "1.5s";
-                            p.el.style.borderRadius = randomShape(0);
-                        }
-                    }
-
-                    p.el.style.transform = `translate(${p.x - p.radius}px, ${p.y - p.radius}px)`;
-                });
-
-                requestAnimationFrame(animate);
-            }
-
-            // Start animation
-            setTimeout(animate, 50);
-        });
-    </script>
 </body>
 
 </html>
