@@ -44,7 +44,8 @@
 
         h1 { margin-bottom: 0.5em; text-transform: uppercase; text-decoration: underline; font-weight: bold; }
         h2 { margin-top: 3em; margin-bottom: 1em; text-transform: uppercase; font-weight: bold; }
-        h3 { margin-top: 1.5em; font-weight: bold; }
+        h3 { margin-top: 1.5em; margin-bottom: 0; font-weight: bold; }
+        h3 + p { margin-top: 0; }
 
         a, a:visited {
             color: var(--color-link);
@@ -59,8 +60,22 @@
         }
 
         ul {
-            list-style-type: square;
+            list-style-type: none;
+            padding: 0;
+            margin: 1em 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
         }
+
+        li {
+            flex: 1 1 25%;
+            background-color: #f1f3f5;
+            padding: 1em;
+        }
+
+        li > :first-child { margin-top: 0; }
+        li > :last-child { margin-bottom: 0; }
 
         .cursor {
             display: inline-block;
@@ -101,14 +116,16 @@
 
         <section>
             <h2>Games</h2>
-            <article>
-                <h3>Dots & Cubes & Boxes</h3>
-                <p>A 3d version of the classic pen and paper game "Dots & Boxes," <a href="https://alidark.com/dots/">Dots & Cubes & Boxes</a> was built with Gemini 2.5 pro in 2025. It's a 2 player browser game.</p>
-            </article>
-            <article>
-                <h3>Glitch Arena</h3>
-                <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">Glitch</a> is an independently published PvP 3d Arena first person shooter (In other words, an old school, minimalistic strategic 1v1 action FPS). This passion project started in 2019 and is ongoing here and there. Check the <a href="https://www.youtube.com/watch?v=RApjGd84EBQ">Glitch Arena intro video here</a>.</p>
-            </article>
+            <ul>
+                <li>
+                    <h3>Dots & Cubes & Boxes</h3>
+                    <p>A 3d version of the classic pen and paper game "Dots & Boxes," <a href="https://alidark.com/dots/">Dots & Cubes & Boxes</a> was built with Gemini 2.5 pro in 2025. It's a 2 player browser game.</p>
+                </li>
+                <li>
+                    <h3>Glitch Arena</h3>
+                    <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">Glitch</a> is an independently published PvP 3d Arena first person shooter (In other words, an old school, minimalistic strategic 1v1 action FPS). This passion project started in 2019 and is ongoing here and there. Check the <a href="https://www.youtube.com/watch?v=RApjGd84EBQ">Glitch Arena intro video here</a>.</p>
+                </li>
+            </ul>
         </section>
 
         <section>
@@ -118,10 +135,14 @@
                 <p>AI prompts to help with specific tasks. Switch mode from Fast to Thinking if you can (in the chat box
                     dropdown).</p>
                 <ul>
-                    <li><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to
-                            Structure</a> - brain dump here and get some clarity.</li>
-                    <li><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction
-                            Finder</a> - answer some questions to get ideas for the future.</li>
+                    <li>
+                        <h3><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to Structure</a></h3>
+                        <p>Brain dump here and get some clarity.</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction Finder</a></h3>
+                        <p>Answer some questions to get ideas for the future.</p>
+                    </li>
                 </ul>
 
                     </section>
@@ -132,19 +153,4 @@
                 <li> <p><b>Base Player</b> - A frontend for your music files. <a href="https://alidark.com/apps/baseplayer1.4.zip">Download Base Player</a></p>
             <li> <p>A simple <a href="/brain.html">AI powered knowledge management tool</a> with local storage. Requires a <a href="https://aistudio.google.com/app/api-keys?project=gen-lang-client-0206510866">Google AI Studio API key</a>. With this tool you can manage a local file that contians notes you've entered, or summaries of links or vids you've dropped in. You can chat with the docs and cross eference them with each other.</p>
             </ul>
-        </section>
-
-        <section>
-            <h2>Music</h2>
-            <p>I have made a few tracks I'm proud of. Check out <a
-                    href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">Caravan</a>
-                and <a
-                    href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">How
-                    We Do It</a> on soundcloud.</p>
-        </section>
-
-        
-    </main>
-</body>
-
-</html>
+        </
