@@ -24,9 +24,9 @@
           colors: {
             claude: {
               bg: '#f5f5f5',
-              bgdark: '#121212',
+              bgdark: '#202020',
               surface: '#ffffff',
-              surfacedark: '#1e1e1e',
+              surfacedark: '#2b2b2b',
               accent: '#D47A57',
               accentdark: '#C76541',
             },
@@ -35,65 +35,65 @@
               100: '#f5f5f5',
               200: '#e5e5e5',
               300: '#d4d4d4',
-              400: '#a3a3a3',
-              500: '#737373',
-              600: '#525252',
-              700: '#404040',
-              800: '#262626',
-              900: '#171717',
-              950: '#0a0a0a',
+              400: '#a1a1aa',
+              500: '#71717a',
+              600: '#52525b',
+              700: '#383838',
+              800: '#2b2b2b',
+              900: '#202020',
+              950: '#181818',
             },
             stone: {
               50: '#fafafa',
               100: '#f5f5f5',
               200: '#e5e5e5',
               300: '#d4d4d4',
-              400: '#a3a3a3',
-              500: '#737373',
-              600: '#525252',
-              700: '#404040',
-              800: '#262626',
-              900: '#171717',
-              950: '#0a0a0a',
+              400: '#a1a1aa',
+              500: '#71717a',
+              600: '#52525b',
+              700: '#383838',
+              800: '#2b2b2b',
+              900: '#202020',
+              950: '#181818',
             },
             gray: {
               50: '#fafafa',
               100: '#f5f5f5',
               200: '#e5e5e5',
               300: '#d4d4d4',
-              400: '#a3a3a3',
-              500: '#737373',
-              600: '#525252',
-              700: '#404040',
-              800: '#262626',
-              900: '#171717',
-              950: '#0a0a0a',
+              400: '#a1a1aa',
+              500: '#71717a',
+              600: '#52525b',
+              700: '#383838',
+              800: '#2b2b2b',
+              900: '#202020',
+              950: '#181818',
             },
             zinc: {
               50: '#fafafa',
               100: '#f5f5f5',
               200: '#e5e5e5',
               300: '#d4d4d4',
-              400: '#a3a3a3',
-              500: '#737373',
-              600: '#525252',
-              700: '#404040',
-              800: '#262626',
-              900: '#171717',
-              950: '#0a0a0a',
+              400: '#a1a1aa',
+              500: '#71717a',
+              600: '#52525b',
+              700: '#383838',
+              800: '#2b2b2b',
+              900: '#202020',
+              950: '#181818',
             },
             neutral: {
               50: '#fafafa',
               100: '#f5f5f5',
               200: '#e5e5e5',
               300: '#d4d4d4',
-              400: '#a3a3a3',
-              500: '#737373',
-              600: '#525252',
-              700: '#404040',
-              800: '#262626',
-              900: '#171717',
-              950: '#0a0a0a',
+              400: '#a1a1aa',
+              500: '#71717a',
+              600: '#52525b',
+              700: '#383838',
+              800: '#2b2b2b',
+              900: '#202020',
+              950: '#181818',
             }
           },
           typography: (theme) => ({
@@ -224,7 +224,7 @@
     /* Dark mode adjustments */
     @media (prefers-color-scheme: dark) {
       .theme-neubrutalist {
-        background-color: #0a0a0a !important;
+        background-color: #1e1e1e !important;
       }
       .theme-neubrutalist select {
         background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
@@ -486,9 +486,10 @@
 
     const injectReferences = (text, allEntries) => {
       if (!text) return '';
-      return text.replace(/\[\[kb-ref:([^\]]+)\]\]/g, (match, entryId) => {
-        const refEntry = (allEntries || []).find(e => e.id === entryId);
-        if (!refEntry) return `<span class="text-red-500 dark:text-red-400 text-xs font-semibold bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded">[Broken Link: ${entryId}]</span>`;
+      return text.replace(/\[\[(?:kb-ref:|ref:)?([^\]]+)\]\]|\[(?:kb-ref:|ref:)?(entry-[a-zA-Z0-9_-]+)\](?!\()/gi, (match, id1, id2) => {
+        const rawId = (id1 || id2 || '').trim();
+        const refEntry = (allEntries || []).find(e => e.id === rawId || String(e.numericId) === rawId);
+        if (!refEntry) return `<span class="text-red-500 dark:text-red-400 text-xs font-semibold bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded">[Broken Link: ${rawId}]</span>`;
         return `<span class="kb-embedded-ref cursor-pointer text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold px-1.5 py-0.5 mx-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 rounded transition-colors" data-id="${refEntry.id}" title="${refEntry.title}">[Ref: ${refEntry.numericId}]</span>`;
       });
     };
@@ -653,7 +654,7 @@
       return JSON.parse(t);
     };
 
-    const EditableText = ({ text, onSave, className = '', tag = 'span', multiline = false, stripPrefix = '' }) => {
+    const EditableText = ({ text, onSave, className = '', tag = 'span', multiline = false, stripPrefix = '', renderView = null, placeholder = '' }) => {
       const [isEditing, setIsEditing] = useState(false);
       const elementRef = useRef(null);
 
@@ -665,14 +666,20 @@
       const handleBlur = () => {
         setIsEditing(false);
         if (elementRef.current) {
-          let newText = elementRef.current.innerText.trim();
-          if (newText !== text && newText !== stripPrefix + text && newText !== '') {
-             if (stripPrefix && newText.startsWith(stripPrefix)) {
-                 newText = newText.substring(stripPrefix.length);
-             }
-             onSave(newText);
+          let newText = elementRef.current.innerText;
+          if (newText !== undefined && newText !== null) {
+            newText = newText.trim();
           } else {
-             elementRef.current.innerText = (stripPrefix || '') + text;
+            newText = '';
+          }
+          const originalText = (text || '').trim();
+          if (newText !== originalText && newText !== (stripPrefix + originalText).trim()) {
+            if (stripPrefix && newText.startsWith(stripPrefix)) {
+              newText = newText.substring(stripPrefix.length);
+            }
+            onSave(newText);
+          } else if (!renderView) {
+            elementRef.current.innerText = (stripPrefix || '') + (text || '');
           }
         }
       };
@@ -683,19 +690,22 @@
           elementRef.current.blur();
         } else if (e.key === 'Escape') {
           e.preventDefault();
-          elementRef.current.innerText = (stripPrefix || '') + text;
           setIsEditing(false);
+          if (elementRef.current && !renderView) {
+            elementRef.current.innerText = (stripPrefix || '') + (text || '');
+          }
         }
       };
 
       useEffect(() => {
-        if (elementRef.current && !isEditing) {
+        if (elementRef.current && !isEditing && !renderView) {
           elementRef.current.innerText = (stripPrefix || '') + (text || '');
         }
-      }, [text, isEditing, stripPrefix]);
+      }, [text, isEditing, stripPrefix, renderView]);
 
       useEffect(() => {
         if (isEditing && elementRef.current) {
+          elementRef.current.innerText = (stripPrefix || '') + (text || '');
           elementRef.current.focus();
           const selection = window.getSelection();
           const range = document.createRange();
@@ -714,10 +724,11 @@
           onDoubleClick={handleDoubleClick}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className={`${className} ${isEditing ? 'outline-none ring-2 ring-indigo-500 rounded bg-white/90 dark:bg-slate-800/90 cursor-text' : ''}`}
+          className={`${className} ${isEditing ? 'outline-none ring-2 ring-indigo-500 rounded bg-white/90 dark:bg-slate-800/90 cursor-text p-2 font-mono whitespace-pre-wrap text-sm block' : ''}`}
           suppressContentEditableWarning={true}
+          title={!isEditing ? "Double-click to edit inline" : undefined}
         >
-          {stripPrefix}{text}
+          {isEditing ? (stripPrefix || '') + (text || '') : (renderView ? renderView(text) : `${stripPrefix || ''}${text || placeholder}`)}
         </Tag>
       );
     };
@@ -786,6 +797,66 @@
       const [activeTags, setActiveTags] = useState([]);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
+      const [navHistory, setNavHistory] = useState([]);
+      const [navIndex, setNavIndex] = useState(-1);
+
+      const selectEntryWithHistory = (newIds, isHistoryAction = false) => {
+        const ids = Array.isArray(newIds) ? newIds : [newIds];
+        setSelectedEntryIds(ids);
+        if (!isHistoryAction && ids.length > 0) {
+          setNavHistory(prev => {
+            const sliced = prev.slice(0, navIndex + 1);
+            const last = sliced[sliced.length - 1];
+            const isSame = last && last.length === ids.length && last.every((x, i) => x === ids[i]);
+            if (isSame) return prev;
+            return [...sliced, ids];
+          });
+          setNavIndex(prev => {
+            const sliced = navHistory.slice(0, prev + 1);
+            const last = sliced[sliced.length - 1];
+            const isSame = last && last.length === ids.length && last.every((x, i) => x === ids[i]);
+            return isSame ? prev : sliced.length;
+          });
+        }
+      };
+
+      const canGoBack = navIndex > 0;
+      const canGoForward = navIndex >= 0 && navIndex < navHistory.length - 1;
+
+      const handleNavBack = () => {
+        if (canGoBack) {
+          const newIdx = navIndex - 1;
+          setNavIndex(newIdx);
+          const targetIds = navHistory[newIdx] || [];
+          setSelectedEntryIds(targetIds);
+        }
+      };
+
+      const handleNavForward = () => {
+        if (canGoForward) {
+          const newIdx = navIndex + 1;
+          setNavIndex(newIdx);
+          const targetIds = navHistory[newIdx] || [];
+          setSelectedEntryIds(targetIds);
+        }
+      };
+
+      useEffect(() => {
+        const handleNavKeyDown = (e) => {
+          const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+          if (isInput) return;
+
+          if ((e.altKey && e.key === 'ArrowLeft') || ((e.metaKey || e.ctrlKey) && e.key === '[')) {
+            e.preventDefault();
+            handleNavBack();
+          } else if ((e.altKey && e.key === 'ArrowRight') || ((e.metaKey || e.ctrlKey) && e.key === ']')) {
+            e.preventDefault();
+            handleNavForward();
+          }
+        };
+        window.addEventListener('keydown', handleNavKeyDown);
+        return () => window.removeEventListener('keydown', handleNavKeyDown);
+      }, [navIndex, navHistory]);
 
       const [addInput, setAddInput] = useState('');
       const [isDragging, setIsDragging] = useState(false);
@@ -813,6 +884,7 @@
 
       const [dragOverEntryId, setDragOverEntryId] = useState(null);
       const [hoveredRef, setHoveredRef] = useState(null);
+      const [activeRefModal, setActiveRefModal] = useState(null);
       const [isTagsOpen, setIsTagsOpen] = useState(true);
       const [showWorkspaceOptions, setShowWorkspaceOptions] = useState(false);
       const [legacyChats, setLegacyChats] = useState({});
@@ -935,7 +1007,10 @@
           const migrated = migrateWorkspaceData(data);
           
           setHistoryState({ past: [], present: migrated.entries });
-          setSelectedEntryIds(migrated.entries.length > 0 ? [migrated.entries[0].id] : []);
+          const initialIds = migrated.entries.length > 0 ? [migrated.entries[0].id] : [];
+          setSelectedEntryIds(initialIds);
+          setNavHistory(initialIds.length > 0 ? [initialIds] : []);
+          setNavIndex(initialIds.length > 0 ? 0 : -1);
           
           setApiKeys(migrated.apiKeys);
           setModel(migrated.model);
@@ -986,6 +1061,8 @@
           setAssistantChats({ workspace: [] });
           setLegacyChats({});
           setSelectedEntryIds([INITIAL_ENTRY.id]);
+          setNavHistory([[INITIAL_ENTRY.id]]);
+          setNavIndex(0);
           
           const file = await handle.getFile();
           setLastSyncTime(file.lastModified);
@@ -1009,7 +1086,10 @@
             const migrated = migrateWorkspaceData(data);
 
             setHistoryState({ past: [], present: migrated.entries });
-            setSelectedEntryIds(migrated.entries.length > 0 ? [migrated.entries[0].id] : []);
+            const initialIds = migrated.entries.length > 0 ? [migrated.entries[0].id] : [];
+            setSelectedEntryIds(initialIds);
+            setNavHistory(initialIds.length > 0 ? [initialIds] : []);
+            setNavIndex(initialIds.length > 0 ? 0 : -1);
             setApiKeys(migrated.apiKeys);
             setModel(migrated.model);
             setTheme(migrated.theme);
@@ -1159,7 +1239,7 @@
             originalWebTitle = file.name;
             prompt = `Analyze this PDF document and return JSON:
             1. Title (Use the document title or "${file.name}").
-            2. TLDR summary (MAX 25 WORDS).
+            2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words).
             3. 3-5 key points in 'shortVersion'.
             4. Detailed reconstructed fullContent in clean Markdown.
             ${taxonomyRules}`;
@@ -1183,7 +1263,7 @@
               } catch(e) {}
               prompt = `Use Google Search to find the exact content, transcript, or summary for this YouTube video (URL: ${droppedData}, ID: ${videoId}). Return strictly JSON:
               1. Title.
-              2. TLDR summary (MAX 25 WORDS).
+              2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words).
               3. 3-5 key points in 'shortVersion'.
               4. Detailed reconstructed fullContent in clean Markdown.
               ${taxonomyRules}`;
@@ -1195,7 +1275,7 @@
                 rawContent = scrapeResult.content;
                 prompt = `Analyze this web article and return strictly JSON:
                 1. Title.
-                2. TLDR summary (MAX 25 WORDS).
+                2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words).
                 3. 3-5 key takeaways in 'shortVersion'.
                 4. Reconstruct detailed fullContent in clean Markdown.
                 ${taxonomyRules}
@@ -1203,12 +1283,12 @@
               } catch (err) {
                 useSearchTool = true;
                 prompt = `Use Google Search to find content for this URL: ${droppedData}. Return strictly JSON:
-                1. Title. 2. TLDR summary (MAX 25 WORDS). 3. 3-5 key points in 'shortVersion'. 4. Reconstruct detailed fullContent in Markdown. ${taxonomyRules}`;
+                1. Title. 2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words). 3. 3-5 key points in 'shortVersion'. 4. Reconstruct detailed fullContent in Markdown. ${taxonomyRules}`;
               }
               payloadParts = [{ text: prompt }];
             } else {
               prompt = `Analyze this text and return strictly JSON:
-              1. Descriptive Title. 2. TLDR summary (MAX 25 WORDS). 3. 3-5 key takeaways in 'shortVersion'. 4. Format input text as clean Markdown in 'fullContent'. ${taxonomyRules}
+              1. Descriptive Title. 2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words). 3. 3-5 key takeaways in 'shortVersion'. 4. Format input text as clean Markdown in 'fullContent'. ${taxonomyRules}
               Content:\n${rawContent.substring(0, 40000)}`;
               payloadParts = [{ text: prompt }];
             }
@@ -1278,9 +1358,10 @@
 
       const handleEntryClick = (e, id) => {
         if (e.ctrlKey || e.metaKey) {
-          setSelectedEntryIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+          const next = selectedEntryIds.includes(id) ? selectedEntryIds.filter(i => i !== id) : [...selectedEntryIds, id];
+          selectEntryWithHistory(next);
         } else {
-          setSelectedEntryIds([id]);
+          selectEntryWithHistory([id]);
         }
       };
 
@@ -1316,7 +1397,7 @@
           pinned: false
         };
         setEntries(prev => [newEntry, ...prev]);
-        setSelectedEntryIds([newId]);
+        selectEntryWithHistory([newId]);
         setEditData(prev => ({
           ...prev,
           [newId]: {
@@ -1401,7 +1482,7 @@
               instructions.push("1. Read this note and suggest a punchy, highly descriptive title (maximum 6 words) in 'title'.");
             }
             if (needsSummary) {
-              instructions.push("2. Provide a concise executive summary (TL;DR) of this note in 1-2 clear sentences in 'summary'.");
+              instructions.push("2. Provide an ultra-concise executive summary (TL;DR) of this note in 1 brief sentence (strictly under 15 words) in 'summary'.");
             }
             if (needsTakeaways) {
               instructions.push("3. Extract 3-5 crucial key takeaways in 'shortVersion'.");
@@ -1567,7 +1648,7 @@
         try {
           const data = editData[id] || entries.find(e => e.id === id);
           if (!data) throw new Error("Note not found.");
-          const prompt = `Write a structured executive summary (TL;DR) of this note. Capture core context and key points. Limit strictly to 2 sentences. Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
+          const prompt = `Write an ultra-concise executive summary (TL;DR) of this note capturing only the single core takeaway. Limit strictly to 1 short sentence (under 15 words). Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
@@ -1779,8 +1860,16 @@
       const handleContentClick = (e) => {
         const refEl = e.target.closest('.kb-embedded-ref');
         if (refEl) {
+          e.preventDefault();
+          e.stopPropagation();
           const refId = refEl.getAttribute('data-id');
-          if (refId) setSelectedEntryIds([refId]);
+          if (refId) {
+            const found = entries.find(ent => ent.id === refId);
+            if (found) {
+              setActiveRefModal(found);
+              setHoveredRef(null);
+            }
+          }
         }
       };
 
@@ -2036,7 +2125,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
       if (appState === 'init') {
         return (
-          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
             <i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 dark:text-indigo-400"></i>
           </div>
         );
@@ -2044,7 +2133,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
       if (appState === 'landing') {
         return (
-          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
             <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 text-center max-w-md w-full relative">
               <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <i className="fa-solid fa-brain text-3xl"></i>
@@ -2112,7 +2201,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
       }
 
       return (
-        <div className={`flex h-screen w-full bg-slate-50 dark:bg-[#0c1017] text-slate-800 dark:text-slate-200 font-sans overflow-hidden relative transition-colors duration-200 ${theme === 'neubrutalist' ? 'theme-neubrutalist' : ''} ${theme === 'msdos' ? 'theme-msdos' : ''}`}>
+        <div className={`flex h-screen w-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans overflow-hidden relative transition-colors duration-200 ${theme === 'neubrutalist' ? 'theme-neubrutalist' : ''} ${theme === 'msdos' ? 'theme-msdos' : ''}`}>
           
           {/* SETTINGS MODAL */}
           {showKeyModal && (
@@ -2232,22 +2321,130 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           {/* CHANGELOG MODAL */}
           {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
 
+          {/* INLINE REFERENCE EXECUTIVE SUMMARY MODAL */}
+          {activeRefModal && (
+            <div 
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[85] p-4"
+              onClick={() => setActiveRefModal(null)}
+            >
+              <div 
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden text-left border border-slate-200 dark:border-slate-800"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start p-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                  <div className="space-y-1.5 pr-4 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/40">
+                        Ref #{activeRefModal.numericId}
+                      </span>
+                      {Array.isArray(activeRefModal.projects) && activeRefModal.projects.slice(0, 1).map(p => (
+                        <span key={p} className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium">
+                          {p}
+                        </span>
+                      ))}
+                      {Array.isArray(activeRefModal.categories) && activeRefModal.categories.slice(0, 1).map(c => (
+                        <span key={c} className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                      {activeRefModal.title || 'Untitled Note'}
+                    </h2>
+                  </div>
+                  <button 
+                    onClick={() => setActiveRefModal(null)} 
+                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <i className="fa-solid fa-xmark text-lg"></i>
+                  </button>
+                </div>
+
+                {/* Content Body */}
+                <div className="p-6 overflow-y-auto space-y-4 text-xs leading-relaxed">
+                  {/* Executive Summary */}
+                  <div>
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2 flex items-center gap-1.5">
+                      <i className="fa-solid fa-bolt text-indigo-500"></i> Executive Summary
+                    </h3>
+                    <div className="bg-slate-50/80 dark:bg-slate-800/50 border-l-4 border-indigo-500 rounded-r-xl p-4 text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                      {activeRefModal.summary || 'No executive summary available for this note.'}
+                    </div>
+                  </div>
+
+                  {/* Key Takeaways */}
+                  {Array.isArray(activeRefModal.shortVersion) && activeRefModal.shortVersion.length > 0 && (
+                    <div>
+                      <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2 flex items-center gap-1.5">
+                        <i className="fa-solid fa-list-check text-indigo-500"></i> Key Takeaways
+                      </h3>
+                      <ul className="space-y-1.5 pl-1">
+                        {activeRefModal.shortVersion.map((point, idx) => (
+                          <li key={idx} className="flex items-start text-xs text-slate-600 dark:text-slate-300 leading-snug">
+                            <span className="text-indigo-500 mr-2 font-bold">•</span>
+                            <span dangerouslySetInnerHTML={{ __html: parseMarkdownInline(point) }}></span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {Array.isArray(activeRefModal.tags) && activeRefModal.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      {activeRefModal.tags.map(t => (
+                        <span key={t} className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-mono">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Updated {new Date(activeRefModal.updatedAt || activeRefModal.createdAt || Date.now()).toLocaleDateString()}
+                  </span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setActiveRefModal(null)} 
+                      className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button 
+                      onClick={() => {
+                        selectEntryWithHistory([activeRefModal.id]);
+                        setActiveRefModal(null);
+                      }} 
+                      className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
+                    >
+                      <i className="fa-solid fa-arrow-right text-[10px]"></i> Jump to Note
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* LEFT SIDEBAR: TAXONOMY & WORKSPACE */}
           {isLeftSidebarOpen && (
             <div className="w-60 lg:w-64 flex-shrink-0 flex flex-col z-20 transition-all duration-300">
               
               {/* Workspace Header */}
-              <div className="p-3.5 flex justify-between items-center">
-                <div className="flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
+              <div className="p-3.5 flex justify-between items-center shrink-0">
+                <div className="flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 truncate h-8">
                   <div className="w-2 h-2 rounded-full bg-green-500 mr-2 shrink-0" title="Local file syncing active"></div>
                   <span className="truncate max-w-[120px]" title={fileName}>{fileName || 'Workspace'}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={openSettings} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Settings">
+                <div className="flex items-center gap-1 h-8">
+                  <button onClick={openSettings} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Settings">
                     <i className="fa-solid fa-gear text-sm"></i>
                   </button>
                   <div className="relative">
-                    <button onClick={() => setShowWorkspaceOptions(!showWorkspaceOptions)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Workspace options">
+                    <button onClick={() => setShowWorkspaceOptions(!showWorkspaceOptions)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Workspace options">
                       <i className="fa-solid fa-ellipsis-vertical text-sm"></i>
                     </button>
                     {showWorkspaceOptions && (
@@ -2285,7 +2482,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       </div>
                     )}
                   </div>
-                  <button onClick={() => setIsLeftSidebarOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Hide Sidebar">
+                  <button onClick={() => setIsLeftSidebarOpen(false)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Hide Sidebar">
                     <i className="fa-solid fa-chevron-left text-xs"></i>
                   </button>
                 </div>
@@ -2463,25 +2660,25 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
               {/* List Header */}
               <div className="p-3.5 flex flex-col gap-2.5">
-                <div className="flex gap-2 items-center">
-                  <div className="relative flex-1">
+                <div className="flex gap-2 items-center h-8">
+                  <div className="relative flex-1 h-8">
                     <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
                     <input 
                       type="text" 
                       placeholder="Search notes..." 
                       value={searchQuery} 
                       onChange={(e) => setSearchQuery(e.target.value)} 
-                      className="w-full pl-8 pr-3 py-1.5 bg-slate-100/80 dark:bg-slate-800/80 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-transparent dark:text-slate-100 transition-all" 
+                      className="w-full h-8 pl-8 pr-3 bg-slate-100/80 dark:bg-slate-800/80 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-transparent dark:text-slate-100 transition-all box-border" 
                     />
                   </div>
                   <button 
                     onClick={handleNewNote} 
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors shrink-0" 
+                    className="h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors shrink-0 box-border" 
                     title="Create new blank note"
                   >
                     <i className="fa-solid fa-plus text-xs"></i> Note
                   </button>
-                  <button onClick={() => setIsListSidebarOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hidden lg:block" title="Hide note list">
+                  <button onClick={() => setIsListSidebarOpen(false)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hidden lg:flex shrink-0" title="Hide note list">
                     <i className="fa-solid fa-chevron-left text-xs"></i>
                   </button>
                 </div>
@@ -2563,7 +2760,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                   const borderClasses = isSelected
                     ? `${typeFullBorder} ring-1 ${typeRing} bg-white dark:bg-slate-800 shadow-md`
-                    : `${typeLeftBorder} border-slate-300/50 dark:border-white/5 bg-slate-200/50 dark:bg-black/40 hover:bg-slate-200/80 dark:hover:bg-black/60 hover:shadow-sm`;
+                    : `${typeLeftBorder} border-slate-300/50 dark:border-white/[0.06] bg-slate-200/50 dark:bg-white/[0.03] hover:bg-slate-200/80 dark:hover:bg-white/[0.06] hover:shadow-sm`;
 
                   return (
                     <div 
@@ -2630,30 +2827,51 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0">
             
             {/* Top Bar / Actions */}
-            <div className="h-12 flex justify-between items-center px-4 shrink-0">
-              <div className="flex items-center gap-2">
+            <div className="p-3.5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2 h-8">
                 {!isLeftSidebarOpen && (
-                  <button onClick={() => setIsLeftSidebarOpen(true)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs" title="Open taxonomy sidebar">
+                  <button onClick={() => setIsLeftSidebarOpen(true)} className="h-8 px-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs" title="Open taxonomy sidebar">
                     <i className="fa-solid fa-folder-tree mr-1"></i>
                   </button>
                 )}
                 {!isListSidebarOpen && (
-                  <button onClick={() => setIsListSidebarOpen(true)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs" title="Open note list">
+                  <button onClick={() => setIsListSidebarOpen(true)} className="h-8 px-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs" title="Open note list">
                     <i className="fa-solid fa-list mr-1"></i>
                   </button>
                 )}
+
+                {/* Back / Forward Navigation Controls */}
+                <div className="flex items-center gap-0.5 bg-slate-100/80 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50 h-8 box-border">
+                  <button 
+                    onClick={handleNavBack} 
+                    disabled={!canGoBack} 
+                    className="p-1 rounded text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs flex items-center justify-center w-6 h-6" 
+                    title="Back (Alt+Left)"
+                  >
+                    <i className="fa-solid fa-arrow-left text-[10px]"></i>
+                  </button>
+                  <button 
+                    onClick={handleNavForward} 
+                    disabled={!canGoForward} 
+                    className="p-1 rounded text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs flex items-center justify-center w-6 h-6" 
+                    title="Forward (Alt+Right)"
+                  >
+                    <i className="fa-solid fa-arrow-right text-[10px]"></i>
+                  </button>
+                </div>
+
                 {selectedEntryIds.length > 1 && (
-                  <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full">
+                  <span className="h-8 flex items-center text-xs font-semibold px-2.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full box-border">
                     {selectedEntryIds.length} notes selected
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 h-8">
                 {activeSingleEntry && !editingEntries[activeSingleEntry.id] && (
                   <button 
                     onClick={() => startEditing(activeSingleEntry)} 
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    className="h-8 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors box-border" 
                     title="Edit note"
                   >
                     <i className="fa-solid fa-pen text-xs"></i> Edit
@@ -2662,7 +2880,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                 <button 
                   onClick={() => setIsAssistantOpen(!isAssistantOpen)} 
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${isAssistantOpen ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
+                  className={`h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors box-border ${isAssistantOpen ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
                   title="Toggle AI Assistant (Cmd+J)"
                 >
                   <i className="fa-solid fa-sparkles text-xs"></i> Assistant
@@ -2703,7 +2921,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {selectedEntries.map(e => (
-                      <div key={e.id} onClick={() => setSelectedEntryIds([e.id])} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 cursor-pointer bg-white dark:bg-slate-900 transition-all">
+                      <div key={e.id} onClick={() => selectEntryWithHistory([e.id])} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 cursor-pointer bg-white dark:bg-slate-900 transition-all">
                         <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate mb-1">{e.title}</div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{e.summary || 'No summary available.'}</p>
                       </div>
@@ -2751,7 +2969,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       value={editData[activeSingleEntry.id]?.summary || ''} 
                       onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], summary: e.target.value } }))} 
                       className="w-full px-4 py-2.5 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed" 
-                      placeholder="Brief 1-2 sentence executive summary..."
+                      placeholder="Ultra-concise 1-sentence executive summary (under 15 words)..."
                     ></textarea>
                   </div>
 
@@ -2941,14 +3159,36 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   {/* Key Takeaways */}
                   {Array.isArray(activeSingleEntry.shortVersion) && activeSingleEntry.shortVersion.length > 0 && (
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3 flex items-center gap-1.5">
-                        <i className="fa-solid fa-list-check text-indigo-500"></i> Key Takeaways
-                      </h3>
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                          <i className="fa-solid fa-list-check text-indigo-500"></i> Key Takeaways
+                        </h3>
+                      </div>
                       <ul className="space-y-2">
                         {activeSingleEntry.shortVersion.map((point, idx) => (
                           <li key={idx} className="flex items-start text-sm text-slate-700 dark:text-slate-300 leading-snug">
-                            <span className="text-indigo-500 mr-2 font-bold">•</span>
-                            <span dangerouslySetInnerHTML={{ __html: parseMarkdownInline(point) }}></span>
+                            <span className="text-indigo-500 mr-2 font-bold shrink-0 mt-0.5">•</span>
+                            <EditableText 
+                              key={`takeaway-${activeSingleEntry.id}-${idx}`}
+                              tag="span"
+                              multiline={true}
+                              className="flex-1 cursor-text"
+                              text={point}
+                              renderView={(val) => <span dangerouslySetInnerHTML={{ __html: parseMarkdownInline(val) }} />}
+                              onSave={(newText) => {
+                                const targetId = activeSingleEntry.id;
+                                setEntries(prev => prev.map(e => {
+                                  if (e.id !== targetId) return e;
+                                  const updated = [...(e.shortVersion || [])];
+                                  if (newText.trim() === '') {
+                                    updated.splice(idx, 1);
+                                  } else {
+                                    updated[idx] = newText.trim();
+                                  }
+                                  return { ...e, shortVersion: updated, updatedAt: Date.now() };
+                                }));
+                              }} 
+                            />
                           </li>
                         ))}
                       </ul>
@@ -2969,11 +3209,27 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         ? activeSingleEntry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
                         : ''
                     );
-                    if (!noteMarkdown) return null;
                     return (
-                      <div 
-                        className="prose prose-slate dark:prose-invert prose-base max-w-none text-slate-800 dark:text-slate-200 leading-relaxed font-sans prose-headings:font-semibold prose-a:text-indigo-600 dark:prose-a:text-indigo-400"
-                        dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(noteMarkdown), entries) }}
+                      <EditableText 
+                        key={`content-${activeSingleEntry.id}`}
+                        tag="div"
+                        multiline={true}
+                        className="prose prose-slate dark:prose-invert prose-base max-w-none text-slate-800 dark:text-slate-200 leading-relaxed font-sans prose-headings:font-semibold prose-a:text-indigo-600 dark:prose-a:text-indigo-400 cursor-text min-h-[60px]"
+                        text={noteMarkdown}
+                        placeholder="Double-click to write note content in Markdown..."
+                        renderView={(val) => (
+                          val ? (
+                            <div 
+                              dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(val), entries) }} 
+                            />
+                          ) : (
+                            <p className="text-slate-400 italic">Double-click to write note content in Markdown...</p>
+                          )
+                        )}
+                        onSave={(newText) => {
+                          const targetId = activeSingleEntry.id;
+                          setEntries(prev => prev.map(e => e.id === targetId ? { ...e, fullContent: newText, updatedAt: Date.now() } : e));
+                        }} 
                       />
                     );
                   })()}
@@ -2991,7 +3247,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           return (
                             <div 
                               key={refId} 
-                              onClick={() => setSelectedEntryIds([refId])} 
+                              onClick={() => selectEntryWithHistory([refId])} 
                               className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 bg-white dark:bg-slate-900 cursor-pointer transition-all flex justify-between items-center"
                             >
                               <div className="truncate mr-2">
@@ -3012,12 +3268,12 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
           {/* RIGHT COLUMN: UNIFIED AI ASSISTANT SIDEBAR */}
           {isAssistantOpen && (
-            <div className="w-80 lg:w-96 flex-shrink-0 max-lg:bg-slate-50 max-lg:dark:bg-[#0c1017] max-lg:shadow-2xl flex flex-col z-20 transition-all duration-300">
+            <div className="w-80 lg:w-96 flex-shrink-0 max-lg:bg-slate-50 max-lg:dark:bg-slate-900 max-lg:shadow-2xl flex flex-col z-20 transition-all duration-300">
               
               {/* Assistant Header */}
-              <div className="p-3 border-b border-slate-200/60 dark:border-slate-800 shrink-0 space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
+              <div className="p-3.5 border-b border-slate-200/60 dark:border-slate-800 shrink-0 space-y-2.5">
+                <div className="flex justify-between items-center h-8">
+                  <div className="flex items-center gap-2 h-8">
                     <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs shadow-sm">
                       <i className="fa-solid fa-sparkles"></i>
                     </div>
@@ -3030,13 +3286,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 h-8">
                     {assistantMessages.length > 0 && (
-                      <button onClick={clearAssistantHistory} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition-colors text-xs" title="Clear current chat">
+                      <button onClick={clearAssistantHistory} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg transition-colors text-xs" title="Clear current chat">
                         <i className="fa-solid fa-trash-can"></i>
                       </button>
                     )}
-                    <button onClick={() => setIsAssistantOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors text-xs" title="Close assistant">
+                    <button onClick={() => setIsAssistantOpen(false)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors text-xs" title="Close assistant">
                       <i className="fa-solid fa-xmark text-sm"></i>
                     </button>
                   </div>
