@@ -98,6 +98,8 @@
       --scrollbar-thumb: #555555;
       --scrollbar-thumb-hover: #777777;
       --selection-bg: #37383a;
+      --chat-user-bg: rgba(255, 82, 82, 0.12);
+      --chat-user-border: rgba(255, 82, 82, 0.22);
       --link-color: #ff5252;
       --link-hover: #ff7b7b;
       --link-underline: rgba(255, 82, 82, 0.4);
@@ -133,6 +135,8 @@
         --scrollbar-thumb: #c7c7cc;
         --scrollbar-thumb-hover: #8e8e93;
         --selection-bg: #dbeafe;
+        --chat-user-bg: rgba(211, 47, 47, 0.08);
+        --chat-user-border: rgba(211, 47, 47, 0.18);
         --link-color: #d32f2f;
         --link-hover: #b71c1c;
         --link-underline: rgba(211, 47, 47, 0.35);
@@ -3333,15 +3337,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 h-8">
-                    <button 
-                      onClick={handleStartNewChat} 
-                      className="btn-secondary text-[11px] px-2 py-1 flex items-center gap-1.5" 
-                      title="Start new chat (archives current conversation)"
-                    >
-                      <i className="fa-solid fa-plus text-[10px]"></i>
-                      <span>New Chat</span>
-                    </button>
+                  <div className="flex items-center gap-1 h-8">
                     {assistantMessages.length > 0 && (
                       <button 
                         onClick={handleArchiveCurrentChat} 
@@ -3361,6 +3357,17 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     </button>
                   </div>
                 </div>
+
+                {/* New Chat Button (Prominent Colored Button on its own line) */}
+                <button 
+                  type="button"
+                  onClick={handleStartNewChat} 
+                  className="btn-primary w-full py-2 px-3 text-xs font-semibold shadow-xs" 
+                  title="Start new chat (archives current conversation)"
+                >
+                  <i className="fa-solid fa-plus text-xs"></i>
+                  <span>New Chat</span>
+                </button>
 
                 {/* Scope Segmented Control */}
                 <div className="grid grid-cols-2 p-0.5 bg-[var(--bg-main)] rounded text-[11px] font-medium font-mono">
@@ -3435,7 +3442,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[90%] rounded px-3.5 py-2.5 shadow-[var(--track-card-shadow)] leading-relaxed ${
                           msg.role === 'user' 
-                            ? 'bg-[var(--accent)] text-white' 
+                            ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)] border border-[var(--chat-user-border)]' 
                             : 'bg-[var(--card-bg)] text-[var(--text-main)]'
                         }`}>
                           {msg.role === 'user' ? (
@@ -3560,7 +3567,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                                   <div key={msg.id || mIdx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mt-2`}>
                                     <div className={`max-w-[92%] rounded px-3 py-2 leading-relaxed text-xs ${
                                       msg.role === 'user' 
-                                        ? 'bg-[var(--accent)] text-white' 
+                                        ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)] border border-[var(--chat-user-border)]' 
                                         : 'bg-[var(--card-bg)] text-[var(--text-main)] shadow-xs'
                                     }`}>
                                       {msg.role === 'user' ? (
