@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antigravity Music Player</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jsmediatags for client-side ID3 reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+    <!-- Pre-load and warm lossless audio decoder reference with window -->
+    <script type="module">
+        try {
+            const { default: decode } = await import('https://esm.sh/audio-decode');
+            window.audioDecode = decode;
+            console.log('[BasePlayer] Lossless audio decoder initialized on window');
+        } catch (e) {
+            console.warn('[BasePlayer] Decoder pre-load deferred:', e);
+        }
+    </script>
+</head>
+<body>
+    <div id="app-container">
+        
+        <!-- Top Section: Explorer and Tracks -->
+        <div id="main-content">
+            <!-- Pane 1: Explorer View (Tree) -->
+            <div id="explorer-pane" class="pane">
+                <div class="pane-header">
+                    <div>
+                        <h2><i class="fa-solid fa-folder-tree"></i> Library</h2>
+                        <span id="library-folder-name" class="sub-label"></span>
+                    </div>
+                    <button id="btn-open-folder" class="btn-primary">Open Folder</button>
+                </div>
+                <div id="tree-container" class="scrollable">
+                    <div id="tree-root"></div>
+                    <div id="explorer-empty-state" class="empty-state">
+                        <p>No folder selected.</p>
+                        <p>Click "Open Folder" to scan your music directory.</p>
+                        <div id="reopen-card" class="reopen-card hidden">
+                            <p class="reopen-title"><i class="fa-solid fa-clock-rotate-left"></i> Previous Library</p>
+                            <p id="reopen-folder-name" class="reopen-name"></p>
+                            <button id="btn-reopen-folder" class="btn-primary"><i class="fa-solid fa-folder-open"></i> Resume Library</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pane 2: Tracks View -->
+            <div id="tracks-pane" class="pane">
+                <div class="pane-header">
+                    <div>
+                        <h2 id="tracks-pane-title"><i class="fa-solid fa-music"></i> Tracks</h2>
+                        <span id="current-folder-label" class="sub-label"></span>
+                    </div>
+                    <div class="controls">
+                        <button id="btn-play-all" class="btn-secondary" disabled><i class="fa-solid fa-play"></i> Play All</button>
+                    </div>
+                </div>
+                <div id="tracks-container" class="scrollable">
+                    <table id="tracks-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Title</th>
+                                <th>Artist</th>
+                                <th>Album</th>
+                                <th>Time</th>
+                                <th>Format</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tracks-tbody">
+                            <!-- Tracks injected here -->
+                        </tbody>
+                    </table>
+                    <div id="tracks-empty-state" class="empty-state">
+                        <p>Select a folder in the Explorer to view tracks.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pane 3: Queue Drawer (Slide-out) -->
+            <div id="queue-drawer" class="queue-drawer hidden">
+                <div class="queue-header">
+                    <div class="queue-title-group">
+                        <h2><i class="fa-solid fa-list-ol"></i> Play Queue</h2>
+                        <span id="queue-count-badge" class="badge">0 tracks</span>
+                    </div>
+                    <div class="queue-actions">
+                        <button id="btn-shuffle-queue" class="btn-icon" title="Shuffle Upcoming Tracks"><i class="fa-solid fa-shuffle"></i></button>
+                        <button id="btn-clear-queue" class="btn-icon" title="Clear Queue"><i class="fa-solid fa-trash"></i></button>
+                        <button id="btn-close-queue" class="btn-icon" title="Close Queue"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+                <div class="queue-content scrollable">
+                    <div class="queue-section-title">Now Playing</div>
+                    <div id="queue-now-playing" class="queue-np-card">
+                        <div class="queue-empty-text">Nothing playing</div>
+                    </div>
+                    <div class="queue-section-title">Up Next</div>
+                    <div id="queue-list" class="queue-list">
+                        <div class="queue-empty-text">Queue is empty</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pane 3: Now Playing / Player View -->
+        <div id="player-pane">
+            <div class="player-info">
+                <div class="album-art">
+                    <img id="np-art" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23333'/><text x='50' y='50' fill='%23666' font-family='sans-serif' font-size='14' text-anchor='middle' dominant-baseline='middle'>No Art</text></svg>" alt="Album Art">
+                </div>
+                <div class="track-details">
+                    <div id="np-title" class="marquee">No Track Selected</div>
+                    <div id="np-artist"></div>
+                    <div id="np-meta"></div> <!-- Format, Bitrate, Size -->
+                </div>
+            </div>
+            
+            <div class="player-controls-container">
+                <div class="player-controls">
+                    <button id="btn-prev" class="control-btn" disabled><i class="fa-solid fa-backward-step"></i></button>
+                    <button id="btn-play-pause" class="control-btn play-btn" disabled><i class="fa-solid fa-play"></i></button>
+                    <button id="btn-next" class="control-btn" disabled><i class="fa-solid fa-forward-step"></i></button>
+                </div>
+                <div class="scrubber-container">
+                    <span id="time-current">0:00</span>
+                    <div id="waveform-container">
+                        <canvas id="waveform-canvas"></canvas>
+                        <div id="scrubber-progress"></div>
+                        <input type="range" id="seek-slider" min="0" max="100" value="0" step="0.1" disabled>
+                    </div>
+                    <span id="time-total">0:00</span>
+                </div>
+            </div>
+
+            <div class="player-extras">
+                <button id="btn-queue" class="control-btn" title="View Queue"><i class="fa-solid fa-list"></i></button>
+                <div class="volume-control">
+                    <i class="fa-solid fa-volume-high"></i>
+                    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+            </div>
+
+            <!-- Mobile Combined View: Upcoming Queue Section -->
+            <div id="mobile-combined-queue" class="mobile-combined-queue">
+                <div class="mobile-queue-header">
+                    <div class="queue-title-group">
+                        <h3><i class="fa-solid fa-list-ol"></i> Up Next in Queue</h3>
+                        <span id="mobile-queue-badge" class="badge">0 tracks</span>
+                    </div>
+                    <div class="queue-actions">
+                        <button id="btn-mobile-shuffle-queue" class="btn-icon" title="Shuffle Upcoming"><i class="fa-solid fa-shuffle"></i></button>
+                        <button id="btn-mobile-clear-queue" class="btn-icon" title="Clear Queue"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                <div id="mobile-queue-list" class="queue-list">
+                    <div class="queue-empty-text">Queue is empty</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile / Tablet Bottom Navigation Bar (Library, Tracks, Now Playing) -->
+        <nav id="mobile-nav" class="mobile-nav">
+            <button class="mobile-nav-btn active" data-view="library">
+                <i class="fa-solid fa-folder-tree"></i>
+                <span>Library</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="tracks">
+                <i class="fa-solid fa-music"></i>
+                <span>Tracks</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="nowplaying">
+                <i class="fa-solid fa-compact-disc"></i>
+                <span>Now Playing</span>
+            </button>
+        </nav>
+
+        <!-- Audio Element (playsinline and preload for background/lockscreen audio) -->
+        <audio id="audio-player" preload="auto" playsinline></audio>
+        
+        <!-- Context Menu -->
+        <div id="context-menu" class="context-menu hidden">
+            <div class="context-menu-item" data-action="play-now">
+                <i class="fa-solid fa-play"></i>
+                <span>Play Now</span>
+            </div>
+            <div class="context-menu-item" data-action="shuffle-play">
+                <i class="fa-solid fa-shuffle"></i>
+                <span>Shuffle Play</span>
+            </div>
+            <div class="context-menu-item" data-action="play-next">
+                <i class="fa-solid fa-angles-right"></i>
+                <span>Play Next</span>
+            </div>
+            <div class="context-menu-item" data-action="add-queue">
+                <i class="fa-solid fa-list-plus"></i>
+                <span>Add to Queue</span>
+            </div>
+            <div class="context-menu-divider hidden" id="cm-divider-remove"></div>
+            <div class="context-menu-item danger hidden" id="cm-item-remove" data-action="remove-queue">
+                <i class="fa-solid fa-trash"></i>
+                <span>Remove from Queue</span>
+            </div>
+        </div>
+
+        <!-- Notifications Container -->
+        <div id="notifications-container"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

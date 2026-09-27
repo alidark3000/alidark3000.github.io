@@ -49,14 +49,11 @@
             padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Monaco', 'Menlo', 'Courier New', Courier, monospace;
+            font-family: ui-monospace, 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Menlo', 'Monaco', monospace;
             font-size: var(--base-font-size);
             line-height: var(--line-height);
             font-weight: 400;
-            letter-spacing: -0.01em;
-            text-rendering: optimizeLegibility;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            letter-spacing: 0;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
 
@@ -120,6 +117,13 @@
             margin: 0 0 1.25rem 0;
             padding-bottom: 0.6rem;
             border-bottom: 2px solid var(--line-color);
+            color: var(--text-color);
+        }
+
+        .section-desc {
+            font-size: 1em;
+            line-height: 1.7;
+            margin: 0 0 1.25rem 0;
             color: var(--text-color);
         }
 
@@ -229,11 +233,18 @@
 
         <main>
             <section>
+                <h2>creative lost souls</h2>
+                <p class="section-desc">A publication I write for designers, artists, creatives, and technologists who want change. Grounded in systems thinking and candid self-reflection, I explore the intersections of AI, neuroplasticity, creative bottlenecks, and personal self-actualisation in a shifting world. Read the essays on <a href="https://cls.alidark.com">creative lost souls</a>.</p>
+                <ul id="cls-posts" class="simple-list">
+                    <li><a href="https://cls.alidark.com/p/create-like-a-child-edit-like-a-scientist">Create like a child (edit like a scientist)</a></li>
+                    <li><a href="https://cls.alidark.com/p/knowing-what-to-do-is-the-bottleneck">Knowing what to do is the bottleneck</a></li>
+                    <li><a href="https://cls.alidark.com/p/the-world-will-be-different-and-so">The world will be different and so will we.</a></li>
+                </ul>
+            </section>
+
+            <section>
                 <h2>Links</h2>
                 <ul class="entries">
-                    <li>
-                        <p><a href="https://cls.alidark.com">creative lost souls</a> &mdash; A publication I write for designers, artists, creatives, and technologists who want change. Grounded in systems thinking and candid self-reflection, I explore the intersections of AI, neuroplasticity, creative bottlenecks, and personal self-actualisation in a shifting world. Read the essays on <a href="https://cls.alidark.com">creative lost souls</a> or explore my <a href="https://cls.alidark.com/about">manifesto</a>.</p>
-                    </li>
                     <li>
                         <p><a href="https://www.instagram.com/alidark3000/">Instagram</a> &mdash; Visuals, process notes, and creative updates from Brisbane.</p>
                     </li>
@@ -268,7 +279,7 @@
                 <h2>Apps</h2>
                 <ul class="entries">
                     <li>
-                        <p><a href="https://alidark.com/apps/baseplayer1.4.zip">Base Player</a> &mdash; A frontend for your music files.</p>
+                        <p><a href="/player.html">music player</a> &mdash; A browser-based audio player for your local music collection, with folder browsing, metadata tag reading, and queue playback.</p>
                     </li>
                     <li>
                         <p><a href="/brain.html">Brain</a> &mdash; A simple AI powered knowledge management tool with local storage. Requires a Google AI Studio API key. You can chat with the docs and cross reference them.</p>
@@ -289,5 +300,69 @@
             <p>Ali Dark &middot; Brisbane, Australia</p>
         </footer>
     </div>
+
+    <script>
+        (function () {
+            var feedUrl = 'https://cls.alidark.com/feed';
+            var listElement = document.getElementById('cls-posts');
+            if (!listElement) return;
+
+            function updateList(posts) {
+                if (!posts || !posts.length) return;
+                var fragment = document.createDocumentFragment();
+                posts.slice(0, 3).forEach(function (post) {
+                    var title = (post.title || '').trim();
+                    var link = post.link || post.url || '#';
+                    if (!title) return;
+
+                    var li = document.createElement('li');
+                    var a = document.createElement('a');
+                    a.href = link;
+                    a.textContent = title;
+                    li.appendChild(a);
+                    fragment.appendChild(li);
+                });
+
+                if (fragment.children.length > 0) {
+                    if (typeof listElement.replaceChildren === 'function') {
+                        listElement.replaceChildren(fragment);
+                    } else {
+                        listElement.innerHTML = '';
+                        listElement.appendChild(fragment);
+                    }
+                }
+            }
+
+            // Fetch RSS feed via rss2json
+            fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feedUrl))
+                .then(function (res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
+                .then(function (data) {
+                    if (data && data.status === 'ok' && Array.isArray(data.items) && data.items.length) {
+                        updateList(data.items);
+                    } else {
+                        throw new Error('Invalid rss2json response');
+                    }
+                })
+                .catch(function () {
+                    // Fallback to feed2json
+                    fetch('https://feed2json.org/convert?url=' + encodeURIComponent(feedUrl))
+                        .then(function (res) {
+                            if (!res.ok) throw new Error('HTTP ' + res.status);
+                            return res.json();
+                        })
+                        .then(function (data) {
+                            if (data && Array.isArray(data.items) && data.items.length) {
+                                updateList(data.items);
+                            }
+                        })
+                        .catch(function (err) {
+                            console.warn('Could not refresh RSS feed:', err);
+                        });
+                });
+        })();
+    </script>
 </body>
 </html>
