@@ -150,6 +150,11 @@ async function loadFolderMetaFile(dirHandle) {
             const text = await file.text();
             const parsed = JSON.parse(text);
             if (parsed && typeof parsed === 'object') {
+                for (const k in parsed) {
+                    if (parsed[k] && parsed[k].artworkUrl && parsed[k].artworkUrl.startsWith('blob:')) {
+                        delete parsed[k].artworkUrl;
+                    }
+                }
                 Object.assign(State.meta, parsed);
                 console.log(`[BasePlayer] Successfully loaded metadata file (${name}) directly from selected folder (${Object.keys(parsed).length} tracks ready)`);
                 return true;
@@ -176,7 +181,18 @@ async function saveFolderMetaFile() {
     try {
         const handle = await State.dirHandle.getFileHandle(META_FILE_NAME, { create: true });
         const writable = await handle.createWritable();
-        await writable.write(JSON.stringify(State.meta, null, 2));
+        
+        // Strip non-persistent blob URLs before saving to disk
+        const cleanMeta = {};
+        for (const k in State.meta) {
+            const item = { ...State.meta[k] };
+            if (item.artworkUrl && item.artworkUrl.startsWith('blob:')) {
+                delete item.artworkUrl;
+            }
+            cleanMeta[k] = item;
+        }
+        
+        await writable.write(JSON.stringify(cleanMeta, null, 2));
         await writable.close();
         console.log(`[BasePlayer] Persisted metadata directly to "${META_FILE_NAME}" in user folder`);
     } catch (e) {
@@ -390,7 +406,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     DOM.seekSlider.addEventListener('input', seekAudio);
     DOM.volumeSlider.addEventListener('input', (e) => { DOM.audio.volume = e.target.value; });
     if (DOM.npArt) {
-        DOM.npArt.addEventListener('error', () => { DOM.npArt.src = NO_ART_SVG; });
+        DOM.npArt.addEventListener('error', () => {
+            if (DOM.npArt.src === NO_ART_SVG || DOM.npArt.src.includes('data:image/svg+xml')) return;
+            const currentPath = State.queueIndex !== -1 ? State.queue[State.queueIndex] : null;
+            if (currentPath) {
+                if (State.meta[currentPath] && State.meta[currentPath].artworkUrl && State.meta[currentPath].artworkUrl.startsWith('blob:')) {
+                    delete State.meta[currentPath].artworkUrl;
+                }
+                const recoveredArt = getArtworkForTrack(currentPath);
+                if (recoveredArt && recoveredArt !== DOM.npArt.src) {
+                    DOM.npArt.src = recoveredArt;
+                    return;
+                }
+            }
+            DOM.npArt.src = NO_ART_SVG;
+        });
     }
     
     DOM.btnPlayAll.addEventListener('click', () => {
@@ -1197,7 +1227,7 @@ function getEffectiveNodeArt(node) {
     if (node.artUrl) return node.artUrl;
     for (const f of node.files) {
         const m = State.meta[f];
-        if (m && m.artworkUrl) return m.artworkUrl;
+        if (m && m.artworkUrl && !m.artworkUrl.startsWith('blob:')) return m.artworkUrl;
     }
     for (const k in node.children) {
         const subArt = getEffectiveNodeArt(node.children[k]);
@@ -1210,7 +1240,7 @@ function getEffectiveNodeArt(node) {
 function getArtworkForTrack(path) {
     if (!path) return null;
     const meta = State.meta[path];
-    if (meta && meta.artworkUrl) return meta.artworkUrl;
+    if (meta && meta.artworkUrl && !meta.artworkUrl.startsWith('blob:')) return meta.artworkUrl;
     
     // 1. Walk up from track's parent folder all the way to root
     let dirPath = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
@@ -1218,13 +1248,7 @@ function getArtworkForTrack(path) {
         const node = findNodeByPath(State.tree, dirPath);
         if (node) {
             const art = getEffectiveNodeArt(node);
-            if (art) {
-                if (meta) {
-                    meta.artworkUrl = art;
-                    queueMetaSave(path);
-                }
-                return art;
-            }
+            if (art) return art;
         }
         if (!dirPath) break;
         const lastSlash = dirPath.lastIndexOf('/');
@@ -1239,26 +1263,14 @@ function getArtworkForTrack(path) {
             const selNode = findNodeByPath(State.tree, selPath);
             if (selNode) {
                 const art = getEffectiveNodeArt(selNode);
-                if (art) {
-                    if (meta) {
-                        meta.artworkUrl = art;
-                        queueMetaSave(path);
-                    }
-                    return art;
-                }
+                if (art) return art;
             }
         }
     }
     
     // 3. Fallback to root library art if available
     const rootArt = getEffectiveNodeArt(State.tree);
-    if (rootArt) {
-        if (meta) {
-            meta.artworkUrl = rootArt;
-            queueMetaSave(path);
-        }
-        return rootArt;
-    }
+    if (rootArt) return rootArt;
     
     return null;
 }
@@ -1852,9 +1864,9 @@ function drawWaveform(peaks, progressRatio) {
     const maxBarHeight = height - 1;
     const playheadX = progressRatio * width;
     
-    // Respect system light / dark mode: purple behind playhead, light grey in front
+    // Respect system light / dark mode: reddish accent behind playhead, light grey in front
     const isLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-    const playedColor = isLight ? '#7c3aed' : '#bb86fc';
+    const playedColor = isLight ? '#d32f2f' : '#ff5252';
     const unplayedColor = isLight ? '#cbd5e1' : 'rgba(255, 255, 255, 0.28)';
     
     // Pass 1: Draw all bars in unplayed light grey
@@ -1980,7 +1992,6 @@ function renderQueue() {
             el.className = 'queue-item';
             el.setAttribute('data-path', path);
             el.innerHTML = `
-                <span class="queue-item-index">${idx + 1}</span>
                 <img class="queue-item-thumb" src="${artSrc || NO_ART_SVG}" alt="">
                 <div class="queue-item-info">
                     <span class="queue-item-title">${meta.title || meta.name}</span>
