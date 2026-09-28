@@ -773,30 +773,6 @@ async function processMetadataQueue() {
             }
         }
         
-        // 4. Scrub Open Source Library (Cover Art Archive / MusicBrainz) + Fallback
-        if (meta.id3_parsed && !meta.artworkUrl && !meta.art_scrubbed) {
-            if (count < 15) {
-                try {
-                    const scrubbedArt = await scrubOpenSourceArtwork(meta.title, meta.artist, meta.album);
-                    if (scrubbedArt) {
-                        meta.artworkUrl = scrubbedArt;
-                        changed = true;
-                        
-                        const parentPath = path.substring(0, path.lastIndexOf('/'));
-                        const parentNode = findNodeByPath(State.tree, parentPath);
-                        if (parentNode && !parentNode.artUrl) {
-                            parentNode.artUrl = scrubbedArt;
-                            updateTreeNodeArt(parentNode);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Scrubbing art failed for', path, e);
-                }
-                meta.art_scrubbed = true;
-                count++;
-            }
-        }
-        
         if (changed) {
             queueMetaSave(path);
             changed = false;
@@ -804,6 +780,9 @@ async function processMetadataQueue() {
     }
     
     await flushMetaSaves();
+
+    // 4. Batch resolve and cache artwork for all albums/folders missing art
+    await resolveMissingFolderArtwork();
     
     updateAllTreeThumbnails();
     if (State.currentTracks.length > 0) {
@@ -839,65 +818,159 @@ function readID3Tags(file) {
     });
 }
 
-async function scrubOpenSourceArtwork(title, artist, album) {
-    const hasAlbum = album && album !== 'Unknown Album' && album.trim().length > 0;
-    const hasArtist = artist && artist !== 'Unknown Artist' && artist.trim().length > 0;
-    
-    // 1. Try iTunes Search API by album + artist
-    if (hasAlbum) {
-        try {
-            const query = encodeURIComponent(`${album} ${hasArtist ? artist : ''}`.trim());
-            const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=album&limit=1`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.results && data.results.length > 0 && data.results[0].artworkUrl100) {
-                    return data.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
-                }
-            }
-        } catch (e) {}
-    }
-    
-    // 2. Fallback: Search iTunes by song title + artist (finds the exact album release and high-res cover!)
-    try {
-        const songQuery = encodeURIComponent(`${title || ''} ${hasArtist ? artist : ''}`.trim());
-        if (songQuery) {
-            const res = await fetch(`https://itunes.apple.com/search?term=${songQuery}&entity=song&limit=1`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.results && data.results.length > 0 && data.results[0].artworkUrl100) {
-                    return data.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
-                }
-            }
-        }
-    } catch (e) {}
-    
-    // 3. Fallback: MusicBrainz & Cover Art Archive
-    try {
-        const queryTerm = hasAlbum ? album : title;
-        if (queryTerm) {
-            let mbQuery = `release:${encodeURIComponent(queryTerm)}`;
-            if (hasArtist) mbQuery += ` AND artist:${encodeURIComponent(artist)}`;
-            const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=${mbQuery}&fmt=json&limit=1`, {
-                headers: { 'User-Agent': 'BasePlayer/1.5 ( https://alidark3000.github.io )' }
-            });
-            if (mbRes.ok) {
-                const mbData = await mbRes.json();
-                if (mbData.releases && mbData.releases.length > 0) {
-                    const mbid = mbData.releases[0].id;
-                    const caaUrl = `https://coverartarchive.org/release/${mbid}/front-500`;
-                    const checkRes = await fetch(caaUrl, { method: 'HEAD' });
-                    if (checkRes.ok) {
-                        return caaUrl;
+// Clean rip tags and release noise: e.g. "pbthal", "pbthall", "flac", "remastered", "vinyl", "deluxe edition", etc.
+function stripRipTags(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str
+        .replace(/\b(pbthal+|flac|alac|wav|mp3|320kbps|320|180g|vinyl|lp|cd\d*|disc\s*\d+|remaster(ed)?|deluxe(\s+edition)?|anniversary(\s+edition)?|bonus(\s+tracks)?|web|hi-res|lossless|24[.-]?96|24[.-]?192|24bit|96khz)\b/gi, '')
+        .replace(/[([{|/].*?[)\]}]/g, '') // remove bracketed text e.g. [2014], (Deluxe), [24.96 FLAC]
+        .replace(/[-–—_.:]+$/, '')
+        .replace(/^[-–—_.:]+/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function generateSearchQueries(title, artist, album, folderName) {
+    const queries = [];
+    const validArtist = (artist && artist !== 'Unknown Artist' && artist.trim().length > 0) ? artist.trim() : '';
+    const validAlbum = (album && album !== 'Unknown Album' && album.trim().length > 0) ? album.trim() : '';
+    const cleanTitle = (title || '').replace(/^\d+[\s.-]+/, '').replace(/[([{|/].*?[)\]}]/g, '').trim();
+
+    // 1. If folderName or album is like "Artist - Album" or "Album - Tag" (e.g. "Stone Temple Pilots- Purple PBTHALL", "jason mraz - Yes", "Dookie - pbthal")
+    const namesToTest = [folderName, validAlbum].filter(Boolean);
+    for (const name of namesToTest) {
+        if (/[-–—]/.test(name)) {
+            // Split by dash with optional spaces on either side (e.g. "Pilots- Purple")
+            const parts = name.split(/\s*[-–—]+\s*/).map(p => p.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+                const part0Clean = stripRipTags(parts[0]);
+                const part1Clean = stripRipTags(parts[1]);
+                
+                // If part 1 was purely a rip tag (like pbthal / PBTHALL): query is part0Clean + validArtist
+                if (parts[1] && !part1Clean && part0Clean) {
+                    if (validArtist) {
+                        queries.push(`${part0Clean} ${validArtist}`);
+                        queries.push(`${validArtist} ${part0Clean}`);
+                    } else {
+                        queries.push(part0Clean);
+                    }
+                } 
+                // If both parts are real words (like "Stone Temple Pilots" & "Purple", or "jason mraz" & "Yes"):
+                else if (part0Clean && part1Clean) {
+                    queries.push(`${part0Clean} ${part1Clean}`);
+                    queries.push(`${part1Clean} ${part0Clean}`);
+                    if (validArtist) {
+                        queries.push(`${part1Clean} ${validArtist}`);
+                        queries.push(`${part0Clean} ${validArtist}`);
                     }
                 }
             }
         }
-    } catch (e) {}
-    
+    }
+
+    // 2. Clean album + artist
+    const cleanAlbum = stripRipTags(validAlbum || folderName || '');
+    if (cleanAlbum && validArtist) {
+        queries.push(`${cleanAlbum} ${validArtist}`);
+        queries.push(`${validArtist} ${cleanAlbum}`);
+    } else if (cleanAlbum) {
+        queries.push(cleanAlbum);
+    }
+
+    // 3. Track title + artist
+    if (cleanTitle && validArtist) {
+        queries.push(`${cleanTitle} ${validArtist}`);
+        queries.push(`${validArtist} ${cleanTitle}`);
+    }
+
+    // Return unique queries
+    return Array.from(new Set(queries.filter(q => q && q.length > 1)));
+}
+
+async function scrubOpenSourceArtwork(title, artist, album, folderName) {
+    const queries = generateSearchQueries(title, artist, album, folderName);
+    const validArtist = (artist && artist !== 'Unknown Artist' && artist.trim().length > 0) ? artist.toLowerCase() : '';
+
+    for (const query of queries) {
+        // 1. Try iTunes Album Search with media=music
+        try {
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=album&limit=5`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    let bestMatch = data.results[0];
+                    const queryLower = query.toLowerCase();
+                    const perfectMatch = data.results.find(r => {
+                        const colName = (r.collectionName || '').toLowerCase();
+                        const artName = (r.artistName || '').toLowerCase();
+                        return (validArtist ? artName.includes(validArtist) : true) && 
+                               (queryLower.split(' ').some(word => word.length > 3 && colName.includes(word)));
+                    });
+                    if (perfectMatch) bestMatch = perfectMatch;
+                    else if (validArtist) {
+                        const artistMatch = data.results.find(r => 
+                            r.artistName && (r.artistName.toLowerCase().includes(validArtist) || validArtist.includes(r.artistName.toLowerCase()))
+                        );
+                        if (artistMatch) bestMatch = artistMatch;
+                    }
+                    if (bestMatch && bestMatch.artworkUrl100) {
+                        return bestMatch.artworkUrl100.replace('100x100bb', '600x600bb');
+                    }
+                }
+            }
+        } catch (e) {}
+
+        // 2. Try iTunes Song Search with media=music
+        try {
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=5`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    let bestMatch = data.results[0];
+                    const queryLower = query.toLowerCase();
+                    const perfectMatch = data.results.find(r => {
+                        const colName = (r.collectionName || '').toLowerCase();
+                        const artName = (r.artistName || '').toLowerCase();
+                        return (validArtist ? artName.includes(validArtist) : true) && 
+                               (queryLower.split(' ').some(word => word.length > 3 && colName.includes(word)));
+                    });
+                    if (perfectMatch) bestMatch = perfectMatch;
+                    else if (validArtist) {
+                        const artistMatch = data.results.find(r => 
+                            r.artistName && (r.artistName.toLowerCase().includes(validArtist) || validArtist.includes(r.artistName.toLowerCase()))
+                        );
+                        if (artistMatch) bestMatch = artistMatch;
+                    }
+                    if (bestMatch && bestMatch.artworkUrl100) {
+                        return bestMatch.artworkUrl100.replace('100x100bb', '600x600bb');
+                    }
+                }
+            }
+        } catch (e) {}
+
+        // 3. Fallback to MusicBrainz release-group & Cover Art Archive
+        try {
+            let mbQuery = `releasegroup:${encodeURIComponent(query)}`;
+            if (validArtist) mbQuery += ` AND artist:${encodeURIComponent(validArtist)}`;
+            const mbRes = await fetch(`https://musicbrainz.org/ws/2/release-group/?query=${mbQuery}&fmt=json&limit=1`, {
+                headers: { 'User-Agent': 'AliPlayer/2.0 ( https://alidark3000.github.io )' }
+            });
+            if (mbRes.ok) {
+                const mbData = await mbRes.json();
+                const rgs = mbData['release-groups'];
+                if (rgs && rgs.length > 0) {
+                    const rgid = rgs[0].id;
+                    const caaUrl = `https://coverartarchive.org/release-group/${rgid}/front-500`;
+                    return caaUrl;
+                }
+            }
+        } catch (e) {}
+    }
+
     return null;
 }
 
-// Cache artwork directly in the album's folder as cover.jpg
+// Cache artwork directly in the album's folder as cover.jpg on disk
 async function cacheArtworkInAlbumFolder(folderNode, imageUrl) {
     if (!folderNode || !folderNode.handle || !imageUrl) return null;
     try {
@@ -915,12 +988,106 @@ async function cacheArtworkInAlbumFolder(folderNode, imageUrl) {
         if (!folderNode.images) folderNode.images = [];
         folderNode.images.unshift(coverHandle);
         
-        console.log(`[BasePlayer] Successfully saved cover.jpg in album folder: ${folderNode.name}`);
+        console.log(`[AliPlayer] Successfully cached cover.jpg in album folder: ${folderNode.name}`);
         return localBlobUrl;
     } catch (e) {
-        console.warn(`[BasePlayer] Could not cache cover.jpg to album folder (${folderNode.name}):`, e);
+        console.warn(`[AliPlayer] Could not cache cover.jpg to album folder (${folderNode.name}):`, e);
         return null;
     }
+}
+
+// Batch resolve and cache artwork for all album folders missing art
+async function resolveMissingFolderArtwork() {
+    const foldersToProcess = [];
+    function collectFolders(node) {
+        if (!node) return;
+        if (node.files && node.files.length > 0) {
+            foldersToProcess.push(node);
+        }
+        for (const k in node.children) {
+            collectFolders(node.children[k]);
+        }
+    }
+    collectFolders(State.tree);
+
+    for (const folder of foldersToProcess) {
+        // If folder already has local artUrl, or all tracks have artworkUrl, skip
+        let hasArt = !!folder.artUrl;
+        if (!hasArt) {
+            for (const f of folder.files) {
+                if (State.meta[f] && State.meta[f].artworkUrl) {
+                    folder.artUrl = State.meta[f].artworkUrl;
+                    hasArt = true;
+                    break;
+                }
+            }
+        }
+        if (hasArt) continue;
+
+        // Find track with best metadata in this folder
+        let bestMeta = null;
+        for (const f of folder.files) {
+            const m = State.meta[f];
+            if (m && m.artist && m.artist !== 'Unknown Artist') {
+                bestMeta = m;
+                break;
+            }
+        }
+        if (!bestMeta && folder.files.length > 0) {
+            bestMeta = State.meta[folder.files[0]];
+        }
+        if (!bestMeta) continue;
+
+        const title = bestMeta.title || '';
+        let artist = (bestMeta.artist && bestMeta.artist !== 'Unknown Artist') ? bestMeta.artist : '';
+        const album = (bestMeta.album && bestMeta.album !== 'Unknown Album') ? bestMeta.album : '';
+        const folderName = folder.name || '';
+
+        // If artist is missing or unknown, check if folder has a parent folder (e.g. "the police/Outlandos d'Amour")
+        if (!artist && folder.path && folder.path.includes('/')) {
+            const parentPath = folder.path.substring(0, folder.path.lastIndexOf('/'));
+            const parentFolder = findNodeByPath(State.tree, parentPath);
+            if (parentFolder && parentFolder.name && parentFolder.name !== State.tree.name) {
+                artist = parentFolder.name;
+            }
+        }
+
+        try {
+            const artUrl = await scrubOpenSourceArtwork(title, artist, album, folderName);
+            if (artUrl) {
+                // 1. Try to cache cover.jpg directly in the folder on disk
+                if (folder.handle) {
+                    await cacheArtworkInAlbumFolder(folder, artUrl);
+                }
+                
+                // 2. Set folder.artUrl so tree thumbnail updates
+                if (!folder.artUrl) folder.artUrl = artUrl;
+                updateTreeNodeArt(folder);
+
+                // 3. Propagate persistent HTTPS artworkUrl to all tracks in this folder
+                for (const f of folder.files) {
+                    if (State.meta[f]) {
+                        State.meta[f].artworkUrl = artUrl;
+                        State.meta[f].art_scrubbed = true;
+                        queueMetaSave(f);
+                    }
+                }
+
+                // If currently playing track is in this folder, update now playing immediately
+                if (State.queueIndex !== -1 && folder.files.includes(State.queue[State.queueIndex])) {
+                    DOM.npArt.src = artUrl;
+                    const curMeta = State.meta[State.queue[State.queueIndex]];
+                    if (curMeta) updateMediaSession(curMeta, artUrl);
+                }
+            }
+            // Gentle 120ms pause between folders to avoid Apple API rate limits
+            await new Promise(r => setTimeout(r, 120));
+        } catch (err) {
+            console.warn(`[AliPlayer] Could not resolve artwork for folder: ${folder.name}`, err);
+        }
+    }
+    await flushMetaSaves();
+    updateAllTreeThumbnails();
 }
 
 // On-demand artwork resolution for active track
@@ -942,9 +1109,10 @@ async function resolveTrackArtwork(path, parentNode) {
     }
     
     const targetFolderNode = parentNode || findNodeByPath(State.tree, path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '') || State.tree;
-    
+    const folderName = targetFolderNode ? targetFolderNode.name : '';
+
     try {
-        const externalArtUrl = await scrubOpenSourceArtwork(meta.title, meta.artist, meta.album);
+        const externalArtUrl = await scrubOpenSourceArtwork(meta.title, meta.artist, meta.album, folderName);
         if (externalArtUrl) {
             meta.artworkUrl = externalArtUrl;
             
@@ -955,17 +1123,8 @@ async function resolveTrackArtwork(path, parentNode) {
             if (targetFolderNode) {
                 targetFolderNode.artUrl = externalArtUrl;
                 updateTreeNodeArt(targetFolderNode);
-            }
-            
-            // Save as cover.jpg inside album folder
-            if (targetFolderNode && targetFolderNode.handle) {
-                const localUrl = await cacheArtworkInAlbumFolder(targetFolderNode, externalArtUrl);
-                if (localUrl) {
-                    meta.artworkUrl = localUrl;
-                    if (State.queueIndex !== -1 && State.queue[State.queueIndex] === path) {
-                        DOM.npArt.src = localUrl;
-                        updateMediaSession(meta, localUrl);
-                    }
+                if (targetFolderNode.handle) {
+                    await cacheArtworkInAlbumFolder(targetFolderNode, externalArtUrl);
                 }
             }
             queueMetaSave(path);

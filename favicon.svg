@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    path, ellipse, rect {
+      fill: #d32f2f;
+    }
+    @media (prefers-color-scheme: dark) {
+      path, ellipse, rect {
+        fill: #ff5252;
+      }
+    }
+  </style>
+  <ellipse cx="38" cy="72" rx="20" ry="14" transform="rotate(-25 38 72)" />
+  <rect x="52" y="16" width="7" height="56" rx="3.5" />
+  <path d="M 52 16 C 68 20, 88 36, 80 62 C 84 48, 80 28, 52 26 Z" />
+</svg>
