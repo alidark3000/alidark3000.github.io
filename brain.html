@@ -367,6 +367,26 @@
       background-color: #000000 !important;
       color: #BDBDBD !important;
     }
+    @keyframes focusFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes focusWindowIn {
+      from {
+        opacity: 0;
+        transform: scale(0.92) translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+    .animate-focus-backdrop {
+      animation: focusFadeIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-focus-window {
+      animation: focusWindowIn 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
   </style>
 </head>
 <body class="bg-[var(--bg-main)] text-[var(--text-main)] font-sans overflow-hidden transition-colors duration-200 antialiased">
@@ -790,6 +810,7 @@
       const selectEntryWithHistory = (newIds, isHistoryAction = false) => {
         const ids = Array.isArray(newIds) ? newIds : [newIds];
         setSelectedEntryIds(ids);
+        setIsAssistantOpen(false);
         if (!isHistoryAction && ids.length > 0) {
           setNavHistory(prev => {
             const sliced = prev.slice(0, navIndex + 1);
@@ -855,12 +876,87 @@
       const [editCatInput, setEditCatInput] = useState({});
       const [editTagInput, setEditTagInput] = useState({});
       const [editProjectInput, setEditProjectInput] = useState({});
+      const [isContentFocused, setIsContentFocused] = useState(false);
+      const [focusedFromView, setFocusedFromView] = useState(false);
+      const contentTextareaRef = useRef(null);
 
       const selectedEntries = entries.filter(e => selectedEntryIds.includes(e.id));
       const activeSingleEntry = selectedEntryIds.length === 1 ? entries.find(e => e.id === selectedEntryIds[0]) : null;
 
+      const handleDefocus = () => {
+        if (contentTextareaRef.current) {
+          contentTextareaRef.current.blur();
+        }
+        setIsContentFocused(false);
+        if (focusedFromView && activeSingleEntry) {
+          const currentId = activeSingleEntry.id;
+          const updatedContent = editData[currentId]?.fullContent;
+          if (updatedContent !== undefined) {
+            setEntries(prev => prev.map(e => e.id === currentId ? { ...e, fullContent: updatedContent, updatedAt: Date.now() } : e));
+          }
+          setEditingEntries(prev => { const n = { ...prev }; delete n[currentId]; return n; });
+          setFocusedFromView(false);
+        }
+      };
+
+      const handleContentKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          handleDefocus();
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          const textarea = e.currentTarget;
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const val = textarea.value;
+          const newVal = val.substring(0, start) + '  ' + val.substring(end);
+          if (activeSingleEntry) {
+            setEditData(prev => ({
+              ...prev,
+              [activeSingleEntry.id]: {
+                ...prev[activeSingleEntry.id],
+                fullContent: newVal
+              }
+            }));
+            setTimeout(() => {
+              if (contentTextareaRef.current) {
+                contentTextareaRef.current.selectionStart = contentTextareaRef.current.selectionEnd = start + 2;
+              }
+            }, 0);
+          }
+        }
+      };
+
+      useEffect(() => {
+        setIsContentFocused(false);
+        setFocusedFromView(false);
+        setIsAssistantOpen(false);
+      }, [selectedEntryIds]);
+
+      useEffect(() => {
+        if (isContentFocused && contentTextareaRef.current) {
+          const el = contentTextareaRef.current;
+          el.focus();
+          if (el.selectionStart === 0 && el.selectionEnd === 0 && el.value.length > 0) {
+            el.selectionStart = el.selectionEnd = el.value.length;
+          }
+        }
+      }, [isContentFocused]);
+
+      useEffect(() => {
+        if (!isContentFocused) return;
+        const handleGlobalEsc = (e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            handleDefocus();
+          }
+        };
+        window.addEventListener('keydown', handleGlobalEsc);
+        return () => window.removeEventListener('keydown', handleGlobalEsc);
+      }, [isContentFocused, focusedFromView, activeSingleEntry, editData]);
+
       // Unified AI Assistant
-      const [isAssistantOpen, setIsAssistantOpen] = useState(window.innerWidth >= 1280);
+      const [isAssistantOpen, setIsAssistantOpen] = useState(false);
       const [assistantScope, setAssistantScope] = useState('selected');
       const [assistantChats, setAssistantChats] = useState({ workspace: [] });
       const [archivedAssistantChats, setArchivedAssistantChats] = useState({ workspace: [] });
@@ -1452,6 +1548,8 @@
       };
 
       const saveNote = async (id) => {
+        setIsContentFocused(false);
+        setFocusedFromView(false);
         const data = editData[id];
         if (!data) return;
 
@@ -1562,6 +1660,8 @@
       };
 
       const cancelEdit = (id) => {
+        setIsContentFocused(false);
+        setFocusedFromView(false);
         setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
       };
 
@@ -3047,9 +3147,10 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Content (Markdown)</label>
                     <textarea 
                       rows="12" 
-                      value={editData[activeSingleEntry.id]?.fullContent || ''} 
+                      value={editData[activeSingleEntry.id]?.fullContent || ''}
                       onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], fullContent: e.target.value } }))} 
-                      className="w-full px-4 py-3 text-xs font-mono bg-[var(--card-bg)] text-[var(--text-main)] rounded leading-relaxed" 
+                      onFocus={() => setIsContentFocused(true)}
+                      className="w-full px-4 py-3 text-xs font-mono bg-[var(--card-bg)] text-[var(--text-main)] rounded leading-relaxed cursor-text" 
                       placeholder="Write your note in Markdown... (Drag any note from the list into this box to insert a backlink)"
                     ></textarea>
                   </div>
@@ -3262,27 +3363,49 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         : ''
                     );
                     return (
-                      <EditableText 
-                        key={`content-${activeSingleEntry.id}`}
-                        tag="div"
-                        multiline={true}
-                        className="prose prose-player max-w-none text-[var(--text-main)] leading-relaxed font-mono cursor-text min-h-[60px]"
-                        text={noteMarkdown}
-                        placeholder="Double-click to write note content in Markdown..."
-                        renderView={(val) => (
-                          val ? (
-                            <div 
-                              dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(val), entries) }} 
-                            />
-                          ) : (
-                            <p className="text-[var(--text-muted)] italic">Double-click to write note content in Markdown...</p>
-                          )
+                      <div className="relative group">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Content</span>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              startEditing(activeSingleEntry);
+                              setFocusedFromView(true);
+                              setIsContentFocused(true);
+                            }} 
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
+                            title="Open distraction-free Focus Mode (or double-click content)"
+                          >
+                            <i className="fa-solid fa-expand text-xs"></i> Focus Mode
+                          </button>
+                        </div>
+                        {noteMarkdown ? (
+                          <div 
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              startEditing(activeSingleEntry);
+                              setFocusedFromView(true);
+                              setIsContentFocused(true);
+                            }}
+                            className="prose prose-player max-w-none text-[var(--text-main)] leading-relaxed font-mono cursor-text min-h-[60px]"
+                            title="Double-click to edit content in Focus Mode"
+                            dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(noteMarkdown), entries) }} 
+                          />
+                        ) : (
+                          <div 
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              startEditing(activeSingleEntry);
+                              setFocusedFromView(true);
+                              setIsContentFocused(true);
+                            }}
+                            className="text-[var(--text-muted)] italic leading-relaxed font-mono cursor-text min-h-[60px] py-4 border border-dashed border-[var(--border)] rounded px-4 text-center"
+                            title="Double-click to write note content in Focus Mode"
+                          >
+                            Double-click to write note content in Focus Mode...
+                          </div>
                         )}
-                        onSave={(newText) => {
-                          const targetId = activeSingleEntry.id;
-                          setEntries(prev => prev.map(e => e.id === targetId ? { ...e, fullContent: newText, updatedAt: Date.now() } : e));
-                        }} 
-                      />
+                      </div>
                     );
                   })()}
 
@@ -3691,6 +3814,46 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               </div>
             );
           })()}
+
+          {/* DISTRACTION-FREE FOCUS MODE (PORTAL OVER ENTIRE APP) */}
+          {isContentFocused && activeSingleEntry && ReactDOM.createPortal(
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+              {/* Opaque backdrop fading in */}
+              <div 
+                className="absolute inset-0 animate-focus-backdrop cursor-pointer"
+                style={{ backgroundColor: 'var(--bg-main)' }}
+                onClick={handleDefocus}
+                title="Click outside to close"
+              />
+              {/* Centered 40em x 40em window animated into place */}
+              <div 
+                className="relative z-10 animate-focus-window flex flex-col rounded-lg shadow-2xl border border-[var(--border)] bg-[var(--card-bg)] overflow-hidden"
+                style={{ width: '40em', height: '40em', maxWidth: 'calc(100vw - 2rem)', maxHeight: 'calc(100vh - 2rem)' }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Close Icon in the top right */}
+                <button 
+                  type="button" 
+                  onClick={handleDefocus}
+                  className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+                  title="Close (Esc or click outside)"
+                >
+                  <i className="fa-solid fa-xmark text-sm"></i>
+                </button>
+
+                {/* Just the textarea with no other instructions */}
+                <textarea 
+                  ref={contentTextareaRef}
+                  value={editData[activeSingleEntry.id]?.fullContent ?? activeSingleEntry.fullContent ?? ''}
+                  onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...(prev[activeSingleEntry.id] || activeSingleEntry), fullContent: e.target.value } }))} 
+                  onKeyDown={handleContentKeyDown}
+                  className="w-full h-full p-8 font-mono text-sm leading-relaxed bg-[var(--card-bg)] text-[var(--text-main)] resize-none outline-none border-none cursor-text select-text"
+                  placeholder="Write your note in Markdown..."
+                ></textarea>
+              </div>
+            </div>,
+            document.body
+          )}
 
         </div>
       );
