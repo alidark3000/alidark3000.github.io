@@ -29,9 +29,11 @@
                 '--tw-prose-body': 'var(--text-main)',
                 '--tw-prose-headings': 'var(--text-main)',
                 'font-family': 'ui-monospace, Cascadia Code, Cascadia Mono, Consolas, Menlo, Monaco, monospace',
-                'line-height': '1.6',
-                'p': { 'line-height': '1.6', 'margin-top': '0.75em', 'margin-bottom': '0.75em' },
-                'li': { 'line-height': '1.6' },
+                'line-height': '1.4',
+                'p': { 'line-height': '1.4', 'margin-top': '0.75em', 'margin-bottom': '0.75em' },
+                'ul, ol': { 'margin-top': '0.4em', 'margin-bottom': '0.4em', 'padding-left': '1.25em' },
+                'li': { 'line-height': '1.4', 'margin-top': '0', 'margin-bottom': '0', 'padding-left': '0' },
+                'li > p, li p': { 'margin-top': '0', 'margin-bottom': '0', 'line-height': '1.4' },
                 'h1, h2, h3, h4, h5, h6': {
                   'color': 'var(--text-main)',
                   'font-weight': '700',
@@ -386,6 +388,41 @@
     }
     .animate-focus-window {
       animation: focusWindowIn 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Markdown Prose & List Spacing */
+    .prose,
+    .prose-player {
+      line-height: 1.4 !important;
+    }
+    .prose p,
+    .prose-player p {
+      line-height: 1.4 !important;
+    }
+    .prose ul, .prose ol,
+    .prose-player ul, .prose-player ol {
+      margin-top: 0.4em !important;
+      margin-bottom: 0.4em !important;
+      padding-left: 1.25em !important;
+    }
+    .prose li,
+    .prose-player li {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      line-height: 1.4 !important;
+      padding-left: 0 !important;
+    }
+    .prose li p, .prose li > p,
+    .prose-player li p, .prose-player li > p {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      line-height: 1.4 !important;
+      display: inline !important;
+    }
+    .prose ul ul, .prose ul ol, .prose ol ul, .prose ol ol,
+    .prose-player ul ul, .prose-player ul ol, .prose-player ol ul, .prose-player ol ol {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
     }
   </style>
 </head>
@@ -1037,7 +1074,7 @@
       }, [entries, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle]);
 
       const ensureNumericIds = (loadedEntries) => {
-        let maxId = loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0);
+        let maxId = Math.floor(loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0));
         return loadedEntries.map(e => {
           if (!e.numericId) {
             maxId += 1;
@@ -1222,6 +1259,316 @@
         setAppState('landing');
         setFileHandle(null);
         setHistoryState({ past: [], present: [] });
+      };
+
+      // Library Merge state & helpers
+      const [mergeStatus, setMergeStatus] = useState(null);
+      const mergeFileInputRef = useRef(null);
+
+      const executeLibraryMerge = (incomingData, sourceFileName = '') => {
+        try {
+          if (!incomingData || typeof incomingData !== 'object') {
+            throw new Error("Invalid format. Expected a KnowledgeBase JSON object.");
+          }
+
+          let rawEntries = [];
+          if (Array.isArray(incomingData)) {
+            rawEntries = incomingData;
+          } else if (incomingData.entries && Array.isArray(incomingData.entries)) {
+            rawEntries = incomingData.entries;
+          } else {
+            throw new Error("No notes found in the selected library file.");
+          }
+
+          const processedIncoming = processLoadedEntries(rawEntries).map(e => ({
+            ...e,
+            createdAt: Number(e.createdAt) || Number(e.updatedAt) || Date.now(),
+            updatedAt: Number(e.updatedAt) || Number(e.createdAt) || Date.now()
+          }));
+
+          if (!processedIncoming.length) {
+            throw new Error("No valid notes found to merge.");
+          }
+
+          let addedCount = 0;
+          let updatedCount = 0;
+          let unchangedCount = 0;
+
+          // Build index of current entries
+          const existingMap = new Map();
+          entries.forEach(e => {
+            if (e.id) existingMap.set(e.id, { ...e });
+          });
+
+          const mergedList = entries.map(e => ({ ...e }));
+          const incomingToInsert = [];
+
+          // Helper to get consistent timestamp for chronological positioning
+          const getEntryTime = (e) => Number(e.createdAt) || Number(e.updatedAt) || 0;
+
+          // Step 1: Scan for existing entries vs new ones
+          processedIncoming.forEach(incoming => {
+            const existing = existingMap.get(incoming.id);
+
+            if (existing) {
+              const incomingTime = Number(incoming.updatedAt) || Number(incoming.createdAt) || 0;
+              const existingTime = Number(existing.updatedAt) || Number(existing.createdAt) || 0;
+
+              if (incomingTime > existingTime) {
+                // Incoming note is more recent: update existing entry
+                const idx = mergedList.findIndex(e => e.id === incoming.id);
+                if (idx !== -1) {
+                  mergedList[idx] = {
+                    ...existing,
+                    ...incoming,
+                    numericId: existing.numericId != null ? existing.numericId : incoming.numericId,
+                    createdAt: existing.createdAt || incoming.createdAt || incomingTime,
+                    updatedAt: incomingTime || Date.now()
+                  };
+                  existingMap.set(incoming.id, mergedList[idx]);
+                  updatedCount++;
+                }
+              } else {
+                // Existing entry is already newer or identical
+                unchangedCount++;
+              }
+            } else {
+              // Incoming entry does not exist in current library
+              incomingToInsert.push(incoming);
+            }
+          });
+
+          // Step 2: Insert new incoming entries in chronological order using decimal numericIds
+          if (incomingToInsert.length > 0) {
+            // Sort new incoming notes chronologically
+            incomingToInsert.sort((a, b) => getEntryTime(a) - getEntryTime(b));
+
+            // Set of all used numeric IDs to guarantee uniqueness
+            const usedIds = new Set(mergedList.map(e => Number(e.numericId)).filter(n => !isNaN(n)));
+
+            const cleanFloat = (num) => parseFloat(Number(num).toFixed(4));
+
+            const makeUnique = (candidate) => {
+              let val = cleanFloat(candidate);
+              while (usedIds.has(val)) {
+                val = cleanFloat(val + 0.0001);
+              }
+              usedIds.add(val);
+              return val;
+            };
+
+            // Existing chronological timeline of notes
+            const currentTimeline = [...mergedList].sort((a, b) => {
+              const timeDiff = getEntryTime(a) - getEntryTime(b);
+              if (timeDiff !== 0) return timeDiff;
+              return (a.numericId || 0) - (b.numericId || 0);
+            });
+
+            if (currentTimeline.length === 0) {
+              incomingToInsert.forEach((inc, idx) => {
+                const assignedId = makeUnique(idx + 1);
+                const newEntry = {
+                  ...inc,
+                  numericId: assignedId,
+                  createdAt: getEntryTime(inc) || Date.now(),
+                  updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
+                };
+                mergedList.push(newEntry);
+                addedCount++;
+              });
+            } else {
+              // Partition new notes into gaps relative to current timeline:
+              // gaps[0]: before currentTimeline[0]
+              // gaps[j]: between currentTimeline[j-1] and currentTimeline[j]
+              // gaps[N]: after currentTimeline[N-1]
+              const gaps = Array.from({ length: currentTimeline.length + 1 }, () => []);
+
+              incomingToInsert.forEach(incoming => {
+                const inTime = getEntryTime(incoming);
+
+                if (inTime < getEntryTime(currentTimeline[0])) {
+                  gaps[0].push(incoming);
+                } else if (inTime >= getEntryTime(currentTimeline[currentTimeline.length - 1])) {
+                  gaps[currentTimeline.length].push(incoming);
+                } else {
+                  let placed = false;
+                  for (let j = 1; j < currentTimeline.length; j++) {
+                    const prevTime = getEntryTime(currentTimeline[j - 1]);
+                    const nextTime = getEntryTime(currentTimeline[j]);
+                    if (inTime >= prevTime && inTime < nextTime) {
+                      gaps[j].push(incoming);
+                      placed = true;
+                      break;
+                    }
+                  }
+                  if (!placed) {
+                    gaps[currentTimeline.length].push(incoming);
+                  }
+                }
+              });
+
+              // 1. Gap 0: Before oldest existing note
+              if (gaps[0].length > 0) {
+                const firstId = Number(currentTimeline[0].numericId) || 1;
+                const k = gaps[0].length;
+                const minVal = firstId > 0 ? 0 : firstId - 1;
+                const step = (firstId - minVal) / (k + 1);
+
+                gaps[0].forEach((inc, i) => {
+                  const rawId = minVal + (i + 1) * step;
+                  const assignedId = makeUnique(rawId);
+                  const newEntry = {
+                    ...inc,
+                    numericId: assignedId,
+                    createdAt: getEntryTime(inc) || Date.now(),
+                    updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
+                  };
+                  mergedList.push(newEntry);
+                  addedCount++;
+                });
+              }
+
+              // 2. Intermediate Gaps (1 <= j < currentTimeline.length)
+              for (let j = 1; j < currentTimeline.length; j++) {
+                const gapNotes = gaps[j];
+                if (gapNotes.length === 0) continue;
+
+                const prevId = Number(currentTimeline[j - 1].numericId) || 0;
+                const nextId = Number(currentTimeline[j].numericId) || (prevId + 1);
+                const k = gapNotes.length;
+
+                if (nextId > prevId) {
+                  const step = (nextId - prevId) / (k + 1);
+                  gapNotes.forEach((inc, i) => {
+                    const rawId = prevId + (i + 1) * step;
+                    const assignedId = makeUnique(rawId);
+                    const newEntry = {
+                      ...inc,
+                      numericId: assignedId,
+                      createdAt: getEntryTime(inc) || Date.now(),
+                      updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
+                    };
+                    mergedList.push(newEntry);
+                    addedCount++;
+                  });
+                } else {
+                  const step = 0.01;
+                  gapNotes.forEach((inc, i) => {
+                    const rawId = prevId + (i + 1) * step;
+                    const assignedId = makeUnique(rawId);
+                    const newEntry = {
+                      ...inc,
+                      numericId: assignedId,
+                      createdAt: getEntryTime(inc) || Date.now(),
+                      updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
+                    };
+                    mergedList.push(newEntry);
+                    addedCount++;
+                  });
+                }
+              }
+
+              // 3. Gap After Last Note (newer than all notes)
+              if (gaps[currentTimeline.length].length > 0) {
+                let highestInt = Math.floor(Math.max(...Array.from(usedIds), 0));
+                gaps[currentTimeline.length].forEach(inc => {
+                  highestInt += 1;
+                  const assignedId = makeUnique(highestInt);
+                  const newEntry = {
+                    ...inc,
+                    numericId: assignedId,
+                    createdAt: getEntryTime(inc) || Date.now(),
+                    updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
+                  };
+                  mergedList.push(newEntry);
+                  addedCount++;
+                });
+              }
+            }
+          }
+
+          const finalEntries = normalizeTaxonomy(mergedList);
+
+          // Merge assistant chats if present in incomingData
+          let updatedChats = { ...assistantChats };
+          let updatedArchived = { ...archivedAssistantChats };
+
+          if (incomingData.assistantChats && typeof incomingData.assistantChats === 'object') {
+            Object.entries(incomingData.assistantChats).forEach(([k, msgs]) => {
+              if (Array.isArray(msgs) && msgs.length > 0 && (!updatedChats[k] || updatedChats[k].length === 0)) {
+                updatedChats[k] = msgs;
+              }
+            });
+          }
+
+          const incomingArchived = incomingData.archivedAssistantChats || incomingData.chats;
+          if (incomingArchived && typeof incomingArchived === 'object') {
+            Object.entries(incomingArchived).forEach(([k, archList]) => {
+              if (Array.isArray(archList) && archList.length > 0) {
+                const currentArch = updatedArchived[k] || [];
+                const currentArchIds = new Set(currentArch.map(c => c.id));
+                const toAdd = archList.filter(c => c && c.id && !currentArchIds.has(c.id));
+                if (toAdd.length > 0) {
+                  updatedArchived[k] = [...currentArch, ...toAdd];
+                }
+              }
+            });
+          }
+
+          setEntries(finalEntries);
+          setAssistantChats(updatedChats);
+          setArchivedAssistantChats(updatedArchived);
+
+          const summary = `Merged successfully${sourceFileName ? ` with "${sourceFileName}"` : ''}: ${addedCount} new note${addedCount === 1 ? '' : 's'} added in chronological order, ${updatedCount} note${updatedCount === 1 ? '' : 's'} updated to latest changes, ${unchangedCount} note${unchangedCount === 1 ? '' : 's'} already up to date.`;
+          setMergeStatus({ type: 'success', message: summary });
+        } catch (err) {
+          console.error("Library merge error:", err);
+          setMergeStatus({ type: 'error', message: `Merge failed: ${err.message}` });
+        }
+      };
+
+      const handleMergePicker = async () => {
+        setMergeStatus(null);
+        try {
+          if (window.showOpenFilePicker) {
+            const [handle] = await window.showOpenFilePicker({
+              types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+            });
+            const file = await handle.getFile();
+            const text = await file.text();
+            let data = {};
+            try {
+              data = JSON.parse(text);
+            } catch (pErr) {
+              throw new Error("File is not valid JSON.");
+            }
+            executeLibraryMerge(data, file.name);
+          } else {
+            if (mergeFileInputRef.current) {
+              mergeFileInputRef.current.value = '';
+              mergeFileInputRef.current.click();
+            }
+          }
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            setMergeStatus({ type: 'error', message: `Could not open file: ${err.message}` });
+          }
+        }
+      };
+
+      const handleMergeFileInputChange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            executeLibraryMerge(data, file.name);
+          } catch (err) {
+            setMergeStatus({ type: 'error', message: `Failed to parse JSON file: ${err.message}` });
+          }
+        };
+        reader.readAsText(file);
       };
 
       // Taxonomy stats
@@ -1414,7 +1761,7 @@
 
           const result = await handleGeminiCall(payload, model);
           const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
-          const nextNumericId = entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0) + 1;
+          const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
 
           const autoTags = [];
           if (file && file.type === 'application/pdf') autoTags.push('pdf');
@@ -1488,7 +1835,7 @@
       };
 
       const handleNewNote = () => {
-        const nextNumericId = entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0) + 1;
+        const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
         const newId = 'entry-' + Date.now();
         const newEntry = {
           id: newId,
@@ -2235,7 +2582,9 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
         const matchesSearch = !searchQuery ||
           (entry.title && entry.title.toLowerCase().includes(searchLower)) ||
           (entry.summary && entry.summary.toLowerCase().includes(searchLower)) ||
-          (entry.fullContent && entry.fullContent.toLowerCase().includes(searchLower));
+          (entry.fullContent && entry.fullContent.toLowerCase().includes(searchLower)) ||
+          (entry.numericId != null && (`#${entry.numericId}`).includes(searchLower)) ||
+          (entry.numericId != null && String(entry.numericId).includes(searchLower));
         return matchesProject && matchesCat && matchesTag && matchesSearch;
       }).sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
@@ -2247,6 +2596,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
         setTempKeys([...apiKeys]);
         setTempModel(model);
         setTempTheme(theme);
+        setMergeStatus(null);
         setShowKeyModal(true);
       };
 
@@ -2339,9 +2689,9 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           
           {/* SETTINGS MODAL */}
           {showKeyModal && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[70] p-[50px]">
-              <div className="bg-[var(--card-bg)] p-6 rounded-lg shadow-2xl w-full max-w-md">
-                <div className="flex items-center justify-between mb-5 pb-3">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[70] p-4 md:p-[50px]">
+              <div className="bg-[var(--card-bg)] p-6 rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-5 pb-3 border-b border-[var(--border)]">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded bg-[var(--accent)] text-white flex items-center justify-center text-xs">
                       <i className="fa-solid fa-gear"></i>
@@ -2410,7 +2760,48 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   </select>
                 </div>
 
-                <div className="flex justify-between items-center pt-4">
+                {/* Library Merge */}
+                <div className="mb-5 p-3.5 bg-[var(--bg-main)] rounded border border-[var(--border)]">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <i className="fa-solid fa-code-merge text-[var(--accent)]"></i> Merge External Library
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] mb-3 leading-relaxed font-mono">
+                    Select an external library JSON file. Merges the most recent changes for existing notes and inserts new notes in chronological order using decimal numbering.
+                  </p>
+                  
+                  <input 
+                    type="file" 
+                    ref={mergeFileInputRef} 
+                    onChange={handleMergeFileInputChange} 
+                    accept=".json,application/json" 
+                    className="hidden" 
+                  />
+                  
+                  <button 
+                    type="button" 
+                    onClick={handleMergePicker} 
+                    className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-2 font-mono"
+                    title="Select a library JSON file to merge into the current library"
+                  >
+                    <i className="fa-solid fa-file-import text-xs"></i> Select Library to Merge...
+                  </button>
+
+                  {mergeStatus && (
+                    <div className={`mt-2.5 p-2.5 rounded text-xs font-mono leading-relaxed flex items-start justify-between gap-2 ${mergeStatus.type === 'error' ? 'bg-[var(--danger)]/15 text-[var(--danger)]' : 'bg-emerald-500/15 text-emerald-400'}`}>
+                      <div className="flex items-start gap-1.5 flex-1">
+                        <i className={`fa-solid ${mergeStatus.type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-check'} text-xs mt-0.5 shrink-0`}></i>
+                        <span>{mergeStatus.message}</span>
+                      </div>
+                      <button type="button" onClick={() => setMergeStatus(null)} className="hover:opacity-75 shrink-0 text-xs">
+                        <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t border-[var(--border)]">
                   <div className="flex items-center gap-3">
                     <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
                       <i className="fa-solid fa-book mr-1.5"></i> Manual
@@ -3150,7 +3541,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       value={editData[activeSingleEntry.id]?.fullContent || ''}
                       onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], fullContent: e.target.value } }))} 
                       onFocus={() => setIsContentFocused(true)}
-                      className="w-full px-4 py-3 text-xs font-mono bg-[var(--card-bg)] text-[var(--text-main)] rounded leading-relaxed cursor-text" 
+                      className="w-full px-4 py-3 text-xs font-mono bg-[var(--card-bg)] text-[var(--text-main)] rounded leading-[1.4] cursor-text" 
                       placeholder="Write your note in Markdown... (Drag any note from the list into this box to insert a backlink)"
                     ></textarea>
                   </div>
@@ -3387,7 +3778,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                               setFocusedFromView(true);
                               setIsContentFocused(true);
                             }}
-                            className="prose prose-player max-w-none text-[var(--text-main)] leading-relaxed font-mono cursor-text min-h-[60px]"
+                            className="prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono cursor-text min-h-[60px]"
                             title="Double-click to edit content in Focus Mode"
                             dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(noteMarkdown), entries) }} 
                           />
@@ -3847,7 +4238,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   value={editData[activeSingleEntry.id]?.fullContent ?? activeSingleEntry.fullContent ?? ''}
                   onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...(prev[activeSingleEntry.id] || activeSingleEntry), fullContent: e.target.value } }))} 
                   onKeyDown={handleContentKeyDown}
-                  className="w-full h-full p-8 font-mono text-sm leading-relaxed bg-[var(--card-bg)] text-[var(--text-main)] resize-none outline-none border-none cursor-text select-text"
+                  className="w-full h-full p-8 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] resize-none outline-none border-none cursor-text select-text"
                   placeholder="Write your note in Markdown..."
                 ></textarea>
               </div>
