@@ -461,9 +461,18 @@
 
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v2.2.0";
+    const APP_VERSION = "v2.2.1";
 
     const CHANGELOG = [
+      {
+        version: "v2.2.1",
+        date: "2026-09-30",
+        highlights: [
+          "Exiting Focus Mode now returns directly to active note edit state with all changes intact, keeping user aware of unsaved changes.",
+          "Added periodic background disk & IndexedDB auto-saving every 15 seconds regardless of user activity.",
+          "Automatic sync triggers on window visibility changes and page unloads."
+        ]
+      },
       {
         version: "v2.2.0",
         date: "2026-09-15",
@@ -914,7 +923,6 @@
       const [editTagInput, setEditTagInput] = useState({});
       const [editProjectInput, setEditProjectInput] = useState({});
       const [isContentFocused, setIsContentFocused] = useState(false);
-      const [focusedFromView, setFocusedFromView] = useState(false);
       const contentTextareaRef = useRef(null);
 
       const selectedEntries = entries.filter(e => selectedEntryIds.includes(e.id));
@@ -925,14 +933,8 @@
           contentTextareaRef.current.blur();
         }
         setIsContentFocused(false);
-        if (focusedFromView && activeSingleEntry) {
-          const currentId = activeSingleEntry.id;
-          const updatedContent = editData[currentId]?.fullContent;
-          if (updatedContent !== undefined) {
-            setEntries(prev => prev.map(e => e.id === currentId ? { ...e, fullContent: updatedContent, updatedAt: Date.now() } : e));
-          }
-          setEditingEntries(prev => { const n = { ...prev }; delete n[currentId]; return n; });
-          setFocusedFromView(false);
+        if (activeSingleEntry) {
+          setEditingEntries(prev => ({ ...prev, [activeSingleEntry.id]: true }));
         }
       };
 
@@ -966,7 +968,6 @@
 
       useEffect(() => {
         setIsContentFocused(false);
-        setFocusedFromView(false);
         setIsAssistantOpen(false);
       }, [selectedEntryIds]);
 
@@ -990,7 +991,7 @@
         };
         window.addEventListener('keydown', handleGlobalEsc);
         return () => window.removeEventListener('keydown', handleGlobalEsc);
-      }, [isContentFocused, focusedFromView, activeSingleEntry, editData]);
+      }, [isContentFocused, activeSingleEntry]);
 
       // Unified AI Assistant
       const [isAssistantOpen, setIsAssistantOpen] = useState(false);
@@ -1044,34 +1045,130 @@
         }
       }, []);
 
-      // Auto-Save to disk
-      useEffect(() => {
-        if (appState !== 'workspace' || !fileHandle) return;
-        const timer = setTimeout(async () => {
-          try {
-            const dataToWrite = {
-              entries,
-              apiKeys,
-              model,
-              theme,
-              assistantMessages: (assistantChats['workspace'] || []).slice(-50),
-              assistantChats,
-              archivedAssistantChats,
-              chats: archivedAssistantChats,
-              updatedAt: Date.now()
-            };
-            const writable = await fileHandle.createWritable();
-            await writable.write(JSON.stringify(dataToWrite, null, 2));
-            await writable.close();
+      // Robust Auto-Save and Periodic Disk Sync
+      const isSavingRef = useRef(false);
+      const savePendingRef = useRef(false);
 
-            const updatedFile = await fileHandle.getFile();
-            setLastSyncTime(updatedFile.lastModified);
-          } catch (err) {
-            console.error("Auto-save sync failed:", err);
+      const saveStateRef = useRef({
+        entries,
+        apiKeys,
+        model,
+        theme,
+        assistantChats,
+        archivedAssistantChats,
+        appState,
+        fileHandle,
+        editData,
+        editingEntries
+      });
+
+      useEffect(() => {
+        saveStateRef.current = {
+          entries,
+          apiKeys,
+          model,
+          theme,
+          assistantChats,
+          archivedAssistantChats,
+          appState,
+          fileHandle,
+          editData,
+          editingEntries
+        };
+      }, [entries, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries]);
+
+      const saveWorkspaceToDisk = async () => {
+        const current = saveStateRef.current;
+        if (current.appState !== 'workspace') return;
+
+        if (isSavingRef.current) {
+          savePendingRef.current = true;
+          return;
+        }
+
+        isSavingRef.current = true;
+        try {
+          const dataToWrite = {
+            entries: current.entries,
+            apiKeys: current.apiKeys,
+            model: current.model,
+            theme: current.theme,
+            assistantMessages: (current.assistantChats['workspace'] || []).slice(-50),
+            assistantChats: current.assistantChats,
+            archivedAssistantChats: current.archivedAssistantChats,
+            chats: current.archivedAssistantChats,
+            updatedAt: Date.now()
+          };
+
+          if (current.fileHandle) {
+            try {
+              const writable = await current.fileHandle.createWritable();
+              await writable.write(JSON.stringify(dataToWrite, null, 2));
+              await writable.close();
+
+              const updatedFile = await current.fileHandle.getFile();
+              setLastSyncTime(updatedFile.lastModified);
+            } catch (err) {
+              console.error("Auto-save sync to file failed:", err);
+            }
           }
+
+          if (typeof idbKeyval !== 'undefined') {
+            try {
+              await idbKeyval.set('kb_workspace_backup', {
+                data: dataToWrite,
+                savedAt: Date.now()
+              });
+            } catch (idbErr) {
+              console.warn("IndexedDB backup failed:", idbErr);
+            }
+          }
+        } catch (err) {
+          console.error("Workspace save failed:", err);
+        } finally {
+          isSavingRef.current = false;
+          if (savePendingRef.current) {
+            savePendingRef.current = false;
+            saveWorkspaceToDisk();
+          }
+        }
+      };
+
+      // 1. Reactive Debounced Auto-Save to disk on state changes
+      useEffect(() => {
+        if (appState !== 'workspace') return;
+        const timer = setTimeout(() => {
+          saveWorkspaceToDisk();
         }, 1200);
         return () => clearTimeout(timer);
       }, [entries, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle]);
+
+      // 2. Periodic Save Regardless (runs every 15 seconds)
+      useEffect(() => {
+        if (appState !== 'workspace') return;
+        const interval = setInterval(() => {
+          saveWorkspaceToDisk();
+        }, 15000);
+        return () => clearInterval(interval);
+      }, [appState]);
+
+      // 3. Save on tab visibility change or unload
+      useEffect(() => {
+        const handleBeforeUnload = () => {
+          saveWorkspaceToDisk();
+        };
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'hidden') {
+            saveWorkspaceToDisk();
+          }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+          window.removeEventListener('beforeunload', handleBeforeUnload);
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+      }, []);
 
       const ensureNumericIds = (loadedEntries) => {
         let maxId = Math.floor(loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0));
@@ -1896,7 +1993,6 @@
 
       const saveNote = async (id) => {
         setIsContentFocused(false);
-        setFocusedFromView(false);
         const data = editData[id];
         if (!data) return;
 
@@ -2008,7 +2104,6 @@
 
       const cancelEdit = (id) => {
         setIsContentFocused(false);
-        setFocusedFromView(false);
         setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
       };
 
@@ -3761,7 +3856,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                             type="button" 
                             onClick={() => {
                               startEditing(activeSingleEntry);
-                              setFocusedFromView(true);
                               setIsContentFocused(true);
                             }} 
                             className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
@@ -3775,7 +3869,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                             onDoubleClick={(e) => {
                               e.stopPropagation();
                               startEditing(activeSingleEntry);
-                              setFocusedFromView(true);
                               setIsContentFocused(true);
                             }}
                             className="prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono cursor-text min-h-[60px]"
@@ -3787,7 +3880,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                             onDoubleClick={(e) => {
                               e.stopPropagation();
                               startEditing(activeSingleEntry);
-                              setFocusedFromView(true);
                               setIsContentFocused(true);
                             }}
                             className="text-[var(--text-muted)] italic leading-relaxed font-mono cursor-text min-h-[60px] py-4 border border-dashed border-[var(--border)] rounded px-4 text-center"
