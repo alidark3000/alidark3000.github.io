@@ -468,9 +468,11 @@
         version: "v2.2.1",
         date: "2026-09-30",
         highlights: [
-          "Exiting Focus Mode now returns directly to active note edit state with all changes intact, keeping user aware of unsaved changes.",
+          "Notes are now automatically saved whenever clicked away from, navigated away from, or when Focus Mode is exited (via Esc, backdrop click, or close button), not just when manually clicking Save.",
           "Added periodic background disk & IndexedDB auto-saving every 15 seconds regardless of user activity.",
-          "Automatic sync triggers on window visibility changes and page unloads."
+          "Automatic sync triggers on window visibility changes and page unloads.",
+          "Added AI Theme Prompt Generator: juxtaposes recurring themes and loose ends from the last 4 months while ignoring executive summaries of previous prompts, gives prompt notes their own distinct Orange color, and features a 'Write' action that opens straight into Focus Mode with the question displayed above the editor.",
+          "Moved color-coded entry type toggles into the Taxonomy view above Projects (with live counts and 'all types' reset), dynamically filtering taxonomies below, with Tags collapsed by default on initial load."
         ]
       },
       {
@@ -509,6 +511,29 @@
     const isMediaSource = (url) => {
       if (!url) return false;
       return /(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|twitch\.tv|dailymotion\.com|spotify\.com|soundcloud\.com|\.(mp4|webm|ogg|mov|mp3|wav|m4a)$)/i.test(url);
+    };
+
+    const isPromptEntry = (entry) => {
+      if (!entry) return false;
+      return Boolean(entry.promptQuestion || (Array.isArray(entry.tags) && entry.tags.includes('prompt')) || (Array.isArray(entry.categories) && entry.categories.includes('prompt')));
+    };
+
+    const ENTRY_TYPES = [
+      { id: 'note', label: 'Notes', color: '#f59e0b', icon: 'fa-file-lines' },
+      { id: 'prompt', label: 'Prompts', color: '#f97316', icon: 'fa-brain' },
+      { id: 'media', label: 'Media', color: '#ff5252', icon: 'fa-play' },
+      { id: 'web', label: 'Web', color: '#38bdf8', icon: 'fa-link' },
+      { id: 'pdf', label: 'PDFs', color: '#ec4899', icon: 'fa-file-pdf' }
+    ];
+
+    const getEntryType = (entry) => {
+      if (!entry) return 'note';
+      if (isPromptEntry(entry)) return 'prompt';
+      const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
+      if (isPdf) return 'pdf';
+      if (isMediaSource(entry.sourceUrl)) return 'media';
+      if (entry.sourceUrl) return 'web';
+      return 'note';
     };
 
     const getEmbedUrl = (url) => {
@@ -795,7 +820,13 @@
       
       const [historyState, setHistoryState] = useState({ past: [], present: [] });
       const entries = historyState.present;
-      
+
+      const [storedPrompts, setStoredPrompts] = useState([]);
+      const [promptState, setPromptState] = useState({
+        isGenerating: false,
+        draft: null
+      });
+
       const setEntries = (updater) => {
         setHistoryState(prev => {
           const nextPresent = typeof updater === 'function' ? updater(prev.present) : updater;
@@ -848,13 +879,42 @@
       const [activeProjects, setActiveProjects] = useState([]);
       const [activeCategories, setActiveCategories] = useState([]);
       const [activeTags, setActiveTags] = useState([]);
+      const [activeTypeFilters, setActiveTypeFilters] = useState(['note', 'prompt', 'media', 'web', 'pdf']);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
       const [navHistory, setNavHistory] = useState([]);
       const [navIndex, setNavIndex] = useState(-1);
 
+      const saveNoteRef = useRef(null);
+      const savingIdsRef = useRef(new Set());
+      const editFormRef = useRef(null);
+      const editingEntriesRef = useRef({});
+      const editDataRef = useRef({});
+      const activeSingleEntryRef = useRef(null);
+      const isContentFocusedRef = useRef(false);
+      const entriesRef = useRef(entries);
+
+      const toggleTypeFilter = (typeId) => {
+        setActiveTypeFilters(prev => 
+          prev.includes(typeId) 
+            ? prev.filter(t => t !== typeId) 
+            : [...prev, typeId]
+        );
+      };
+
       const selectEntryWithHistory = (newIds, isHistoryAction = false) => {
         const ids = Array.isArray(newIds) ? newIds : [newIds];
+        if (editingEntriesRef.current) {
+          const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
+          if (activeEditingIds.length > 0) {
+            const isSameSingleEntry = ids.length === 1 && activeEditingIds.includes(ids[0]);
+            if (!isSameSingleEntry) {
+              activeEditingIds.forEach(id => {
+                if (saveNoteRef.current) saveNoteRef.current(id);
+              });
+            }
+          }
+        }
         setSelectedEntryIds(ids);
         setIsAssistantOpen(false);
         if (!isHistoryAction && ids.length > 0) {
@@ -924,19 +984,65 @@
       const [editProjectInput, setEditProjectInput] = useState({});
       const [isContentFocused, setIsContentFocused] = useState(false);
       const contentTextareaRef = useRef(null);
+      const skipDefocusOnSelectRef = useRef(false);
 
       const selectedEntries = entries.filter(e => selectedEntryIds.includes(e.id));
       const activeSingleEntry = selectedEntryIds.length === 1 ? entries.find(e => e.id === selectedEntryIds[0]) : null;
+
+      useEffect(() => { editingEntriesRef.current = editingEntries; }, [editingEntries]);
+      useEffect(() => { editDataRef.current = editData; }, [editData]);
+      useEffect(() => { activeSingleEntryRef.current = activeSingleEntry; }, [activeSingleEntry]);
+      useEffect(() => { isContentFocusedRef.current = isContentFocused; }, [isContentFocused]);
+      useEffect(() => { entriesRef.current = entries; }, [entries]);
 
       const handleDefocus = () => {
         if (contentTextareaRef.current) {
           contentTextareaRef.current.blur();
         }
         setIsContentFocused(false);
-        if (activeSingleEntry) {
-          setEditingEntries(prev => ({ ...prev, [activeSingleEntry.id]: true }));
+        const currentEntry = activeSingleEntryRef.current || activeSingleEntry;
+        if (currentEntry && currentEntry.id) {
+          if (contentTextareaRef.current) {
+            const currentVal = contentTextareaRef.current.value;
+            editDataRef.current = {
+              ...editDataRef.current,
+              [currentEntry.id]: {
+                ...(editDataRef.current[currentEntry.id] || currentEntry),
+                fullContent: currentVal
+              }
+            };
+            setEditData(editDataRef.current);
+          }
+          if (saveNoteRef.current) {
+            saveNoteRef.current(currentEntry.id);
+          }
         }
       };
+
+      // Click outside listener: saves note when clicked away from edit mode
+      useEffect(() => {
+        const isEditingAny = Object.keys(editingEntries).some(id => editingEntries[id]);
+        if (!isEditingAny) return;
+
+        const handlePointerDownOutside = (e) => {
+          if (isContentFocusedRef.current) return;
+          if (e.target && e.target.closest && e.target.closest('[data-cancel-edit="true"]')) return;
+          if (e.target && e.target.closest && e.target.closest('[data-delete-entry="true"]')) return;
+          if (editFormRef.current && editFormRef.current.contains(e.target)) return;
+
+          const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
+          activeEditingIds.forEach(id => {
+            if (saveNoteRef.current) {
+              saveNoteRef.current(id);
+            }
+          });
+        };
+
+        document.addEventListener('pointerdown', handlePointerDownOutside, true);
+        return () => {
+          document.removeEventListener('pointerdown', handlePointerDownOutside, true);
+        };
+      }, [editingEntries]);
 
       const handleContentKeyDown = (e) => {
         if (e.key === 'Escape') {
@@ -967,19 +1073,31 @@
       };
 
       useEffect(() => {
+        if (skipDefocusOnSelectRef.current) {
+          skipDefocusOnSelectRef.current = false;
+          setIsAssistantOpen(false);
+          return;
+        }
         setIsContentFocused(false);
         setIsAssistantOpen(false);
       }, [selectedEntryIds]);
 
       useEffect(() => {
-        if (isContentFocused && contentTextareaRef.current) {
-          const el = contentTextareaRef.current;
-          el.focus();
-          if (el.selectionStart === 0 && el.selectionEnd === 0 && el.value.length > 0) {
-            el.selectionStart = el.selectionEnd = el.value.length;
-          }
+        if (isContentFocused) {
+          const tryFocus = () => {
+            if (contentTextareaRef.current) {
+              const el = contentTextareaRef.current;
+              el.focus();
+              if (el.selectionStart === 0 && el.selectionEnd === 0 && el.value.length > 0) {
+                el.selectionStart = el.selectionEnd = el.value.length;
+              }
+            }
+          };
+          tryFocus();
+          const timer = setTimeout(tryFocus, 50);
+          return () => clearTimeout(timer);
         }
-      }, [isContentFocused]);
+      }, [isContentFocused, activeSingleEntry]);
 
       useEffect(() => {
         if (!isContentFocused) return;
@@ -1009,7 +1127,7 @@
       const [dragOverEntryId, setDragOverEntryId] = useState(null);
       const [hoveredRef, setHoveredRef] = useState(null);
       const [activeRefModal, setActiveRefModal] = useState(null);
-      const [isTagsOpen, setIsTagsOpen] = useState(true);
+      const [isTagsOpen, setIsTagsOpen] = useState(false);
       const [showWorkspaceOptions, setShowWorkspaceOptions] = useState(false);
 
       const chatScrollRef = useRef(null);
@@ -1040,6 +1158,11 @@
             console.error("IndexedDB error:", err);
             setAppState('landing');
           });
+          idbKeyval.get('kb_stored_prompts').then(p => {
+            if (Array.isArray(p) && p.length > 0) {
+              setStoredPrompts(p);
+            }
+          }).catch(() => {});
         } else {
           setAppState('landing');
         }
@@ -1051,6 +1174,7 @@
 
       const saveStateRef = useRef({
         entries,
+        storedPrompts,
         apiKeys,
         model,
         theme,
@@ -1065,6 +1189,7 @@
       useEffect(() => {
         saveStateRef.current = {
           entries,
+          storedPrompts,
           apiKeys,
           model,
           theme,
@@ -1075,7 +1200,7 @@
           editData,
           editingEntries
         };
-      }, [entries, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries]);
+      }, [entries, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries]);
 
       const saveWorkspaceToDisk = async () => {
         const current = saveStateRef.current;
@@ -1090,6 +1215,7 @@
         try {
           const dataToWrite = {
             entries: current.entries,
+            storedPrompts: current.storedPrompts || [],
             apiKeys: current.apiKeys,
             model: current.model,
             theme: current.theme,
@@ -1155,10 +1281,22 @@
       // 3. Save on tab visibility change or unload
       useEffect(() => {
         const handleBeforeUnload = () => {
+          if (editingEntriesRef.current) {
+            const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
+            activeEditingIds.forEach(id => {
+              if (saveNoteRef.current) saveNoteRef.current(id);
+            });
+          }
           saveWorkspaceToDisk();
         };
         const handleVisibilityChange = () => {
           if (document.visibilityState === 'hidden') {
+            if (editingEntriesRef.current) {
+              const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
+              activeEditingIds.forEach(id => {
+                if (saveNoteRef.current) saveNoteRef.current(id);
+              });
+            }
             saveWorkspaceToDisk();
           }
         };
@@ -1224,8 +1362,16 @@
           });
         }
 
+        let loadedStoredPrompts = [];
+        if (Array.isArray(data.storedPrompts)) {
+          loadedStoredPrompts = data.storedPrompts;
+        } else if (Array.isArray(data.generatedPrompts)) {
+          loadedStoredPrompts = data.generatedPrompts;
+        }
+
         return {
           entries: migratedEntries,
+          storedPrompts: loadedStoredPrompts,
           apiKeys: parsedKeys,
           model: data.model || 'gemini-2.5-flash',
           theme: data.theme || 'default',
@@ -1254,6 +1400,7 @@
           setNavHistory(initialIds.length > 0 ? [initialIds] : []);
           setNavIndex(initialIds.length > 0 ? 0 : -1);
           
+          setStoredPrompts(migrated.storedPrompts || []);
           setApiKeys(migrated.apiKeys);
           setModel(migrated.model);
           setTheme(migrated.theme);
@@ -1298,6 +1445,7 @@
           setFileHandle(handle);
           setFileName(handle.name);
           setHistoryState({ past: [], present: [INITIAL_ENTRY] });
+          setStoredPrompts([]);
           setApiKeys([]);
           setModel('gemini-2.5-flash');
           setTheme('default');
@@ -1704,6 +1852,9 @@
       const availableTags = new Set();
 
       entries.forEach(e => {
+        const matchesType = activeTypeFilters.includes(getEntryType(e));
+        if (!matchesType) return;
+
         const matchesProject = activeProjects.length === 0 || (Array.isArray(e.projects) && e.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
         const matchesCat = activeCategories.length === 0 || (Array.isArray(e.categories) && e.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
         const matchesTag = activeTags.length === 0 || (Array.isArray(e.tags) && e.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
@@ -1969,12 +2120,220 @@
         setEditingEntries(prev => ({ ...prev, [newId]: true }));
       };
 
+      const handleWriteFromPrompt = () => {
+        if (!promptState.draft) return;
+        const draft = promptState.draft;
+        const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
+        const newId = 'entry-' + Date.now();
+        const questionText = draft.fullContent || draft.content || '';
+        const promptTitle = draft.title || 'Theme Reflection';
+
+        const newEntry = {
+          id: newId,
+          title: promptTitle,
+          numericId: nextNumericId,
+          summary: '',
+          promptQuestion: questionText,
+          shortVersion: [],
+          fullContent: '',
+          categories: ['notes'],
+          tags: ['prompt', 'reflection'],
+          projects: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          sourceUrl: null,
+          references: [],
+          pinned: false
+        };
+
+        skipDefocusOnSelectRef.current = true;
+        setEntries(prev => [newEntry, ...prev]);
+        setSelectedEntryIds([newId]);
+        setNavHistory(prev => [[newId], ...prev]);
+        setNavIndex(0);
+        setEditData(prev => ({
+          ...prev,
+          [newId]: {
+            ...newEntry,
+            fullContent: ''
+          }
+        }));
+        setEditingEntries(prev => ({ ...prev, [newId]: true }));
+        setPromptState(prev => ({ ...prev, draft: null }));
+        if (window.innerWidth < 1024 && typeof setIsListSidebarOpen === 'function') {
+          setIsListSidebarOpen(false);
+        }
+        setIsContentFocused(true);
+        setTimeout(() => {
+          setIsContentFocused(true);
+        }, 30);
+      };
+
+      const generatePromptNote = async () => {
+        setPromptState({ isGenerating: true, draft: null });
+        try {
+          const now = Date.now();
+          const fourMonthsAgo = now - (120 * 24 * 60 * 60 * 1000);
+          
+          // Pool notes from the last 4 months
+          const recentPool = entries.filter(e => {
+            const time = Number(e.createdAt) || Number(e.updatedAt) || 0;
+            return time >= fourMonthsAgo;
+          });
+
+          const pool = recentPool.length >= 5 ? recentPool : entries;
+          
+          // Spread attention equally over entries from last 4 months:
+          // Divide the 120-day timeframe into 4 equal 30-day buckets
+          const monthSpan = 30 * 24 * 60 * 60 * 1000;
+          const buckets = [[], [], [], []];
+          pool.forEach(e => {
+            const time = Number(e.createdAt) || Number(e.updatedAt) || now;
+            const age = Math.max(0, now - time);
+            const bIdx = Math.min(3, Math.floor(age / monthSpan));
+            buckets[bIdx].push(e);
+          });
+
+          // Helper to sample evenly from a bucket, prioritizing manual notes (!e.sourceUrl)
+          const sampleFromBucket = (bucket, count) => {
+            if (!bucket || bucket.length === 0) return [];
+            const manuals = bucket.filter(e => !e.sourceUrl);
+            const others = bucket.filter(e => e.sourceUrl);
+            const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
+            return [...shuffle(manuals), ...shuffle(others)].slice(0, count);
+          };
+
+          let selectedNotes = [];
+          // Sample up to 10 notes per month bucket
+          buckets.forEach(b => {
+            selectedNotes.push(...sampleFromBucket(b, 10));
+          });
+
+          // If some buckets had fewer notes, top up from the overall pool
+          if (selectedNotes.length < 25 && pool.length > selectedNotes.length) {
+            const chosenIds = new Set(selectedNotes.map(e => e.id));
+            const remaining = pool.filter(e => !chosenIds.has(e.id));
+            selectedNotes.push(...sampleFromBucket(remaining, 35 - selectedNotes.length));
+          }
+
+          if (selectedNotes.length === 0) {
+            throw new Error("No notes found in knowledge base to analyze.");
+          }
+
+          const contextText = selectedNotes.map(e => {
+            const dateStr = new Date(e.createdAt || e.updatedAt || now).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            const isPrompt = isPromptEntry(e);
+            const typeStr = isPrompt ? 'Prompt Reflection Note' : (!e.sourceUrl ? 'Manual Note' : 'Ingested Web/Media');
+            const takeaways = Array.isArray(e.shortVersion) && e.shortVersion.length ? `\nTakeaways: ${e.shortVersion.join('; ')}` : '';
+            // Ignore executive summaries of prompt entries
+            const summary = (!isPrompt && e.summary) ? `\nSummary: ${e.summary}` : '';
+            const contentText = e.fullContent ? e.fullContent.trim() : '';
+            const snippet = (isPrompt || !summary) && contentText ? `\nContent: ${contentText.substring(0, 350)}` : '';
+            return `--- [[kb-ref:${e.id}]] "${e.title || 'Untitled'}" (${dateStr}, ${typeStr}) ---${summary}${takeaways}${snippet}`;
+          }).join('\n\n');
+
+          const pastPromptsList = storedPrompts.length > 0
+            ? "\n\nPREVIOUSLY GENERATED PROMPTS (DO NOT REPEAT OR CLOSELY RETREAD ANY OF THESE THEMES OR QUESTIONS):\n" +
+              storedPrompts.slice(-30).map((p, i) => `${i + 1}. [${p.title}]: ${p.content || p.question}`).join('\n')
+            : "";
+
+          const systemPrompt = `You are a perceptive thinking assistant inside the user's personal knowledge base.
+Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.
+
+PROMPT MODES - SELECT EITHER A OR B:
+A) CHECK IN ON AN UNRESOLVED THEME OR LOOSE END:
+   - Identify an unresolved question, lingering curiosity, half-finished idea, or open thread from a note (or recurring across notes).
+   - Check in directly: ask where that stands now, what has developed, or what needs answering.
+B) JUXTAPOSE OR CONNECT THEMES:
+   - Identify 2 concrete ideas, perspectives, or themes across notes.
+   - Connect or contrast them simply: show how one idea impacts, complicates, or illuminates the other.
+(Note: You do NOT always have to juxtapose—spotting an unresolved theme or loose end and checking in is equally valuable.)
+
+CORE GUIDELINES:
+1. CLEAR & DIRECT:
+   - Use plain, conversational language. Absolutely avoid academic jargon, flowery rhetoric, or convoluted phrasing.
+   - State the context or thread simply in one sentence, then ask one focused question.
+   - Avoid run-on sentences, nested clauses, or multi-part questions.
+
+2. CONCISE & PERTINENT:
+   - Keep the entire prompt brief (around 30–60 words).
+   - Get straight to the point without any introductory throat-clearing, filler, or fluff.
+
+3. EQUAL ATTENTION ACROSS LAST 4 MONTHS:
+   - Give equal consideration across the entire 4-month span, especially manual user notes.
+
+4. NO REPETITION:
+   - Do NOT repeat or retread questions from previous prompts.${pastPromptsList}
+
+OUTPUT FORMAT:
+Respond with valid JSON ONLY matching this structure:
+{
+  "title": "A short 3-5 word direct title",
+  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes."
+}`;
+
+          const payload = {
+            contents: [{ parts: [{ text: contextText }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.7 }
+          };
+
+          const activeKey = apiKeys[0]?.key;
+          if (!activeKey) {
+            setShowKeyModal(true);
+            setError("Please configure your Gemini API key in Settings first.");
+            setPromptState({ isGenerating: false, draft: null });
+            return;
+          }
+          
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`;
+          const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const result = await response.json();
+          
+          if (result.error) throw new Error(result.error.message);
+          
+          const rawText = result.candidates[0].content.parts[0].text;
+          const cleanText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const parsed = JSON.parse(cleanText);
+          
+          const newPromptRecord = {
+            id: 'prompt-' + Date.now(),
+            title: parsed.title || "Theme Prompt",
+            content: parsed.content || "",
+            createdAt: Date.now()
+          };
+
+          // Store generated prompt so it is never repeated
+          setStoredPrompts(prev => {
+            const updated = [...prev, newPromptRecord];
+            if (typeof idbKeyval !== 'undefined') {
+              idbKeyval.set('kb_stored_prompts', updated).catch(() => {});
+            }
+            return updated;
+          });
+
+          setPromptState({
+            isGenerating: false,
+            draft: {
+              title: newPromptRecord.title,
+              fullContent: newPromptRecord.content,
+              summary: newPromptRecord.content
+            }
+          });
+        } catch (e) {
+          console.error("Prompt generation failed:", e);
+          setError("Failed to generate prompt note: " + e.message);
+          setPromptState({ isGenerating: false, draft: null });
+        }
+      };
+
       const startEditing = (entry) => {
         setEditData(prev => ({
           ...prev,
           [entry.id]: {
             title: entry.title || '',
             summary: entry.summary || '',
+            promptQuestion: entry.promptQuestion || '',
             fullContent: entry.fullContent || (
               Array.isArray(entry.chatHistory) && entry.chatHistory.length > 0
                 ? entry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
@@ -1993,8 +2352,22 @@
 
       const saveNote = async (id) => {
         setIsContentFocused(false);
-        const data = editData[id];
+        if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+          const val = contentTextareaRef.current.value;
+          if (val !== undefined && val !== null) {
+            editDataRef.current = {
+              ...editDataRef.current,
+              [id]: {
+                ...(editDataRef.current[id] || activeSingleEntryRef.current),
+                fullContent: val
+              }
+            };
+          }
+        }
+        const data = editDataRef.current[id] || editData[id];
         if (!data) return;
+        if (savingIdsRef.current.has(id)) return;
+        savingIdsRef.current.add(id);
 
         const rawShortVersion = typeof data.shortVersion === 'string'
           ? data.shortVersion.split('\n').map(s => s.trim()).filter(Boolean)
@@ -2003,6 +2376,7 @@
         const initialSavedEntry = {
           title: data.title ? data.title.trim() : 'Untitled Note',
           summary: data.summary ? data.summary.trim() : '',
+          promptQuestion: data.promptQuestion || entriesRef.current.find(e => e.id === id)?.promptQuestion || undefined,
           fullContent: data.fullContent || '',
           shortVersion: rawShortVersion,
           sourceUrl: data.sourceUrl || null,
@@ -2028,8 +2402,8 @@
 
         const contentToAnalyze = (initialSavedEntry.fullContent || initialSavedEntry.summary || '').trim();
 
-        if ((needsTitle || needsSummary || needsTakeaways || needsTaxonomies) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
-          try {
+        try {
+          if ((needsTitle || needsSummary || needsTakeaways || needsTaxonomies) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
             const instructions = [];
             if (needsTitle) instructions.push("1. Suggest a punchy, descriptive title (max 6 words) in 'title'.");
             if (needsSummary) instructions.push("2. Provide an ultra-concise TL;DR summary in 1 sentence (strictly under 15 words) in 'summary'.");
@@ -2096,11 +2470,14 @@
               }
               return e;
             }));
-          } catch (err) {
-            console.warn("Auto-generation of missing note metadata on save failed:", err);
           }
+        } catch (err) {
+          console.warn("Auto-generation of missing note metadata on save failed:", err);
+        } finally {
+          savingIdsRef.current.delete(id);
         }
       };
+      saveNoteRef.current = saveNote;
 
       const cancelEdit = (id) => {
         setIsContentFocused(false);
@@ -2670,6 +3047,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
       // Filtered entries
       const filteredEntries = entries.filter(entry => {
         if (!entry) return false;
+        const entryType = getEntryType(entry);
+        if (!activeTypeFilters.includes(entryType)) return false;
         const matchesProject = activeProjects.length === 0 || (Array.isArray(entry.projects) && entry.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
         const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
         const matchesTag = activeTags.length === 0 || (Array.isArray(entry.tags) && entry.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
@@ -3087,7 +3466,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         </button>
                         <button 
                           onClick={() => {
-                            const dataStr = JSON.stringify({ entries, apiKeys, model, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []) }, null, 2);
+                            const dataStr = JSON.stringify({ entries, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []) }, null, 2);
                             const blob = new Blob([dataStr], { type: "application/json" });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
@@ -3120,12 +3499,61 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Taxonomy Navigation */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-5">
                 
+                {/* Entry Types */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2 px-1.5 font-mono">
+                    <span className="flex items-center gap-1.5"><i className="fa-solid fa-shapes text-xs text-[var(--accent)]"></i> Types</span>
+                    {activeTypeFilters.length < ENTRY_TYPES.length ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTypeFilters(ENTRY_TYPES.map(t => t.id))}
+                        className="font-mono text-[10px] text-[var(--accent)] hover:underline cursor-pointer lowercase"
+                        title="Show all entry types"
+                      >
+                        all types
+                      </button>
+                    ) : (
+                      <span className="font-mono opacity-75 text-[10px]">
+                        {ENTRY_TYPES.length} / {ENTRY_TYPES.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 px-0.5">
+                    {ENTRY_TYPES.map(t => {
+                      const isActive = activeTypeFilters.includes(t.id);
+                      const count = entries.filter(e => getEntryType(e) === t.id).length;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => toggleTypeFilter(t.id)}
+                          style={{
+                            borderColor: isActive ? t.color : 'var(--border)',
+                            backgroundColor: isActive ? `${t.color}15` : 'transparent',
+                            color: isActive ? t.color : 'var(--text-muted)'
+                          }}
+                          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer select-none ${
+                            isActive ? 'shadow-xs font-semibold' : 'opacity-40 hover:opacity-75'
+                          }`}
+                          title={`${isActive ? 'Hide' : 'Show'} ${t.label} (Click to toggle)`}
+                        >
+                          <i className={`fa-solid ${t.icon} text-[10px]`}></i>
+                          <span>{t.label}</span>
+                          <span className={`text-[10px] ml-0.5 px-1 rounded-full ${isActive ? 'bg-black/10 dark:bg-white/10' : 'opacity-60'}`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Projects */}
                 <div>
                   <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 px-1.5 font-mono">
                     <span className="flex items-center gap-1.5"><i className="fa-solid fa-folder-open text-xs text-amber-500"></i> Projects</span>
                     <span className="font-mono opacity-75 text-[10px]">
-                      {activeCategories.length > 0 || activeTags.length > 0 ? `${Array.from(availableProjects).length} / ${sortedProjects.length}` : sortedProjects.length}
+                      {activeTypeFilters.length < ENTRY_TYPES.length || activeCategories.length > 0 || activeTags.length > 0 ? `${Array.from(availableProjects).length} / ${sortedProjects.length}` : sortedProjects.length}
                     </span>
                   </div>
                   <div className="flex flex-col">
@@ -3167,7 +3595,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 px-1.5 font-mono">
                     <span className="flex items-center gap-1.5"><i className="fa-solid fa-layer-group text-xs text-[var(--accent)]"></i> Categories</span>
                     <span className="font-mono opacity-75 text-[10px]">
-                      {activeProjects.length > 0 || activeTags.length > 0 ? `${Array.from(availableCategories).length} / ${sortedCategories.length}` : sortedCategories.length}
+                      {activeTypeFilters.length < ENTRY_TYPES.length || activeProjects.length > 0 || activeTags.length > 0 ? `${Array.from(availableCategories).length} / ${sortedCategories.length}` : sortedCategories.length}
                     </span>
                   </div>
                   <div className="flex flex-col">
@@ -3220,7 +3648,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       )}
                     </span>
                     <span className="font-mono opacity-75 text-[10px]">
-                      {activeProjects.length > 0 || activeCategories.length > 0 ? `${Array.from(availableTags).length} / ${sortedTags.length}` : sortedTags.length}
+                      {activeTypeFilters.length < ENTRY_TYPES.length || activeProjects.length > 0 || activeCategories.length > 0 ? `${Array.from(availableTags).length} / ${sortedTags.length}` : sortedTags.length}
                     </span>
                   </div>
                   {isTagsOpen && (
@@ -3362,14 +3790,58 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
               {/* Note Cards List: 30px margin between cards */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
+                
+                {/* PROMPT NOTE SECTION */}
+                {!promptState.draft && !promptState.isGenerating && (
+                  <button onClick={generatePromptNote} className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer">
+                    <i className="fa-solid fa-wand-magic-sparkles"></i> Generate Theme Prompt
+                  </button>
+                )}
+                {promptState.isGenerating && (
+                  <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--text-muted)] text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2">
+                    <i className="fa-solid fa-spinner fa-spin"></i> Finding themes and loose ends from last 4 months...
+                  </div>
+                )}
+                {promptState.draft && (
+                  <div className="group relative p-4 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 border-l-4 bg-[var(--card-bg)]" style={{ borderLeftColor: '#f97316', borderLeftWidth: '4px' }}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2 text-[#f97316] font-bold text-xs uppercase tracking-wider">
+                        <i className="fa-solid fa-brain"></i> Theme Prompt
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={handleWriteFromPrompt} 
+                          className="text-xs bg-[#f97316] text-white px-3 py-1 rounded font-bold hover:bg-[#ea580c] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
+                          title="Open in Focus Mode to write your response"
+                        >
+                          <i className="fa-solid fa-pen-nib text-[10px]"></i> Write
+                        </button>
+                        <button 
+                          onClick={() => setPromptState(prev => ({ ...prev, draft: null }))} 
+                          className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] p-1 cursor-pointer transition-colors"
+                          title="Dismiss prompt"
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="font-bold text-[var(--text-main)] mb-2 font-mono text-base">{promptState.draft.title}</div>
+                    <div className="text-xs text-[var(--text-main)] font-mono leading-relaxed pb-1 whitespace-pre-wrap">{promptState.draft.fullContent}</div>
+                  </div>
+                )}
+
                 {filteredEntries.map(entry => {
                   const isSelected = selectedEntryIds.includes(entry.id);
                   const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
                   const isMedia = !isPdf && isMediaSource(entry.sourceUrl);
+                  const isPrompt = isPromptEntry(entry);
                   
                   let typeColor = '#f59e0b'; // Note (Amber)
                   let typeIcon = 'fa-file-lines';
-                  if (isMedia) {
+                  if (isPrompt) {
+                    typeColor = '#f97316'; // Prompt (Orange)
+                    typeIcon = 'fa-brain';
+                  } else if (isMedia) {
                     typeColor = '#ff5252'; // Media (Red)
                     typeIcon = 'fa-play';
                   } else if (entry.sourceUrl) {
@@ -3416,6 +3888,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                             <i className="fa-solid fa-thumbtack"></i>
                           </button>
                           <button 
+                            data-delete-entry="true"
                             onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id); }} 
                             className="p-1 text-xs text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/10 rounded" 
                             title="Delete note"
@@ -3428,10 +3901,19 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         )}
                       </div>
 
-                      {entry.summary && (
-                        <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
-                          {entry.summary}
-                        </p>
+                      {/* Ignore executive summaries of prompt entries; show written response preview if present */}
+                      {isPrompt ? (
+                        entry.fullContent && (
+                          <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
+                            {entry.fullContent}
+                          </p>
+                        )
+                      ) : (
+                        entry.summary && (
+                          <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
+                            {entry.summary}
+                          </p>
+                        )
                       )}
 
                       <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
@@ -3568,11 +4050,11 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 </div>
               ) : activeSingleEntry && editingEntries[activeSingleEntry.id] ? (
                 /* Note Edit Mode */
-                <div className="max-w-4xl mx-auto p-[50px] space-y-6 pb-24 font-mono">
+                <div ref={editFormRef} className="max-w-4xl mx-auto p-[50px] space-y-6 pb-24 font-mono">
                   <div className="flex justify-between items-center pb-4">
                     <h2 className="text-base font-bold text-[var(--text-main)]">Edit Note #{activeSingleEntry.numericId}</h2>
                     <div className="flex gap-2">
-                      <button onClick={() => cancelEdit(activeSingleEntry.id)} className="btn-secondary text-xs">Cancel</button>
+                      <button data-cancel-edit="true" onClick={() => cancelEdit(activeSingleEntry.id)} className="btn-secondary text-xs">Cancel</button>
                       <button onClick={() => saveNote(activeSingleEntry.id)} className="btn-primary text-xs">Save Changes</button>
                     </div>
                   </div>
@@ -3779,8 +4261,19 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     </div>
                   </div>
 
-                  {/* Executive Summary */}
-                  {activeSingleEntry.summary && (
+                  {/* Theme Prompt Display if note originated from prompt */}
+                  {activeSingleEntry.promptQuestion && (
+                    <div className="bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#f97316] mb-1 flex items-center gap-1.5">
+                        <i className="fa-solid fa-brain"></i>
+                        <span>Theme Prompt</span>
+                      </div>
+                      <p className="italic text-xs font-medium leading-relaxed select-text">{activeSingleEntry.promptQuestion}</p>
+                    </div>
+                  )}
+
+                  {/* Executive Summary - strictly ignored for prompt entries */}
+                  {!isPromptEntry(activeSingleEntry) && activeSingleEntry.summary && (
                     <div className="bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-sm leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
                       <EditableText 
                         key={`summary-${activeSingleEntry.id}`}
@@ -4306,7 +4799,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 className="absolute inset-0 animate-focus-backdrop cursor-pointer"
                 style={{ backgroundColor: 'var(--bg-main)' }}
                 onClick={handleDefocus}
-                title="Click outside to close"
+                title="Click outside to save and close"
               />
               {/* Centered 40em x 40em window animated into place */}
               <div 
@@ -4319,18 +4812,31 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   type="button" 
                   onClick={handleDefocus}
                   className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
-                  title="Close (Esc or click outside)"
+                  title="Close and save (Esc or click outside)"
                 >
                   <i className="fa-solid fa-xmark text-sm"></i>
                 </button>
 
-                {/* Just the textarea with no other instructions */}
+                {/* Prompt Question Display Above Text Area */}
+                {activeSingleEntry.promptQuestion && (
+                  <div className="shrink-0 pt-6 px-8 pb-4 pr-14 border-b border-[var(--border)] bg-[var(--bg-pane)] select-text">
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#f97316] font-mono mb-1.5">
+                      <i className="fa-solid fa-brain"></i>
+                      <span>Theme Prompt</span>
+                    </div>
+                    <p className="text-xs font-mono text-[var(--text-main)] leading-relaxed italic font-medium">
+                      {activeSingleEntry.promptQuestion}
+                    </p>
+                  </div>
+                )}
+
+                {/* Textarea */}
                 <textarea 
                   ref={contentTextareaRef}
                   value={editData[activeSingleEntry.id]?.fullContent ?? activeSingleEntry.fullContent ?? ''}
                   onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...(prev[activeSingleEntry.id] || activeSingleEntry), fullContent: e.target.value } }))} 
                   onKeyDown={handleContentKeyDown}
-                  className="w-full h-full p-8 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] resize-none outline-none border-none cursor-text select-text"
+                  className="w-full flex-1 p-8 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] resize-none outline-none border-none cursor-text select-text"
                   placeholder="Write your note in Markdown..."
                 ></textarea>
               </div>
