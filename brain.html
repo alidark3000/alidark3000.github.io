@@ -472,7 +472,9 @@
           "Added periodic background disk & IndexedDB auto-saving every 15 seconds regardless of user activity.",
           "Automatic sync triggers on window visibility changes and page unloads.",
           "Added AI Theme Prompt Generator: juxtaposes recurring themes and loose ends from the last 4 months while ignoring executive summaries of previous prompts, gives prompt notes their own distinct Orange color, and features a 'Write' action that opens straight into Focus Mode with the question displayed above the editor.",
-          "Moved color-coded entry type toggles into the Taxonomy view above Projects (with live counts and 'all types' reset), dynamically filtering taxonomies below, with Tags collapsed by default on initial load."
+          "Moved color-coded entry type toggles into the Taxonomy view above Projects (with live counts and 'all types' reset), dynamically filtering taxonomies below, with Tags collapsed by default on initial load.",
+          "Prompt entries now display an Answer Summary alongside the Theme Prompt in the content view, with AI generation specifically tuned to synthesize and summarize the user's answer to the prompt question.",
+          "In the content view, the last edited date is only displayed if it falls on a different day from the created date. When both dates are shown, they are neatly positioned on their own dedicated line above taxonomy badges."
         ]
       },
       {
@@ -2390,8 +2392,9 @@ Respond with valid JSON ONLY matching this structure:
         setEntries(prev => prev.map(e => e.id === id ? { ...e, ...initialSavedEntry } : e));
         setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
 
+        const isPrompt = isPromptEntry(initialSavedEntry);
         const cleanTitle = (initialSavedEntry.title || '').trim();
-        const isUntitled = !cleanTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(cleanTitle);
+        const isUntitled = !cleanTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(cleanTitle) || cleanTitle.toLowerCase() === 'theme reflection';
         const needsTitle = isUntitled;
         const needsSummary = !initialSavedEntry.summary;
         const needsTakeaways = initialSavedEntry.shortVersion.length === 0;
@@ -2405,8 +2408,20 @@ Respond with valid JSON ONLY matching this structure:
         try {
           if ((needsTitle || needsSummary || needsTakeaways || needsTaxonomies) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
             const instructions = [];
-            if (needsTitle) instructions.push("1. Suggest a punchy, descriptive title (max 6 words) in 'title'.");
-            if (needsSummary) instructions.push("2. Provide an ultra-concise TL;DR summary in 1 sentence (strictly under 15 words) in 'summary'.");
+            if (needsTitle) {
+              if (isPrompt) {
+                instructions.push("1. Suggest a punchy, reflective title (max 6 words) based on the user's answer in 'title'.");
+              } else {
+                instructions.push("1. Suggest a punchy, descriptive title (max 6 words) in 'title'.");
+              }
+            }
+            if (needsSummary) {
+              if (isPrompt && initialSavedEntry.promptQuestion) {
+                instructions.push("2. Provide an ultra-concise 1-sentence summary (strictly under 20 words) in 'summary' that directly synthesizes and summarizes the user's answer/response to the prompt question.");
+              } else {
+                instructions.push("2. Provide an ultra-concise TL;DR summary in 1 sentence (strictly under 15 words) in 'summary'.");
+              }
+            }
             if (needsTakeaways) instructions.push("3. Extract 3-5 crucial key takeaways in 'shortVersion'.");
             if (needsTaxonomies) {
               const taxRules = [];
@@ -2417,7 +2432,10 @@ Respond with valid JSON ONLY matching this structure:
             }
 
             const titleContext = isUntitled ? '' : `Title: ${initialSavedEntry.title}\n`;
-            const prompt = `Analyze this note and generate the requested missing metadata:\n${instructions.join('\n')}\n\n${titleContext}Content:\n${contentToAnalyze.substring(0, 30000)}`;
+            const promptContext = (isPrompt && initialSavedEntry.promptQuestion)
+              ? `Prompt Question:\n${initialSavedEntry.promptQuestion}\n\nUser's Answer/Response:\n`
+              : 'Content:\n';
+            const prompt = `Analyze this note and generate the requested missing metadata:\n${instructions.join('\n')}\n\n${titleContext}${promptContext}${contentToAnalyze.substring(0, 30000)}`;
 
             const schemaProps = {};
             if (needsTitle) schemaProps.title = { type: "STRING" };
@@ -2552,7 +2570,10 @@ Respond with valid JSON ONLY matching this structure:
         try {
           const data = editData[id] || entries.find(e => e.id === id);
           if (!data) throw new Error("Note not found.");
-          const prompt = `Write an ultra-concise executive summary (TL;DR) of this note capturing only the single core takeaway. Limit strictly to 1 short sentence (under 15 words). Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
+          const isPrompt = isPromptEntry(data);
+          const prompt = (isPrompt && data.promptQuestion)
+            ? `Write an ultra-concise 1-sentence summary (strictly under 20 words) that directly synthesizes and summarizes the user's answer/response to the prompt question. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${data.fullContent || ''}`
+            : `Write an ultra-concise executive summary (TL;DR) of this note capturing only the single core takeaway. Limit strictly to 1 short sentence (under 15 words). Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
@@ -2560,10 +2581,58 @@ Respond with valid JSON ONLY matching this structure:
           const result = await handleGeminiCall(payload, model);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.summary) {
-            setEditData(prev => ({ ...prev, [id]: { ...prev[id], summary: resData.summary } }));
+            setEditData(prev => ({ ...prev, [id]: { ...prev[id], summary: resData.summary.trim() } }));
           }
         } catch(err) {
           setError("TL;DR generation failed: " + err.message);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+
+      const handleGenerateAnswerSummary = async (id) => {
+        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
+        setIsAnalyzing(true);
+        try {
+          const entry = entries.find(e => e.id === id) || (editData && editData[id]);
+          if (!entry) throw new Error("Note not found.");
+          const questionText = entry.promptQuestion || '';
+          const responseText = entry.fullContent || '';
+          if (!responseText.trim()) throw new Error("No answer written yet to summarize.");
+
+          const prompt = `You are summarizing the user's answer/response to a prompt question.
+Prompt Question:
+${questionText}
+
+User's Written Response:
+${responseText.substring(0, 30000)}
+
+Instructions:
+Write an ultra-concise 1-sentence summary (strictly under 20 words) that directly synthesizes and summarizes the user's answer/response to the prompt question. Return strictly JSON: {"summary": "text"}.`;
+
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: "OBJECT",
+                properties: { summary: { type: "STRING" } }
+              }
+            }
+          };
+
+          const result = await handleGeminiCall(payload, model);
+          const resData = parseAIJson(result.candidates[0].content.parts[0].text);
+          if (resData.summary) {
+            const cleanSummary = resData.summary.trim();
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
+            setEditData(prev => ({
+              ...prev,
+              [id]: { ...(prev[id] || entry), summary: cleanSummary }
+            }));
+          }
+        } catch (err) {
+          setError("Failed to generate answer summary: " + err.message);
         } finally {
           setIsAnalyzing(false);
         }
@@ -3901,11 +3970,11 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         )}
                       </div>
 
-                      {/* Ignore executive summaries of prompt entries; show written response preview if present */}
+                      {/* For prompt entries, show answer summary if present, else fullContent preview */}
                       {isPrompt ? (
-                        entry.fullContent && (
+                        (entry.summary || entry.fullContent) && (
                           <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
-                            {entry.fullContent}
+                            {entry.summary || entry.fullContent}
                           </p>
                         )
                       ) : (
@@ -4079,9 +4148,11 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   {/* Summary */}
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Executive Summary (TL;DR)</label>
+                      <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                        {isPromptEntry(activeSingleEntry) ? 'Answer Summary' : 'Executive Summary (TL;DR)'}
+                      </label>
                       <button type="button" onClick={() => handleGenerateTLDR(activeSingleEntry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1">
-                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i> Generate TL;DR
+                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i> {isPromptEntry(activeSingleEntry) ? 'Generate Summary' : 'Generate TL;DR'}
                       </button>
                     </div>
                     <textarea 
@@ -4089,7 +4160,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       value={editData[activeSingleEntry.id]?.summary || ''} 
                       onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], summary: e.target.value } }))} 
                       className="w-full px-4 py-2.5 text-xs bg-[var(--card-bg)] text-[var(--text-main)] rounded leading-relaxed font-mono" 
-                      placeholder="Ultra-concise 1-sentence executive summary (under 15 words)..."
+                      placeholder={isPromptEntry(activeSingleEntry) ? "Ultra-concise summary of your answer to the prompt question..." : "Ultra-concise 1-sentence executive summary (under 15 words)..."}
                     ></textarea>
                   </div>
 
@@ -4233,59 +4304,166 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       }} 
                     />
                     
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-                      <span className="text-[var(--text-muted)] flex items-center gap-1">
-                        <i className="fa-regular fa-calendar text-[11px]"></i>
-                        {new Date(activeSingleEntry.createdAt || activeSingleEntry.updatedAt || Date.now()).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </span>
-                      {Array.isArray(activeSingleEntry.projects) && activeSingleEntry.projects.map(p => (
-                        <span key={p} className="badge text-[11px]">
-                          <i className="fa-solid fa-folder-open text-[10px] text-amber-500"></i>{p}
-                        </span>
-                      ))}
-                      {Array.isArray(activeSingleEntry.categories) && activeSingleEntry.categories.map(c => (
-                        <span key={c} className="badge text-[11px]">
-                          {c}
-                        </span>
-                      ))}
-                      {Array.isArray(activeSingleEntry.tags) && activeSingleEntry.tags.map(t => (
-                        <span key={t} className="badge text-[11px]">
-                          #{t}
-                        </span>
-                      ))}
-                      {activeSingleEntry.sourceUrl && (
-                        <a href={activeSingleEntry.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto btn-secondary text-xs px-2.5 py-1">
-                          <i className="fa-solid fa-arrow-up-right-from-square text-[10px] mr-1"></i> View Source
-                        </a>
-                      )}
-                    </div>
+                    {(() => {
+                      const createdVal = activeSingleEntry.createdAt || activeSingleEntry.updatedAt || Date.now();
+                      const updatedVal = activeSingleEntry.updatedAt;
+                      const createdDateObj = new Date(createdVal);
+                      const updatedDateObj = updatedVal ? new Date(updatedVal) : null;
+                      const createdDateStr = createdDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                      const updatedDateStr = updatedDateObj ? updatedDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                      const hasDifferentEditedDate = Boolean(updatedDateStr && updatedDateStr !== createdDateStr);
+
+                      return (
+                        <>
+                          {hasDifferentEditedDate ? (
+                            <>
+                              {/* Both dates on their own dedicated line */}
+                              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-mono text-[var(--text-muted)] mb-2">
+                                <span className="flex items-center gap-1" title={`Created: ${createdDateObj.toLocaleString()}`}>
+                                  <i className="fa-regular fa-calendar text-[11px]"></i>
+                                  <span>Created {createdDateStr}</span>
+                                </span>
+                                <span className="opacity-40">•</span>
+                                <span className="flex items-center gap-1" title={`Last edited: ${updatedDateObj.toLocaleString()}`}>
+                                  <i className="fa-regular fa-pen-to-square text-[11px]"></i>
+                                  <span>Edited {updatedDateStr}</span>
+                                </span>
+                              </div>
+
+                              {/* Taxonomy badges on their own line */}
+                              <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                                {Array.isArray(activeSingleEntry.projects) && activeSingleEntry.projects.map(p => (
+                                  <span key={p} className="badge text-[11px]">
+                                    <i className="fa-solid fa-folder-open text-[10px] text-amber-500"></i>{p}
+                                  </span>
+                                ))}
+                                {Array.isArray(activeSingleEntry.categories) && activeSingleEntry.categories.map(c => (
+                                  <span key={c} className="badge text-[11px]">{c}</span>
+                                ))}
+                                {Array.isArray(activeSingleEntry.tags) && activeSingleEntry.tags.map(t => (
+                                  <span key={t} className="badge text-[11px]">#{t}</span>
+                                ))}
+                                {activeSingleEntry.sourceUrl && (
+                                  <a href={activeSingleEntry.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto btn-secondary text-xs px-2.5 py-1">
+                                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px] mr-1"></i> View Source
+                                  </a>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono">
+                              <span className="text-[var(--text-muted)] flex items-center gap-1" title={`Created: ${createdDateObj.toLocaleString()}`}>
+                                <i className="fa-regular fa-calendar text-[11px]"></i>
+                                <span>Created {createdDateStr}</span>
+                              </span>
+                              {Array.isArray(activeSingleEntry.projects) && activeSingleEntry.projects.map(p => (
+                                <span key={p} className="badge text-[11px]">
+                                  <i className="fa-solid fa-folder-open text-[10px] text-amber-500"></i>{p}
+                                </span>
+                              ))}
+                              {Array.isArray(activeSingleEntry.categories) && activeSingleEntry.categories.map(c => (
+                                <span key={c} className="badge text-[11px]">{c}</span>
+                              ))}
+                              {Array.isArray(activeSingleEntry.tags) && activeSingleEntry.tags.map(t => (
+                                <span key={t} className="badge text-[11px]">#{t}</span>
+                              ))}
+                              {activeSingleEntry.sourceUrl && (
+                                <a href={activeSingleEntry.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto btn-secondary text-xs px-2.5 py-1">
+                                  <i className="fa-solid fa-arrow-up-right-from-square text-[10px] mr-1"></i> View Source
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
-                  {/* Theme Prompt Display if note originated from prompt */}
-                  {activeSingleEntry.promptQuestion && (
-                    <div className="bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#f97316] mb-1 flex items-center gap-1.5">
-                        <i className="fa-solid fa-brain"></i>
-                        <span>Theme Prompt</span>
+                  {/* Theme Prompt & Answer Summary Display for Prompt Entries */}
+                  {isPromptEntry(activeSingleEntry) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Left Column: Prompt Question */}
+                      <div className="bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#f97316] mb-1.5 flex items-center gap-1.5">
+                            <i className="fa-solid fa-brain"></i>
+                            <span>Theme Prompt</span>
+                          </div>
+                          <p className="italic text-xs font-medium leading-relaxed select-text">
+                            {activeSingleEntry.promptQuestion || 'No prompt question recorded.'}
+                          </p>
+                        </div>
                       </div>
-                      <p className="italic text-xs font-medium leading-relaxed select-text">{activeSingleEntry.promptQuestion}</p>
-                    </div>
-                  )}
 
-                  {/* Executive Summary - strictly ignored for prompt entries */}
-                  {!isPromptEntry(activeSingleEntry) && activeSingleEntry.summary && (
-                    <div className="bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-sm leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
-                      <EditableText 
-                        key={`summary-${activeSingleEntry.id}`}
-                        tag="p"
-                        multiline={true}
-                        text={activeSingleEntry.summary} 
-                        onSave={(newText) => {
-                          const targetId = activeSingleEntry.id;
-                          setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
-                        }} 
-                      />
+                      {/* Right Column: Answer Summary */}
+                      <div className="bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] mb-1.5 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <i className="fa-solid fa-lightbulb"></i>
+                              <span>Answer Summary</span>
+                            </span>
+                            {(!activeSingleEntry.summary && activeSingleEntry.fullContent && apiKeys && apiKeys.length > 0) && (
+                              <button
+                                type="button"
+                                onClick={() => handleGenerateAnswerSummary(activeSingleEntry.id)}
+                                disabled={isAnalyzing}
+                                className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer lowercase"
+                                title="Summarize answer to prompt"
+                              >
+                                <i className="fa-solid fa-wand-magic-sparkles text-[9px]"></i> summarize
+                              </button>
+                            )}
+                          </div>
+                          {activeSingleEntry.summary ? (
+                            <EditableText 
+                              key={`summary-${activeSingleEntry.id}`}
+                              tag="p"
+                              multiline={true}
+                              className="text-xs leading-relaxed"
+                              text={activeSingleEntry.summary} 
+                              onSave={(newText) => {
+                                const targetId = activeSingleEntry.id;
+                                setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
+                              }} 
+                            />
+                          ) : (
+                            <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
+                              {activeSingleEntry.fullContent ? 'No summary yet. Click "summarize" to generate an answer summary.' : 'Write your response in Focus Mode to generate an answer summary.'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {/* Theme Prompt Display for non-prompt entries if promptQuestion exists */}
+                      {activeSingleEntry.promptQuestion && (
+                        <div className="bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#f97316] mb-1 flex items-center gap-1.5">
+                            <i className="fa-solid fa-brain"></i>
+                            <span>Theme Prompt</span>
+                          </div>
+                          <p className="italic text-xs font-medium leading-relaxed select-text">{activeSingleEntry.promptQuestion}</p>
+                        </div>
+                      )}
+
+                      {/* Executive Summary for normal entries */}
+                      {activeSingleEntry.summary && (
+                        <div className="bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-sm leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
+                          <EditableText 
+                            key={`summary-${activeSingleEntry.id}`}
+                            tag="p"
+                            multiline={true}
+                            text={activeSingleEntry.summary} 
+                            onSave={(newText) => {
+                              const targetId = activeSingleEntry.id;
+                              setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
+                            }} 
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Key Takeaways */}
