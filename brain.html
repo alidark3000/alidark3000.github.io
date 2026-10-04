@@ -461,9 +461,28 @@
 
     const { useState, useEffect, useRef } = React;
 
-    const APP_VERSION = "v2.2.1";
+    // =========================================================================
+    // VERSIONING & DOCUMENTATION PROTOCOL:
+    // With each functional change or new feature, maintainers MUST:
+    // 1. Bump APP_VERSION below (e.g. v2.3.0 -> v2.3.1 or v2.4.0).
+    // 2. Prepend a new entry to CHANGELOG with the date and highlights.
+    // 3. Update brain-readme.html to reflect the modified/new functionality.
+    // =========================================================================
+    const APP_VERSION = "v2.3.0";
 
     const CHANGELOG = [
+      {
+        version: "v2.3.0",
+        date: "2026-10-04",
+        highlights: [
+          "Non-Destructive Multi-Device Sync: Implemented read-before-write 3-way entry merging, 60-day tombstone tracking for deletions, and conflict copy preservation ([Conflict Copy]) to prevent overwrites across multiple computers.",
+          "Dirty-State Guard: Stale background tabs and idle computers no longer write over newer disk updates.",
+          "Live Background & Focus Sync: Automatically detects and pulls remote file updates on focus or visibility change without manual reload.",
+          "Type Soloing: Shift-clicking any type badge (Notes, Prompts, Media, Web, PDFs) untoggles all others, soloing that specific type.",
+          "AI Prompt Weighting: Shifted theme prompt generation to prioritize manual yellow notes first, previous prompt reflections second, and external sources as supporting context, considering notes across all time while favoring the last 4 months.",
+          "Version & Documentation: Added persistent version display, separate standalone documentation (brain-readme.html), and removed legacy visual theme options from Settings."
+        ]
+      },
       {
         version: "v2.2.1",
         date: "2026-09-30",
@@ -3397,6 +3416,9 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   <button onClick={() => setShowManual(true)} className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-book mr-2"></i> User Manual
                   </button>
+                  <a href="brain-readme.html" target="_blank" rel="noopener noreferrer" className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
+                    <i className="fa-solid fa-file-lines mr-2"></i> Full Documentation (Readme)
+                  </a>
                   <button onClick={() => setShowChangelog(true)} className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-clock-rotate-left mr-2"></i> Release Notes & Changelog
                   </button>
@@ -3448,6 +3470,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       <i className="fa-solid fa-gear"></i>
                     </div>
                     <h3 className="text-sm font-bold text-[var(--text-main)] font-mono">Settings</h3>
+                    <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-main)] px-2 py-0.5 rounded border border-[var(--border)]">{APP_VERSION}</span>
                   </div>
                   <button onClick={() => setShowKeyModal(false)} className="btn-icon"><i className="fa-solid fa-xmark text-lg"></i></button>
                 </div>
@@ -3501,15 +3524,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   </div>
                 </div>
 
-                {/* Visual Theme */}
-                <div className="mb-5">
-                  <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-mono">Visual Theme</label>
-                  <select value={tempTheme} onChange={e => setTempTheme(e.target.value)} className="w-full px-3 py-2 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono">
-                    <option value="default">Default (Ali Player Style)</option>
-                    <option value="neubrutalist">Neubrutalist</option>
-                    <option value="msdos">MS-DOS WordStar</option>
-                  </select>
-                </div>
 
                 {/* Library Merge */}
                 <div className="mb-5 p-3.5 bg-[var(--bg-main)] rounded border border-[var(--border)]">
@@ -3554,6 +3568,9 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                 <div className="flex justify-between items-center pt-4 border-t border-[var(--border)]">
                   <div className="flex items-center gap-3">
+                    <a href="brain-readme.html" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
+                      <i className="fa-solid fa-file-lines mr-1.5"></i> Readme
+                    </a>
                     <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
                       <i className="fa-solid fa-book mr-1.5"></i> Manual
                     </button>

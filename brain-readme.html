@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ali Brain - Documentation & Architecture</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-main: #141414;
+      --bg-pane: #1b1b1b;
+      --bg-card: #202020;
+      --text-main: #e3e3dc;
+      --text-muted: #95968f;
+      --accent: #ff5252;
+      --accent-hover: #ff7b7b;
+      --border: #2a2a2a;
+      --code-bg: #181818;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-main: #f7f7f9;
+        --bg-pane: #ffffff;
+        --bg-card: #ffffff;
+        --text-main: #111111;
+        --text-muted: #555555;
+        --accent: #d32f2f;
+        --accent-hover: #b71c1c;
+        --border: #e5e5ea;
+        --code-bg: #f0f0f3;
+      }
+    }
+    body {
+      font-family: ui-monospace, 'Cascadia Code', 'Cascadia Mono', Consolas, Menlo, Monaco, monospace;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    a:hover {
+      color: var(--accent-hover);
+    }
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      border: 1px solid var(--border);
+    }
+    pre {
+      background: var(--code-bg);
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      font-size: 0.85em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="p-6 md:p-12 max-w-4xl mx-auto">
+
+  <!-- Header -->
+  <header class="mb-10 pb-6 border-b border-[var(--border)] flex flex-wrap justify-between items-center gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded bg-[var(--accent)] text-white flex items-center justify-center text-lg">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
+      </div>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.3.0</span></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="brain.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-left"></i> Open Brain App
+      </a>
+    </div>
+  </header>
+
+  <!-- Important Maintainer Notice -->
+  <section class="mb-10 p-5 rounded-lg border-2 border-dashed border-[var(--accent)] bg-[var(--accent)]/5">
+    <div class="flex items-center gap-2 text-sm font-bold text-[var(--accent)] uppercase tracking-wider mb-2">
+      <i class="fa-solid fa-triangle-exclamation"></i> Developer & Maintainer Protocol
+    </div>
+    <p class="text-xs text-[var(--text-main)] mb-3 leading-relaxed">
+      Whenever changes or new features are introduced to the Brain application, maintainers and AI assistants <strong>MUST</strong> adhere to the following steps:
+    </p>
+    <ol class="list-decimal pl-5 text-xs text-[var(--text-muted)] space-y-1.5">
+      <li><strong>Bump the Version Number:</strong> Update <code>const APP_VERSION = "vX.Y.Z";</code> at the top of <code>brain.html</code>.</li>
+      <li><strong>Update In-App Changelog:</strong> Prepend the new release entry to <code>CHANGELOG</code> in <code>brain.html</code> with date and bulleted highlights.</li>
+      <li><strong>Update This Readme:</strong> Update <code>brain-readme.html</code> to document any modified behaviors, settings, or architectural enhancements, keeping this manual as an accurate single source of truth.</li>
+    </ol>
+  </section>
+
+  <!-- Table of Contents -->
+  <nav class="mb-10 p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)] text-xs">
+    <div class="font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">Table of Contents</div>
+    <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 list-none p-0 m-0">
+      <li>&bull; <a href="#overview">1. Architecture & Local-First Design</a></li>
+      <li>&bull; <a href="#sync">2. Multi-Computer Non-Destructive Sync</a></li>
+      <li>&bull; <a href="#taxonomies">3. Entry Types & Solo Filtering</a></li>
+      <li>&bull; <a href="#ingestion">4. Content Ingestion & Scrubbing</a></li>
+      <li>&bull; <a href="#ai">5. Gemini AI Synthesis & Prompt Generator</a></li>
+      <li>&bull; <a href="#assistant">6. Unified AI Assistant & Chat Modes</a></li>
+      <li>&bull; <a href="#referencing">7. Backlinks & Decimal Numeric IDs</a></li>
+      <li>&bull; <a href="#settings">8. Settings & Workspace Management</a></li>
+    </ul>
+  </nav>
+
+  <!-- Content Sections -->
+  <main class="space-y-12 text-sm leading-relaxed">
+
+    <!-- 1. Architecture -->
+    <section id="overview" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-microchip text-[var(--accent)] text-sm"></i> 1. Architecture & Local-First Design
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        Ali Brain is an entirely browser-based, serverless personal knowledge management system built with <strong>React 18</strong> and the <strong>File System Access API</strong>.
+      </p>
+      <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
+        <li><strong>Single JSON Database File:</strong> All entries, generated prompt questions, prompt reflection answers, taxonomies, assistant chat histories, and deletion tombstones are stored in a single JSON file on your computer.</li>
+        <li><strong>IndexedDB Persistence:</strong> File handles are retained via <code>idb-keyval</code> so you can resume your active workspace upon reload without picking the file again. An automatic backup snapshot is also written to IndexedDB on every save.</li>
+        <li><strong>Privacy by Default:</strong> Zero telemetry, zero analytics, zero external database servers. Communication occurs solely between your browser and the Google Gemini API when using AI features.</li>
+      </ul>
+    </section>
+
+    <!-- 2. Multi-Computer Sync -->
+    <section id="sync" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-arrows-rotate text-emerald-500 text-sm"></i> 2. Multi-Computer Non-Destructive Sync
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        When sharing a knowledge base JSON file across multiple devices via cloud sync services (Dropbox, OneDrive, Google Drive, iCloud, or Syncthing), Brain prevents stale overwrites through an entry-level sync engine:
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Dirty-State Guard
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            Computers left open in the background never blind-save stale memory snapshots. If no local changes have been made on that device, auto-save timers will not touch or truncate the file on disk.
+          </p>
+        </div>
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-code-merge text-amber-400"></i> Read-Before-Write 3-Way Merge
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            Before saving local modifications, Brain inspects the file on disk. If another computer wrote to the file, Brain reads and merges entries non-destructively using individual <code>updatedAt</code> timestamps.
+          </p>
+        </div>
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-clone text-sky-400"></i> Conflict Preservation
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            If the exact same note was edited concurrently on two computers, the newer timestamp becomes primary, and the older edit is cloned non-destructively as a <code>[Conflict Copy]</code> note so nothing is lost.
+          </p>
+        </div>
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-skull text-rose-400"></i> Deletion Tombstones
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            Deleted notes record a timestamped tombstone in the database (<code>tombstones: { [id]: timestamp }</code>). This prevents deleted notes from being resurrected by other computers. Tombstones older than 60 days are pruned automatically.
+          </p>
+        </div>
+      </div>
+      <p class="text-xs text-[var(--text-muted)]">
+        <strong>Live Focus & Background Pulling:</strong> Switching to the Brain tab (or while idle) automatically polls the disk file. When remote changes are detected, a pulsing <span class="text-emerald-400 font-semibold">"Synced"</span> badge appears and updates the view seamlessly.
+      </p>
+    </section>
+
+    <!-- 3. Entry Types & Soloing -->
+    <section id="taxonomies" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-shapes text-amber-500 text-sm"></i> 3. Entry Types & Taxonomy Solo Filtering
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        Every document in Ali Brain is classified into one of five color-coded types:
+      </p>
+      <div class="flex flex-wrap gap-2 mb-4">
+        <span class="badge" style="background-color: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b;">
+          <i class="fa-solid fa-file-lines"></i> Notes (Yellow / Amber) &bull; Manual User Thoughts
+        </span>
+        <span class="badge" style="background-color: #f9731620; color: #f97316; border: 1px solid #f97316;">
+          <i class="fa-solid fa-brain"></i> Prompts (Orange) &bull; AI Theme Reflection Notes
+        </span>
+        <span class="badge" style="background-color: #ff525220; color: #ff5252; border: 1px solid #ff5252;">
+          <i class="fa-solid fa-play"></i> Media (Red) &bull; Videos & Audio (YouTube/Vimeo)
+        </span>
+        <span class="badge" style="background-color: #38bdf820; color: #38bdf8; border: 1px solid #38bdf8;">
+          <i class="fa-solid fa-link"></i> Web (Sky) &bull; Scraped Web Pages & Articles
+        </span>
+        <span class="badge" style="background-color: #ec489920; color: #ec4899; border: 1px solid #ec4899;">
+          <i class="fa-solid fa-file-pdf"></i> PDFs (Pink) &bull; PDF Documents
+        </span>
+      </div>
+      <div class="p-3.5 rounded bg-[var(--bg-pane)] border border-[var(--border)] text-xs text-[var(--text-muted)] space-y-1.5">
+        <div><strong>Type Filtering Shortcuts:</strong></div>
+        <div>&bull; <strong>Click:</strong> Toggles that individual type on or off in the list.</div>
+        <div>&bull; <strong>Shift + Click:</strong> Solos that specific type &mdash; untoggling all other types in one click. Shift-clicking the active solo type again restores all types back to visible.</div>
+        <div>&bull; <strong>Taxonomies:</strong> Filter notes by Projects, Categories, and Tags. Drag notes onto taxonomy tags to assign them.</div>
+      </div>
+    </section>
+
+    <!-- 4. Content Ingestion -->
+    <section id="ingestion" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-cloud-arrow-down text-sky-400 text-sm"></i> 4. Content Ingestion & Media Scrubbing
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        Paste any URL, YouTube link, or raw text into the top ingestion bar:
+      </p>
+      <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
+        <li><strong>Web Articles:</strong> Uses CORS proxying and <code>turndown</code> to strip navbars, ads, scripts, and footers, extracting clean Markdown into the note content.</li>
+        <li><strong>Video & Audio:</strong> YouTube and Vimeo links embed an interactive player directly inside the note view.</li>
+        <li><strong>Automatic Metadata Extraction:</strong> If Gemini API key is configured, saving a new note automatically generates a concise title, executive summary, 3-5 bulleted key takeaways, and suggested categories/tags.</li>
+      </ul>
+    </section>
+
+    <!-- 5. AI Prompt Generator -->
+    <section id="ai" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-sm"></i> 5. Gemini AI Synthesis & Theme Prompt Generator
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        Clicking <strong>"Generate Prompt"</strong> above the note list synthesizes an exploratory reflection question designed to prompt immediate deep thought:
+      </p>
+      <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)] space-y-2.5 text-xs text-[var(--text-muted)]">
+        <div><strong>Topic Selection Weighting Hierarchy:</strong></div>
+        <div>1. <span class="text-amber-400 font-semibold">Primary Topics (Highest Weight):</span> Manual entries (Yellow Notes). The model grounds questions primarily in your own direct thoughts and reflections.</div>
+        <div>2. <span class="text-orange-400 font-semibold">Secondary Topics:</span> Previous prompt responses (Orange Notes). The model explores how your thinking has evolved since earlier reflections.</div>
+        <div>3. <span class="text-sky-400 font-semibold">Supporting Context Only:</span> Ingested external entries (Web/Media/PDF). These are never the central subject; they are used only to cross-reference or illuminate manual notes.</div>
+        <div class="pt-2 border-t border-[var(--border)]">
+          <strong>Time Span:</strong> Evaluates your <em>entire knowledge base across all time</em>, with ~65% weighting given to entries from the last 4 months.
+        </div>
+        <div>
+          <strong>Non-Repetition:</strong> Remembers all previous prompts in <code>storedPrompts</code> to prevent repeating or closely retreading questions.
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Unified Assistant -->
+    <section id="assistant" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-comments text-[var(--accent)] text-sm"></i> 6. Unified AI Assistant & Chat Context
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        The Assistant panel (toggle via <code>Cmd+J</code> / <code>Ctrl+J</code> or the sidebar chat icon) provides an interactive conversational copilot:
+      </p>
+      <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
+        <li><strong>Current Entry Mode:</strong> Focuses exclusively on the active note to brainstorm, expand, critique, or extract specific concepts.</li>
+        <li><strong>Whole Brain Mode:</strong> Synthesizes across all documents in your library to spot cross-disciplinary patterns and unexpected connections.</li>
+        <li><strong>Insert Into Note:</strong> Click the insert action on any assistant reply to immediately append the text into your active note editor.</li>
+      </ul>
+    </section>
+
+    <!-- 7. Backlinks & IDs -->
+    <section id="referencing" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-link text-[var(--accent)] text-sm"></i> 7. Backlinks & Decimal Numeric IDs
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        Ali Brain implements bi-directional knowledge graphs without database dependencies:
+      </p>
+      <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
+        <li><strong>Wiki-Style Shortcodes:</strong> Typing <code>[[kb-ref:ENTRY_ID]]</code> creates an interactive link to another note. Hovering displays an instantaneous preview modal; clicking selects the target note.</li>
+        <li><strong>Drag to Reference:</strong> Drag any note card from the list into the content editor to auto-insert a formatted backlink.</li>
+        <li><strong>Chronological Decimal IDs:</strong> Every note receives a numeric ID (e.g. <code>#1</code>, <code>#2</code>, <code>#2.1</code>) allowing historical insertions into time gaps while preserving clean numeric chronology.</li>
+      </ul>
+    </section>
+
+    <!-- 8. Settings & Protocol -->
+    <section id="settings" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-sliders text-[var(--accent)] text-sm"></i> 8. Settings & Version Protocol
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        Settings are accessible via the gear icon in the workspace header:
+      </p>
+      <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
+        <li><strong>Gemini API Keys:</strong> Configure one or more Gemini API keys (managed in rotation).</li>
+        <li><strong>Model Tier:</strong> Switch between <code>gemini-2.5-flash</code> (ultra fast) and <code>gemini-2.5-pro</code> (deep reasoning).</li>
+        <li><strong>External Library Merge:</strong> Manually merge secondary JSON files into your active workspace with live count reporting.</li>
+        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.3.0</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-16 pt-8 border-t border-[var(--border)] text-xs text-[var(--text-muted)] flex flex-wrap justify-between items-center gap-4">
+    <div>
+      Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
+    </div>
+    <div class="flex items-center gap-4">
+      <span>Version <strong>v2.3.0</strong></span>
+      <a href="brain.html">Back to Brain App</a>
+    </div>
+  </footer>
+
+</body>
+</html>
