@@ -819,6 +819,12 @@
       const [fileHandle, setFileHandle] = useState(null);
       const [fileName, setFileName] = useState('');
       const [lastSyncTime, setLastSyncTime] = useState(Date.now());
+      const lastSyncTimeRef = useRef(Date.now());
+      const [tombstones, setTombstones] = useState({});
+      const tombstonesRef = useRef({});
+      const [syncNotification, setSyncNotification] = useState(null);
+      const isDirtyRef = useRef(false);
+      const isLoadedRef = useRef(false);
       
       const [historyState, setHistoryState] = useState({ past: [], present: [] });
       const entries = historyState.present;
@@ -896,7 +902,15 @@
       const isContentFocusedRef = useRef(false);
       const entriesRef = useRef(entries);
 
-      const toggleTypeFilter = (typeId) => {
+      const toggleTypeFilter = (typeId, e) => {
+        if (e && e.shiftKey) {
+          setActiveTypeFilters(prev => 
+            (prev.length === 1 && prev[0] === typeId) 
+              ? ENTRY_TYPES.map(t => t.id) 
+              : [typeId]
+          );
+          return;
+        }
         setActiveTypeFilters(prev => 
           prev.includes(typeId) 
             ? prev.filter(t => t !== typeId) 
@@ -1170,145 +1184,9 @@
         }
       }, []);
 
-      // Robust Auto-Save and Periodic Disk Sync
+      // Robust Non-Destructive Auto-Save and Multi-Device Disk Sync
       const isSavingRef = useRef(false);
       const savePendingRef = useRef(false);
-
-      const saveStateRef = useRef({
-        entries,
-        storedPrompts,
-        apiKeys,
-        model,
-        theme,
-        assistantChats,
-        archivedAssistantChats,
-        appState,
-        fileHandle,
-        editData,
-        editingEntries
-      });
-
-      useEffect(() => {
-        saveStateRef.current = {
-          entries,
-          storedPrompts,
-          apiKeys,
-          model,
-          theme,
-          assistantChats,
-          archivedAssistantChats,
-          appState,
-          fileHandle,
-          editData,
-          editingEntries
-        };
-      }, [entries, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries]);
-
-      const saveWorkspaceToDisk = async () => {
-        const current = saveStateRef.current;
-        if (current.appState !== 'workspace') return;
-
-        if (isSavingRef.current) {
-          savePendingRef.current = true;
-          return;
-        }
-
-        isSavingRef.current = true;
-        try {
-          const dataToWrite = {
-            entries: current.entries,
-            storedPrompts: current.storedPrompts || [],
-            apiKeys: current.apiKeys,
-            model: current.model,
-            theme: current.theme,
-            assistantMessages: (current.assistantChats['workspace'] || []).slice(-50),
-            assistantChats: current.assistantChats,
-            archivedAssistantChats: current.archivedAssistantChats,
-            chats: current.archivedAssistantChats,
-            updatedAt: Date.now()
-          };
-
-          if (current.fileHandle) {
-            try {
-              const writable = await current.fileHandle.createWritable();
-              await writable.write(JSON.stringify(dataToWrite, null, 2));
-              await writable.close();
-
-              const updatedFile = await current.fileHandle.getFile();
-              setLastSyncTime(updatedFile.lastModified);
-            } catch (err) {
-              console.error("Auto-save sync to file failed:", err);
-            }
-          }
-
-          if (typeof idbKeyval !== 'undefined') {
-            try {
-              await idbKeyval.set('kb_workspace_backup', {
-                data: dataToWrite,
-                savedAt: Date.now()
-              });
-            } catch (idbErr) {
-              console.warn("IndexedDB backup failed:", idbErr);
-            }
-          }
-        } catch (err) {
-          console.error("Workspace save failed:", err);
-        } finally {
-          isSavingRef.current = false;
-          if (savePendingRef.current) {
-            savePendingRef.current = false;
-            saveWorkspaceToDisk();
-          }
-        }
-      };
-
-      // 1. Reactive Debounced Auto-Save to disk on state changes
-      useEffect(() => {
-        if (appState !== 'workspace') return;
-        const timer = setTimeout(() => {
-          saveWorkspaceToDisk();
-        }, 1200);
-        return () => clearTimeout(timer);
-      }, [entries, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle]);
-
-      // 2. Periodic Save Regardless (runs every 15 seconds)
-      useEffect(() => {
-        if (appState !== 'workspace') return;
-        const interval = setInterval(() => {
-          saveWorkspaceToDisk();
-        }, 15000);
-        return () => clearInterval(interval);
-      }, [appState]);
-
-      // 3. Save on tab visibility change or unload
-      useEffect(() => {
-        const handleBeforeUnload = () => {
-          if (editingEntriesRef.current) {
-            const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
-            activeEditingIds.forEach(id => {
-              if (saveNoteRef.current) saveNoteRef.current(id);
-            });
-          }
-          saveWorkspaceToDisk();
-        };
-        const handleVisibilityChange = () => {
-          if (document.visibilityState === 'hidden') {
-            if (editingEntriesRef.current) {
-              const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
-              activeEditingIds.forEach(id => {
-                if (saveNoteRef.current) saveNoteRef.current(id);
-              });
-            }
-            saveWorkspaceToDisk();
-          }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => {
-          window.removeEventListener('beforeunload', handleBeforeUnload);
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-      }, []);
 
       const ensureNumericIds = (loadedEntries) => {
         let maxId = Math.floor(loadedEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0));
@@ -1334,6 +1212,15 @@
           }));
         } else {
           migratedEntries = [INITIAL_ENTRY];
+        }
+
+        let loadedTombstones = {};
+        if (data.tombstones && typeof data.tombstones === 'object' && !Array.isArray(data.tombstones)) {
+          const CUTOFF = Date.now() - (60 * 24 * 60 * 60 * 1000); // 60-day prune
+          Object.entries(data.tombstones).forEach(([id, time]) => {
+            const t = Number(time);
+            if (t > CUTOFF) loadedTombstones[id] = t;
+          });
         }
 
         let parsedKeys = data.apiKeys || [];
@@ -1373,6 +1260,7 @@
 
         return {
           entries: migratedEntries,
+          tombstones: loadedTombstones,
           storedPrompts: loadedStoredPrompts,
           apiKeys: parsedKeys,
           model: data.model || 'gemini-2.5-flash',
@@ -1383,6 +1271,485 @@
           archivedAssistantChats: loadedArchived
         };
       };
+
+      const saveStateRef = useRef({
+        entries,
+        tombstones,
+        storedPrompts,
+        apiKeys,
+        model,
+        theme,
+        assistantChats,
+        archivedAssistantChats,
+        appState,
+        fileHandle,
+        editData,
+        editingEntries
+      });
+
+      useEffect(() => {
+        saveStateRef.current = {
+          entries,
+          tombstones,
+          storedPrompts,
+          apiKeys,
+          model,
+          theme,
+          assistantChats,
+          archivedAssistantChats,
+          appState,
+          fileHandle,
+          editData,
+          editingEntries
+        };
+      }, [entries, tombstones, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries]);
+
+      // Non-Destructive Entry-Level 3-Way Merge Algorithm
+      const mergeDatabases = (localState, incomingRawData) => {
+        const incoming = migrateWorkspaceData(incomingRawData);
+
+        // 1. Tombstone merging & pruning (60-day cutoff)
+        const SIXTY_DAYS = 60 * 24 * 60 * 60 * 1000;
+        const cutoff = Date.now() - SIXTY_DAYS;
+        const mergedTombstones = {};
+
+        const addTombstone = (id, time) => {
+          const t = Number(time) || 0;
+          if (t > cutoff) {
+            mergedTombstones[id] = Math.max(mergedTombstones[id] || 0, t);
+          }
+        };
+
+        if (localState.tombstones) {
+          Object.entries(localState.tombstones).forEach(([id, time]) => addTombstone(id, time));
+        }
+        if (incoming.tombstones) {
+          Object.entries(incoming.tombstones).forEach(([id, time]) => addTombstone(id, time));
+        }
+
+        // 2. Index local entries and incoming entries
+        const localMap = new Map();
+        (localState.entries || []).forEach(e => {
+          if (e && e.id) localMap.set(e.id, { ...e });
+        });
+
+        const incomingMap = new Map();
+        (incoming.entries || []).forEach(e => {
+          if (e && e.id) incomingMap.set(e.id, { ...e });
+        });
+
+        const allIds = new Set([...localMap.keys(), ...incomingMap.keys()]);
+        const mergedList = [];
+        let addedCount = 0;
+        let updatedCount = 0;
+        let conflictCount = 0;
+
+        const getEntryTime = (e) => Number(e.updatedAt) || Number(e.createdAt) || 0;
+
+        allIds.forEach(id => {
+          const local = localMap.get(id);
+          const inc = incomingMap.get(id);
+          const tombTime = mergedTombstones[id] || 0;
+
+          // Case 1: Only in local
+          if (local && !inc) {
+            const localTime = getEntryTime(local);
+            if (tombTime >= localTime) {
+              // Deleted externally on disk
+              return;
+            }
+            mergedList.push(local);
+            return;
+          }
+
+          // Case 2: Only in incoming
+          if (!local && inc) {
+            const incTime = getEntryTime(inc);
+            if (tombTime >= incTime) {
+              // Deleted locally
+              return;
+            }
+            mergedList.push(inc);
+            addedCount++;
+            return;
+          }
+
+          // Case 3: In both local and incoming
+          const localTime = getEntryTime(local);
+          const incTime = getEntryTime(inc);
+
+          // If deleted after the latest edit
+          if (tombTime >= Math.max(localTime, incTime)) {
+            return;
+          }
+
+          // If edited after tombstone, keep note and remove tombstone
+          if (mergedTombstones[id]) {
+            delete mergedTombstones[id];
+          }
+
+          const localContent = (local.fullContent || '').trim();
+          const incContent = (inc.fullContent || '').trim();
+          const localTitle = (local.title || '').trim();
+          const incTitle = (inc.title || '').trim();
+          const contentsDiffer = (localContent !== incContent || localTitle !== incTitle);
+
+          if (!contentsDiffer) {
+            // Text is identical: preserve newer timestamp and metadata
+            const preferred = incTime > localTime ? { ...local, ...inc } : { ...inc, ...local };
+            mergedList.push({ ...preferred, numericId: local.numericId || inc.numericId });
+          } else if (incTime > localTime) {
+            // Disk version is newer
+            // Did local modify this concurrently?
+            if (localState.isDirty && Math.abs(incTime - localTime) < 86400000) {
+              // Concurrent edit: keep disk as primary, duplicate local as conflict copy
+              mergedList.push({ ...inc, numericId: local.numericId || inc.numericId });
+              const conflictCopy = {
+                ...local,
+                id: 'conflict-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                numericId: undefined,
+                title: `[Conflict Copy] ${local.title || 'Untitled'}`,
+                updatedAt: Date.now()
+              };
+              mergedList.push(conflictCopy);
+              conflictCount++;
+            } else {
+              mergedList.push({ ...inc, numericId: local.numericId || inc.numericId });
+              updatedCount++;
+            }
+          } else if (localTime > incTime) {
+            // Local version is newer
+            if (localState.lastSyncTime && incTime > localState.lastSyncTime) {
+              // Both modified concurrently: keep local as primary, disk as conflict copy
+              mergedList.push(local);
+              const conflictCopy = {
+                ...inc,
+                id: 'conflict-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                numericId: undefined,
+                title: `[Conflict Copy] ${inc.title || 'Untitled'}`,
+                updatedAt: Date.now()
+              };
+              mergedList.push(conflictCopy);
+              conflictCount++;
+            } else {
+              mergedList.push(local);
+            }
+          } else {
+            // Timestamps equal but contents differ: keep local
+            mergedList.push(local);
+          }
+        });
+
+        // 3. Merge Assistant Chats
+        const updatedChats = { ...(localState.assistantChats || { workspace: [] }) };
+        if (incoming.assistantChats && typeof incoming.assistantChats === 'object') {
+          Object.entries(incoming.assistantChats).forEach(([k, msgs]) => {
+            if (Array.isArray(msgs) && msgs.length > 0) {
+              if (!updatedChats[k] || updatedChats[k].length === 0) {
+                updatedChats[k] = msgs;
+              }
+            }
+          });
+        }
+
+        // 4. Merge Archived Assistant Chats
+        const updatedArchived = { ...(localState.archivedAssistantChats || { workspace: [] }) };
+        if (incoming.archivedAssistantChats && typeof incoming.archivedAssistantChats === 'object') {
+          Object.entries(incoming.archivedAssistantChats).forEach(([k, archList]) => {
+            if (Array.isArray(archList) && archList.length > 0) {
+              const currentList = updatedArchived[k] || [];
+              const currentIds = new Set(currentList.map(c => c.id));
+              const toAdd = archList.filter(c => c && c.id && !currentIds.has(c.id));
+              if (toAdd.length > 0) {
+                updatedArchived[k] = [...currentList, ...toAdd];
+              }
+            }
+          });
+        }
+
+        // 5. Merge Prompts
+        const localPrompts = localState.storedPrompts || [];
+        const incomingPrompts = incoming.storedPrompts || [];
+        const promptMap = new Map();
+        localPrompts.forEach(p => { if (p) promptMap.set(p.id || p.promptQuestion || JSON.stringify(p), p); });
+        incomingPrompts.forEach(p => { if (p) promptMap.set(p.id || p.promptQuestion || JSON.stringify(p), p); });
+        const mergedPrompts = Array.from(promptMap.values());
+
+        return {
+          entries: processLoadedEntries(mergedList),
+          tombstones: mergedTombstones,
+          assistantChats: updatedChats,
+          archivedAssistantChats: updatedArchived,
+          storedPrompts: mergedPrompts,
+          apiKeys: (localState.apiKeys && localState.apiKeys.length > 0) ? localState.apiKeys : incoming.apiKeys,
+          model: localState.model || incoming.model,
+          theme: localState.theme || incoming.theme,
+          addedCount,
+          updatedCount,
+          conflictCount
+        };
+      };
+
+      const saveWorkspaceToDisk = async (force = false) => {
+        const current = saveStateRef.current;
+        if (current.appState !== 'workspace') return;
+        if (!current.fileHandle) return;
+
+        // Skip saving if clean and not forced
+        if (!isDirtyRef.current && !force) return;
+
+        if (isSavingRef.current) {
+          savePendingRef.current = true;
+          return;
+        }
+
+        isSavingRef.current = true;
+        try {
+          let currentEntries = current.entries;
+          let currentTombstones = tombstonesRef.current || {};
+          let currentChats = current.assistantChats;
+          let currentArchived = current.archivedAssistantChats;
+          let currentPrompts = current.storedPrompts || [];
+          let currentKeys = current.apiKeys;
+          let currentModel = current.model;
+          let currentTheme = current.theme;
+
+          // Non-destructive check: Did disk file change externally since our last sync?
+          try {
+            const file = await current.fileHandle.getFile();
+            if (file.lastModified > (lastSyncTimeRef.current || 0) + 1500) {
+              const diskText = await file.text();
+              if (diskText.trim()) {
+                const diskData = JSON.parse(diskText);
+                const merged = mergeDatabases(
+                  {
+                    entries: currentEntries,
+                    tombstones: currentTombstones,
+                    assistantChats: currentChats,
+                    archivedAssistantChats: currentArchived,
+                    storedPrompts: currentPrompts,
+                    apiKeys: currentKeys,
+                    model: currentModel,
+                    theme: currentTheme,
+                    isDirty: isDirtyRef.current,
+                    lastSyncTime: lastSyncTimeRef.current
+                  },
+                  diskData
+                );
+
+                currentEntries = merged.entries;
+                currentTombstones = merged.tombstones;
+                currentChats = merged.assistantChats;
+                currentArchived = merged.archivedAssistantChats;
+                currentPrompts = merged.storedPrompts;
+                currentKeys = merged.apiKeys;
+                currentModel = merged.model;
+                currentTheme = merged.theme;
+
+                setHistoryState(h => ({
+                  past: h.past,
+                  present: currentEntries
+                }));
+                setTombstones(currentTombstones);
+                tombstonesRef.current = currentTombstones;
+                setAssistantChats(currentChats);
+                setArchivedAssistantChats(currentArchived);
+                setStoredPrompts(currentPrompts);
+
+                if (merged.addedCount > 0 || merged.updatedCount > 0 || merged.conflictCount > 0) {
+                  setSyncNotification({
+                    time: Date.now(),
+                    msg: `Merged: ${merged.addedCount ? `+${merged.addedCount} new ` : ''}${merged.updatedCount ? `~${merged.updatedCount} updated ` : ''}${merged.conflictCount ? `(${merged.conflictCount} conflicts saved)` : ''}`
+                  });
+                }
+              }
+            }
+          } catch (readErr) {
+            console.warn("External pre-save check failed:", readErr);
+          }
+
+          const dataToWrite = {
+            entries: currentEntries,
+            tombstones: currentTombstones,
+            storedPrompts: currentPrompts,
+            apiKeys: currentKeys,
+            model: currentModel,
+            theme: currentTheme,
+            assistantMessages: (currentChats['workspace'] || []).slice(-50),
+            assistantChats: currentChats,
+            archivedAssistantChats: currentArchived,
+            chats: currentArchived,
+            updatedAt: Date.now()
+          };
+
+          const writable = await current.fileHandle.createWritable();
+          await writable.write(JSON.stringify(dataToWrite, null, 2));
+          await writable.close();
+
+          const updatedFile = await current.fileHandle.getFile();
+          lastSyncTimeRef.current = updatedFile.lastModified;
+          setLastSyncTime(updatedFile.lastModified);
+          isDirtyRef.current = false;
+
+          if (typeof idbKeyval !== 'undefined') {
+            try {
+              await idbKeyval.set('kb_workspace_backup', {
+                data: dataToWrite,
+                savedAt: Date.now()
+              });
+            } catch (idbErr) {
+              console.warn("IndexedDB backup failed:", idbErr);
+            }
+          }
+        } catch (err) {
+          console.error("Workspace save failed:", err);
+        } finally {
+          isSavingRef.current = false;
+          if (savePendingRef.current) {
+            savePendingRef.current = false;
+            saveWorkspaceToDisk();
+          }
+        }
+      };
+
+      // Pull updates from disk in background without overwriting
+      const pullExternalChangesIfAny = async () => {
+        const current = saveStateRef.current;
+        if (current.appState !== 'workspace' || !current.fileHandle || isSavingRef.current) return;
+        if (isContentFocused) return;
+
+        try {
+          const file = await current.fileHandle.getFile();
+          if (file.lastModified > (lastSyncTimeRef.current || 0) + 1500) {
+            const diskText = await file.text();
+            if (!diskText.trim()) return;
+            let diskData;
+            try {
+              diskData = JSON.parse(diskText);
+            } catch (pErr) {
+              return;
+            }
+
+            const merged = mergeDatabases(
+              {
+                entries: current.entries,
+                tombstones: tombstonesRef.current || {},
+                assistantChats: current.assistantChats,
+                archivedAssistantChats: current.archivedAssistantChats,
+                storedPrompts: current.storedPrompts,
+                apiKeys: current.apiKeys,
+                model: current.model,
+                theme: current.theme,
+                isDirty: isDirtyRef.current,
+                lastSyncTime: lastSyncTimeRef.current
+              },
+              diskData
+            );
+
+            setHistoryState(h => ({
+              past: h.past,
+              present: merged.entries
+            }));
+            setTombstones(merged.tombstones);
+            tombstonesRef.current = merged.tombstones;
+            setAssistantChats(merged.assistantChats);
+            setArchivedAssistantChats(merged.archivedAssistantChats);
+            setStoredPrompts(merged.storedPrompts);
+
+            lastSyncTimeRef.current = file.lastModified;
+            setLastSyncTime(file.lastModified);
+
+            if (merged.addedCount > 0 || merged.updatedCount > 0 || merged.conflictCount > 0) {
+              setSyncNotification({
+                time: Date.now(),
+                msg: `Synced: ${merged.addedCount ? `+${merged.addedCount} new ` : ''}${merged.updatedCount ? `~${merged.updatedCount} updated ` : ''}${merged.conflictCount ? `(${merged.conflictCount} conflicts)` : ''}`
+              });
+            }
+          }
+        } catch (err) {
+          console.warn("Pulling external changes failed:", err);
+        }
+      };
+
+      // 1. Reactive Debounced Auto-Save to disk on actual state changes
+      useEffect(() => {
+        if (appState !== 'workspace') return;
+        if (!isLoadedRef.current) return;
+        isDirtyRef.current = true;
+        const timer = setTimeout(() => {
+          saveWorkspaceToDisk();
+        }, 1200);
+        return () => clearTimeout(timer);
+      }, [entries, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, tombstones]);
+
+      // 2. Periodic sync (every 10 seconds): save if dirty, or pull external changes if clean
+      useEffect(() => {
+        if (appState !== 'workspace') return;
+        const interval = setInterval(() => {
+          if (isDirtyRef.current) {
+            saveWorkspaceToDisk();
+          } else {
+            pullExternalChangesIfAny();
+          }
+        }, 10000);
+        return () => clearInterval(interval);
+      }, [appState]);
+
+      // 3. Tab visibility change and focus sync listeners
+      useEffect(() => {
+        const handleBeforeUnload = () => {
+          if (editingEntriesRef.current) {
+            const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
+            activeEditingIds.forEach(id => {
+              if (saveNoteRef.current) saveNoteRef.current(id);
+            });
+          }
+          if (isDirtyRef.current) {
+            saveWorkspaceToDisk();
+          }
+        };
+
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'hidden') {
+            if (editingEntriesRef.current) {
+              const activeEditingIds = Object.keys(editingEntriesRef.current).filter(id => editingEntriesRef.current[id]);
+              activeEditingIds.forEach(id => {
+                if (saveNoteRef.current) saveNoteRef.current(id);
+              });
+            }
+            if (isDirtyRef.current) {
+              saveWorkspaceToDisk();
+            }
+          } else if (document.visibilityState === 'visible') {
+            if (!isDirtyRef.current) {
+              pullExternalChangesIfAny();
+            }
+          }
+        };
+
+        const handleFocus = () => {
+          if (!isDirtyRef.current) {
+            pullExternalChangesIfAny();
+          }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+          window.removeEventListener('beforeunload', handleBeforeUnload);
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+          window.removeEventListener('focus', handleFocus);
+        };
+      }, []);
+
+      // Auto-clear sync notification after 4.5s
+      useEffect(() => {
+        if (!syncNotification) return;
+        const t = setTimeout(() => setSyncNotification(null), 4500);
+        return () => clearTimeout(t);
+      }, [syncNotification]);
 
       const loadWorkspaceData = async (handle) => {
         try {
@@ -1402,6 +1769,8 @@
           setNavHistory(initialIds.length > 0 ? [initialIds] : []);
           setNavIndex(initialIds.length > 0 ? 0 : -1);
           
+          setTombstones(migrated.tombstones || {});
+          tombstonesRef.current = migrated.tombstones || {};
           setStoredPrompts(migrated.storedPrompts || []);
           setApiKeys(migrated.apiKeys);
           setModel(migrated.model);
@@ -1413,6 +1782,10 @@
           setFileHandle(handle);
           setFileName(file.name);
           setLastSyncTime(file.lastModified);
+          lastSyncTimeRef.current = file.lastModified;
+          isDirtyRef.current = false;
+          isLoadedRef.current = false;
+          setTimeout(() => { isLoadedRef.current = true; }, 1500);
           
           if (typeof idbKeyval !== 'undefined') {
             await idbKeyval.set('kb_file_handle', handle);
@@ -1447,6 +1820,8 @@
           setFileHandle(handle);
           setFileName(handle.name);
           setHistoryState({ past: [], present: [INITIAL_ENTRY] });
+          setTombstones({});
+          tombstonesRef.current = {};
           setStoredPrompts([]);
           setApiKeys([]);
           setModel('gemini-2.5-flash');
@@ -1460,6 +1835,10 @@
           
           const file = await handle.getFile();
           setLastSyncTime(file.lastModified);
+          lastSyncTimeRef.current = file.lastModified;
+          isDirtyRef.current = false;
+          isLoadedRef.current = false;
+          setTimeout(() => { isLoadedRef.current = true; }, 1500);
           
           if (typeof idbKeyval !== 'undefined') {
             await idbKeyval.set('kb_file_handle', handle);
@@ -1484,6 +1863,9 @@
             setSelectedEntryIds(initialIds);
             setNavHistory(initialIds.length > 0 ? [initialIds] : []);
             setNavIndex(initialIds.length > 0 ? 0 : -1);
+            setTombstones(migrated.tombstones || {});
+            tombstonesRef.current = migrated.tombstones || {};
+            setStoredPrompts(migrated.storedPrompts || []);
             setApiKeys(migrated.apiKeys);
             setModel(migrated.model);
             setTheme(migrated.theme);
@@ -1494,6 +1876,10 @@
             setFileName(file.name);
             setFileHandle(null);
             setLastSyncTime(Date.now());
+            lastSyncTimeRef.current = Date.now();
+            isDirtyRef.current = false;
+            isLoadedRef.current = false;
+            setTimeout(() => { isLoadedRef.current = true; }, 1500);
             setAppState('workspace');
           } catch (err) {
             setError(`Import error: ${err.message}`);
@@ -1517,256 +1903,35 @@
           if (!incomingData || typeof incomingData !== 'object') {
             throw new Error("Invalid format. Expected a KnowledgeBase JSON object.");
           }
+          const current = saveStateRef.current;
+          const merged = mergeDatabases(
+            {
+              entries: current.entries,
+              tombstones: tombstonesRef.current || {},
+              assistantChats: current.assistantChats,
+              archivedAssistantChats: current.archivedAssistantChats,
+              storedPrompts: current.storedPrompts,
+              apiKeys: current.apiKeys,
+              model: current.model,
+              theme: current.theme,
+              isDirty: true,
+              lastSyncTime: lastSyncTimeRef.current
+            },
+            incomingData
+          );
 
-          let rawEntries = [];
-          if (Array.isArray(incomingData)) {
-            rawEntries = incomingData;
-          } else if (incomingData.entries && Array.isArray(incomingData.entries)) {
-            rawEntries = incomingData.entries;
-          } else {
-            throw new Error("No notes found in the selected library file.");
-          }
-
-          const processedIncoming = processLoadedEntries(rawEntries).map(e => ({
-            ...e,
-            createdAt: Number(e.createdAt) || Number(e.updatedAt) || Date.now(),
-            updatedAt: Number(e.updatedAt) || Number(e.createdAt) || Date.now()
+          setHistoryState(h => ({
+            past: [...h.past.slice(-25), h.present],
+            present: merged.entries
           }));
+          setTombstones(merged.tombstones);
+          tombstonesRef.current = merged.tombstones;
+          setAssistantChats(merged.assistantChats);
+          setArchivedAssistantChats(merged.archivedAssistantChats);
+          setStoredPrompts(merged.storedPrompts);
+          isDirtyRef.current = true;
 
-          if (!processedIncoming.length) {
-            throw new Error("No valid notes found to merge.");
-          }
-
-          let addedCount = 0;
-          let updatedCount = 0;
-          let unchangedCount = 0;
-
-          // Build index of current entries
-          const existingMap = new Map();
-          entries.forEach(e => {
-            if (e.id) existingMap.set(e.id, { ...e });
-          });
-
-          const mergedList = entries.map(e => ({ ...e }));
-          const incomingToInsert = [];
-
-          // Helper to get consistent timestamp for chronological positioning
-          const getEntryTime = (e) => Number(e.createdAt) || Number(e.updatedAt) || 0;
-
-          // Step 1: Scan for existing entries vs new ones
-          processedIncoming.forEach(incoming => {
-            const existing = existingMap.get(incoming.id);
-
-            if (existing) {
-              const incomingTime = Number(incoming.updatedAt) || Number(incoming.createdAt) || 0;
-              const existingTime = Number(existing.updatedAt) || Number(existing.createdAt) || 0;
-
-              if (incomingTime > existingTime) {
-                // Incoming note is more recent: update existing entry
-                const idx = mergedList.findIndex(e => e.id === incoming.id);
-                if (idx !== -1) {
-                  mergedList[idx] = {
-                    ...existing,
-                    ...incoming,
-                    numericId: existing.numericId != null ? existing.numericId : incoming.numericId,
-                    createdAt: existing.createdAt || incoming.createdAt || incomingTime,
-                    updatedAt: incomingTime || Date.now()
-                  };
-                  existingMap.set(incoming.id, mergedList[idx]);
-                  updatedCount++;
-                }
-              } else {
-                // Existing entry is already newer or identical
-                unchangedCount++;
-              }
-            } else {
-              // Incoming entry does not exist in current library
-              incomingToInsert.push(incoming);
-            }
-          });
-
-          // Step 2: Insert new incoming entries in chronological order using decimal numericIds
-          if (incomingToInsert.length > 0) {
-            // Sort new incoming notes chronologically
-            incomingToInsert.sort((a, b) => getEntryTime(a) - getEntryTime(b));
-
-            // Set of all used numeric IDs to guarantee uniqueness
-            const usedIds = new Set(mergedList.map(e => Number(e.numericId)).filter(n => !isNaN(n)));
-
-            const cleanFloat = (num) => parseFloat(Number(num).toFixed(4));
-
-            const makeUnique = (candidate) => {
-              let val = cleanFloat(candidate);
-              while (usedIds.has(val)) {
-                val = cleanFloat(val + 0.0001);
-              }
-              usedIds.add(val);
-              return val;
-            };
-
-            // Existing chronological timeline of notes
-            const currentTimeline = [...mergedList].sort((a, b) => {
-              const timeDiff = getEntryTime(a) - getEntryTime(b);
-              if (timeDiff !== 0) return timeDiff;
-              return (a.numericId || 0) - (b.numericId || 0);
-            });
-
-            if (currentTimeline.length === 0) {
-              incomingToInsert.forEach((inc, idx) => {
-                const assignedId = makeUnique(idx + 1);
-                const newEntry = {
-                  ...inc,
-                  numericId: assignedId,
-                  createdAt: getEntryTime(inc) || Date.now(),
-                  updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
-                };
-                mergedList.push(newEntry);
-                addedCount++;
-              });
-            } else {
-              // Partition new notes into gaps relative to current timeline:
-              // gaps[0]: before currentTimeline[0]
-              // gaps[j]: between currentTimeline[j-1] and currentTimeline[j]
-              // gaps[N]: after currentTimeline[N-1]
-              const gaps = Array.from({ length: currentTimeline.length + 1 }, () => []);
-
-              incomingToInsert.forEach(incoming => {
-                const inTime = getEntryTime(incoming);
-
-                if (inTime < getEntryTime(currentTimeline[0])) {
-                  gaps[0].push(incoming);
-                } else if (inTime >= getEntryTime(currentTimeline[currentTimeline.length - 1])) {
-                  gaps[currentTimeline.length].push(incoming);
-                } else {
-                  let placed = false;
-                  for (let j = 1; j < currentTimeline.length; j++) {
-                    const prevTime = getEntryTime(currentTimeline[j - 1]);
-                    const nextTime = getEntryTime(currentTimeline[j]);
-                    if (inTime >= prevTime && inTime < nextTime) {
-                      gaps[j].push(incoming);
-                      placed = true;
-                      break;
-                    }
-                  }
-                  if (!placed) {
-                    gaps[currentTimeline.length].push(incoming);
-                  }
-                }
-              });
-
-              // 1. Gap 0: Before oldest existing note
-              if (gaps[0].length > 0) {
-                const firstId = Number(currentTimeline[0].numericId) || 1;
-                const k = gaps[0].length;
-                const minVal = firstId > 0 ? 0 : firstId - 1;
-                const step = (firstId - minVal) / (k + 1);
-
-                gaps[0].forEach((inc, i) => {
-                  const rawId = minVal + (i + 1) * step;
-                  const assignedId = makeUnique(rawId);
-                  const newEntry = {
-                    ...inc,
-                    numericId: assignedId,
-                    createdAt: getEntryTime(inc) || Date.now(),
-                    updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
-                  };
-                  mergedList.push(newEntry);
-                  addedCount++;
-                });
-              }
-
-              // 2. Intermediate Gaps (1 <= j < currentTimeline.length)
-              for (let j = 1; j < currentTimeline.length; j++) {
-                const gapNotes = gaps[j];
-                if (gapNotes.length === 0) continue;
-
-                const prevId = Number(currentTimeline[j - 1].numericId) || 0;
-                const nextId = Number(currentTimeline[j].numericId) || (prevId + 1);
-                const k = gapNotes.length;
-
-                if (nextId > prevId) {
-                  const step = (nextId - prevId) / (k + 1);
-                  gapNotes.forEach((inc, i) => {
-                    const rawId = prevId + (i + 1) * step;
-                    const assignedId = makeUnique(rawId);
-                    const newEntry = {
-                      ...inc,
-                      numericId: assignedId,
-                      createdAt: getEntryTime(inc) || Date.now(),
-                      updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
-                    };
-                    mergedList.push(newEntry);
-                    addedCount++;
-                  });
-                } else {
-                  const step = 0.01;
-                  gapNotes.forEach((inc, i) => {
-                    const rawId = prevId + (i + 1) * step;
-                    const assignedId = makeUnique(rawId);
-                    const newEntry = {
-                      ...inc,
-                      numericId: assignedId,
-                      createdAt: getEntryTime(inc) || Date.now(),
-                      updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
-                    };
-                    mergedList.push(newEntry);
-                    addedCount++;
-                  });
-                }
-              }
-
-              // 3. Gap After Last Note (newer than all notes)
-              if (gaps[currentTimeline.length].length > 0) {
-                let highestInt = Math.floor(Math.max(...Array.from(usedIds), 0));
-                gaps[currentTimeline.length].forEach(inc => {
-                  highestInt += 1;
-                  const assignedId = makeUnique(highestInt);
-                  const newEntry = {
-                    ...inc,
-                    numericId: assignedId,
-                    createdAt: getEntryTime(inc) || Date.now(),
-                    updatedAt: Number(inc.updatedAt) || getEntryTime(inc) || Date.now()
-                  };
-                  mergedList.push(newEntry);
-                  addedCount++;
-                });
-              }
-            }
-          }
-
-          const finalEntries = normalizeTaxonomy(mergedList);
-
-          // Merge assistant chats if present in incomingData
-          let updatedChats = { ...assistantChats };
-          let updatedArchived = { ...archivedAssistantChats };
-
-          if (incomingData.assistantChats && typeof incomingData.assistantChats === 'object') {
-            Object.entries(incomingData.assistantChats).forEach(([k, msgs]) => {
-              if (Array.isArray(msgs) && msgs.length > 0 && (!updatedChats[k] || updatedChats[k].length === 0)) {
-                updatedChats[k] = msgs;
-              }
-            });
-          }
-
-          const incomingArchived = incomingData.archivedAssistantChats || incomingData.chats;
-          if (incomingArchived && typeof incomingArchived === 'object') {
-            Object.entries(incomingArchived).forEach(([k, archList]) => {
-              if (Array.isArray(archList) && archList.length > 0) {
-                const currentArch = updatedArchived[k] || [];
-                const currentArchIds = new Set(currentArch.map(c => c.id));
-                const toAdd = archList.filter(c => c && c.id && !currentArchIds.has(c.id));
-                if (toAdd.length > 0) {
-                  updatedArchived[k] = [...currentArch, ...toAdd];
-                }
-              }
-            });
-          }
-
-          setEntries(finalEntries);
-          setAssistantChats(updatedChats);
-          setArchivedAssistantChats(updatedArchived);
-
-          const summary = `Merged successfully${sourceFileName ? ` with "${sourceFileName}"` : ''}: ${addedCount} new note${addedCount === 1 ? '' : 's'} added in chronological order, ${updatedCount} note${updatedCount === 1 ? '' : 's'} updated to latest changes, ${unchangedCount} note${unchangedCount === 1 ? '' : 's'} already up to date.`;
+          const summary = `Merged successfully${sourceFileName ? ` with "${sourceFileName}"` : ''}: ${merged.addedCount} new note${merged.addedCount === 1 ? '' : 's'} added, ${merged.updatedCount} note${merged.updatedCount === 1 ? '' : 's'} updated to latest changes${merged.conflictCount ? `, ${merged.conflictCount} conflict copies preserved` : ''}.`;
           setMergeStatus({ type: 'success', message: summary });
         } catch (err) {
           console.error("Library merge error:", err);
@@ -2074,6 +2239,13 @@
 
       const deleteEntry = (id) => {
         if (!window.confirm("Are you sure you want to delete this note?")) return;
+        const now = Date.now();
+        setTombstones(prev => {
+          const updated = { ...prev, [id]: now };
+          tombstonesRef.current = updated;
+          return updated;
+        });
+        isDirtyRef.current = true;
         setEntries(prev => prev.filter(e => e.id !== id));
         setSelectedEntryIds(prev => prev.filter(i => i !== id));
         setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
@@ -2177,45 +2349,64 @@
           const now = Date.now();
           const fourMonthsAgo = now - (120 * 24 * 60 * 60 * 1000);
           
-          // Pool notes from the last 4 months
-          const recentPool = entries.filter(e => {
-            const time = Number(e.createdAt) || Number(e.updatedAt) || 0;
+          // 1. Partition entries across all time into recent (last 4 months) and older history
+          const recentEntries = entries.filter(e => {
+            const time = Number(e.createdAt) || Number(e.updatedAt) || now;
             return time >= fourMonthsAgo;
           });
-
-          const pool = recentPool.length >= 5 ? recentPool : entries;
-          
-          // Spread attention equally over entries from last 4 months:
-          // Divide the 120-day timeframe into 4 equal 30-day buckets
-          const monthSpan = 30 * 24 * 60 * 60 * 1000;
-          const buckets = [[], [], [], []];
-          pool.forEach(e => {
+          const olderEntries = entries.filter(e => {
             const time = Number(e.createdAt) || Number(e.updatedAt) || now;
-            const age = Math.max(0, now - time);
-            const bIdx = Math.min(3, Math.floor(age / monthSpan));
-            buckets[bIdx].push(e);
+            return time < fourMonthsAgo;
           });
 
-          // Helper to sample evenly from a bucket, prioritizing manual notes (!e.sourceUrl)
-          const sampleFromBucket = (bucket, count) => {
-            if (!bucket || bucket.length === 0) return [];
-            const manuals = bucket.filter(e => !e.sourceUrl);
-            const others = bucket.filter(e => e.sourceUrl);
-            const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
-            return [...shuffle(manuals), ...shuffle(others)].slice(0, count);
-          };
+          // 2. Classify by topic hierarchy:
+          //    - Manual entries (yellow / 'note'): highest priority for topic selection
+          //    - Previous prompt responses (orange / 'prompt'): secondary priority
+          //    - Other colors (media, web, pdf): background context only
+          const categorize = (list) => ({
+            manual: list.filter(e => getEntryType(e) === 'note'),
+            prompt: list.filter(e => getEntryType(e) === 'prompt'),
+            context: list.filter(e => getEntryType(e) !== 'note' && getEntryType(e) !== 'prompt')
+          });
+
+          const recent = categorize(recentEntries);
+          const older = categorize(olderEntries);
+
+          const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
+          const sample = (arr, count) => shuffle(arr).slice(0, count);
 
           let selectedNotes = [];
-          // Sample up to 10 notes per month bucket
-          buckets.forEach(b => {
-            selectedNotes.push(...sampleFromBucket(b, 10));
-          });
+          const chosenIds = new Set();
+          const addNotes = (notes) => {
+            notes.forEach(n => {
+              if (n && !chosenIds.has(n.id)) {
+                chosenIds.add(n.id);
+                selectedNotes.push(n);
+              }
+            });
+          };
 
-          // If some buckets had fewer notes, top up from the overall pool
-          if (selectedNotes.length < 25 && pool.length > selectedNotes.length) {
-            const chosenIds = new Set(selectedNotes.map(e => e.id));
-            const remaining = pool.filter(e => !chosenIds.has(e.id));
-            selectedNotes.push(...sampleFromBucket(remaining, 35 - selectedNotes.length));
+          // Higher weighting to last 4 months (~65%), while considering all time (~35%)
+          // Heavily prioritize manual notes (yellow), followed by prompt responses, with others as context
+          // Recent pool (Last 4 months)
+          addNotes(sample(recent.manual, 15));
+          addNotes(sample(recent.prompt, 6));
+          addNotes(sample(recent.context, 4));
+
+          // Older / All-time history
+          addNotes(sample(older.manual, 8));
+          addNotes(sample(older.prompt, 4));
+          addNotes(sample(older.context, 2));
+
+          // Top up if we haven't reached 35 notes, preserving priority: manual -> prompt -> context
+          const remaining = entries.filter(e => !chosenIds.has(e.id));
+          if (selectedNotes.length < 35 && remaining.length > 0) {
+            const remManual = remaining.filter(e => getEntryType(e) === 'note');
+            const remPrompt = remaining.filter(e => getEntryType(e) === 'prompt');
+            const remContext = remaining.filter(e => getEntryType(e) !== 'note' && getEntryType(e) !== 'prompt');
+            addNotes(sample(remManual, 35 - selectedNotes.length));
+            if (selectedNotes.length < 35) addNotes(sample(remPrompt, 35 - selectedNotes.length));
+            if (selectedNotes.length < 35) addNotes(sample(remContext, 35 - selectedNotes.length));
           }
 
           if (selectedNotes.length === 0) {
@@ -2223,15 +2414,26 @@
           }
 
           const contextText = selectedNotes.map(e => {
-            const dateStr = new Date(e.createdAt || e.updatedAt || now).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            const isPrompt = isPromptEntry(e);
-            const typeStr = isPrompt ? 'Prompt Reflection Note' : (!e.sourceUrl ? 'Manual Note' : 'Ingested Web/Media');
+            const time = Number(e.createdAt) || Number(e.updatedAt) || now;
+            const dateStr = new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            const isRecent = time >= fourMonthsAgo;
+            const type = getEntryType(e);
+
+            let roleLabel = '';
+            if (type === 'note') {
+              roleLabel = 'PRIMARY TOPIC SOURCE [Manual Note - Yellow]';
+            } else if (type === 'prompt') {
+              roleLabel = 'SECONDARY TOPIC SOURCE [Previous Prompt Reflection - Orange]';
+            } else {
+              roleLabel = `BACKGROUND CONTEXT ONLY [External Source - ${type.toUpperCase()}]`;
+            }
+
+            const ageLabel = isRecent ? 'Recent (Last 4 Months)' : 'Earlier History';
             const takeaways = Array.isArray(e.shortVersion) && e.shortVersion.length ? `\nTakeaways: ${e.shortVersion.join('; ')}` : '';
-            // Ignore executive summaries of prompt entries
-            const summary = (!isPrompt && e.summary) ? `\nSummary: ${e.summary}` : '';
+            const summary = (type !== 'prompt' && e.summary) ? `\nSummary: ${e.summary}` : '';
             const contentText = e.fullContent ? e.fullContent.trim() : '';
-            const snippet = (isPrompt || !summary) && contentText ? `\nContent: ${contentText.substring(0, 350)}` : '';
-            return `--- [[kb-ref:${e.id}]] "${e.title || 'Untitled'}" (${dateStr}, ${typeStr}) ---${summary}${takeaways}${snippet}`;
+            const snippet = (type === 'prompt' || !summary) && contentText ? `\nContent: ${contentText.substring(0, 350)}` : '';
+            return `--- [[kb-ref:${e.id}]] "${e.title || 'Untitled'}" (${roleLabel} | ${dateStr} - ${ageLabel}) ---${summary}${takeaways}${snippet}`;
           }).join('\n\n');
 
           const pastPromptsList = storedPrompts.length > 0
@@ -2251,20 +2453,26 @@ B) JUXTAPOSE OR CONNECT THEMES:
    - Connect or contrast them simply: show how one idea impacts, complicates, or illuminates the other.
 (Note: You do NOT always have to juxtapose—spotting an unresolved theme or loose end and checking in is equally valuable.)
 
-CORE GUIDELINES:
-1. CLEAR & DIRECT:
+WEIGHTING & TOPIC SELECTION GUIDELINES:
+1. TOPIC SELECTION PRIORITY:
+   - HIGHEST WEIGHT (PRIMARY TOPICS): Choose topics, themes, or loose ends primarily from the user's MANUAL ENTRIES (marked [Manual Note - Yellow]). These reflect the user's direct, personal thoughts, creations, and active reflections.
+   - SECONDARY WEIGHT: Next consider PREVIOUS PROMPT RESPONSES (marked [Previous Prompt Reflection - Orange]). Check in on how the user's thinking has progressed or branched out since answering an earlier prompt.
+   - BACKGROUND CONTEXT ONLY: Other color entries (marked [External Source - Web/Media/PDF]) were gathered from external sources. Do NOT center the prompt on an external article or video; only reference them as supporting context, inspiration, or cross-references to illuminate the user's manual notes.
+
+2. TIME WEIGHTING (ALL TIME, EMPHASIZING RECENT):
+   - Consider the user's entire knowledge base across ALL TIME (both recent and earlier history).
+   - Give higher weighting to entries from the last 4 months, connecting them to enduring interests or earlier thoughts from across their history when relevant.
+
+3. CLEAR & DIRECT:
    - Use plain, conversational language. Absolutely avoid academic jargon, flowery rhetoric, or convoluted phrasing.
    - State the context or thread simply in one sentence, then ask one focused question.
    - Avoid run-on sentences, nested clauses, or multi-part questions.
 
-2. CONCISE & PERTINENT:
+4. CONCISE & PERTINENT:
    - Keep the entire prompt brief (around 30–60 words).
    - Get straight to the point without any introductory throat-clearing, filler, or fluff.
 
-3. EQUAL ATTENTION ACROSS LAST 4 MONTHS:
-   - Give equal consideration across the entire 4-month span, especially manual user notes.
-
-4. NO REPETITION:
+5. NO REPETITION:
    - Do NOT repeat or retread questions from previous prompts.${pastPromptsList}
 
 OUTPUT FORMAT:
@@ -3513,8 +3721,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Workspace Header */}
               <div className="px-[50px] py-3 flex justify-between items-center shrink-0">
                 <div className="flex items-center text-xs font-semibold text-[var(--text-main)] truncate h-8">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shrink-0" title="Local file syncing active"></div>
+                  <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${syncNotification ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} title={syncNotification ? syncNotification.msg : "Non-destructive file syncing active"}></div>
                   <span className="truncate max-w-[130px]" title={fileName}>{fileName || 'Workspace'}</span>
+                  {syncNotification && (
+                    <span className="ml-1.5 px-1 py-0.5 text-[9px] bg-emerald-500/20 text-emerald-400 rounded shrink-0 font-mono" title={syncNotification.msg}>
+                      Synced
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 h-8">
                   <button onClick={openSettings} className="btn-icon" title="Settings">
@@ -3535,7 +3748,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         </button>
                         <button 
                           onClick={() => {
-                            const dataStr = JSON.stringify({ entries, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []) }, null, 2);
+                            const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []) }, null, 2);
                             const blob = new Blob([dataStr], { type: "application/json" });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
@@ -3595,7 +3808,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         <button
                           key={t.id}
                           type="button"
-                          onClick={() => toggleTypeFilter(t.id)}
+                          onClick={(e) => toggleTypeFilter(t.id, e)}
                           style={{
                             borderColor: isActive ? t.color : 'var(--border)',
                             backgroundColor: isActive ? `${t.color}15` : 'transparent',
@@ -3604,7 +3817,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer select-none ${
                             isActive ? 'shadow-xs font-semibold' : 'opacity-40 hover:opacity-75'
                           }`}
-                          title={`${isActive ? 'Hide' : 'Show'} ${t.label} (Click to toggle)`}
+                          title={`${isActive ? 'Hide' : 'Show'} ${t.label} (Click to toggle, Shift-click to solo)`}
                         >
                           <i className={`fa-solid ${t.icon} text-[10px]`}></i>
                           <span>{t.label}</span>
@@ -3761,7 +3974,9 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Sidebar Footer */}
               <div className="px-[50px] py-4 flex justify-between items-center text-[11px] font-mono text-[var(--text-muted)]">
                 <span>{entries.length} notes</span>
-                <span className="opacity-75">{new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="opacity-75" title={syncNotification ? syncNotification.msg : `Last synced: ${new Date(lastSyncTime).toLocaleTimeString()}`}>
+                  {syncNotification ? syncNotification.msg : new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
             </div>
           )}
@@ -3868,7 +4083,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 )}
                 {promptState.isGenerating && (
                   <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--text-muted)] text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2">
-                    <i className="fa-solid fa-spinner fa-spin"></i> Finding themes and loose ends from last 4 months...
+                    <i className="fa-solid fa-spinner fa-spin"></i> Finding themes and loose ends across your notes...
                   </div>
                 )}
                 {promptState.draft && (
