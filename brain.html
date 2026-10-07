@@ -546,9 +546,23 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update brain-readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.6.3";
+    const APP_VERSION = "v2.6.5";
 
     const CHANGELOG = [
+      {
+        version: "v2.6.5",
+        date: "2026-10-08",
+        highlights: [
+          "Search Clear Action: Added an inline cancel/clear icon (and Escape key shortcut) to the note search field that dynamically appears whenever search text is present, allowing one-click instant clearing."
+        ]
+      },
+      {
+        version: "v2.6.4",
+        date: "2026-10-08",
+        highlights: [
+          "Latest Model Aliases Filter: When fetching models from Google AI Studio in Settings, only 'latest' alias models (e.g. gemini-flash-latest, gemini-pro-latest, gemini-1.5-flash-latest) are returned, eliminating deprecated snapshots and version clutter."
+        ]
+      },
       {
         version: "v2.6.3",
         date: "2026-10-07",
@@ -1095,6 +1109,7 @@
       const [navHistory, setNavHistory] = useState([]);
       const [navIndex, setNavIndex] = useState(-1);
 
+      const searchInputRef = useRef(null);
       const saveNoteRef = useRef(null);
       const savingIdsRef = useRef(new Set());
       const editFormRef = useRef(null);
@@ -1374,7 +1389,11 @@
           if (!Array.isArray(data.models)) throw new Error("Unexpected response from Gemini API.");
           
           const contentModels = data.models
-            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+            .filter(m => 
+              Array.isArray(m.supportedGenerationMethods) && 
+              m.supportedGenerationMethods.includes('generateContent') &&
+              (m.name || '').toLowerCase().includes('latest')
+            )
             .map(m => ({
               id: m.name.replace(/^models\//, ''),
               displayName: m.displayName || m.name.replace(/^models\//, ''),
@@ -1383,7 +1402,7 @@
             .sort((a, b) => a.id.localeCompare(b.id));
 
           if (contentModels.length === 0) {
-            throw new Error("No text generation models returned for this key.");
+            throw new Error("No 'latest' alias models returned for this key from Gemini API.");
           }
 
           setAvailableModels(contentModels);
@@ -1422,7 +1441,10 @@
           }).catch(() => {});
           idbKeyval.get('kb_available_models').then(m => {
             if (Array.isArray(m) && m.length > 0) {
-              setAvailableModels(m);
+              const latestOnly = m.filter(model => (model.id || '').toLowerCase().includes('latest'));
+              if (latestOnly.length > 0) {
+                setAvailableModels(latestOnly);
+              }
             }
           }).catch(() => {});
         } else {
@@ -4045,7 +4067,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       onClick={() => fetchAvailableModels(tempKeys?.[0]?.key)}
                       disabled={isFetchingModels || (!tempKeys?.[0]?.key && !apiKeys?.[0]?.key)}
                       className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1.5 font-mono disabled:opacity-40 cursor-pointer"
-                      title="Fetch live active models directly from Google AI Studio"
+                      title="Fetch live active 'latest' alias models directly from Google AI Studio"
                     >
                       <i className={`fa-solid fa-arrows-rotate text-[9px] ${isFetchingModels ? 'fa-spin' : ''}`}></i>
                       {isFetchingModels ? 'Fetching...' : (availableModels.length > 0 ? 'Refresh Models' : 'Fetch Models from API')}
@@ -4061,7 +4083,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                   {availableModels.length > 0 && (
                     <div className="text-[10px] text-[var(--text-muted)] font-mono mb-2 flex items-center justify-between px-1">
-                      <span>{availableModels.length} models fetched from Google AI Studio</span>
+                      <span>{availableModels.length} latest alias models fetched from Google AI Studio</span>
                       <span className="text-[9px] text-emerald-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> API Connected
                       </span>
@@ -4764,14 +4786,35 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               <div className="px-[50px] pt-[50px] pb-4 flex flex-col gap-3">
                 <div className="flex gap-2 items-center h-8">
                   <div className="relative flex-1 h-8">
-                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-[var(--text-muted)] text-xs"></i>
+                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-[var(--text-muted)] text-xs pointer-events-none"></i>
                     <input 
+                      ref={searchInputRef}
                       type="text" 
                       placeholder="Search notes..." 
                       value={searchQuery} 
                       onChange={(e) => setSearchQuery(e.target.value)} 
-                      className="w-full h-8 pl-8 pr-3 bg-[var(--bg-main)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded text-xs transition-colors box-border" 
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape' && searchQuery) {
+                          e.stopPropagation();
+                          setSearchQuery('');
+                        }
+                      }}
+                      className={`w-full h-8 pl-8 ${searchQuery ? 'pr-8' : 'pr-3'} bg-[var(--bg-main)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded text-xs transition-colors box-border`} 
                     />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          if (searchInputRef.current) searchInputRef.current.focus();
+                        }}
+                        className="absolute right-2.5 top-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors p-0.5 rounded cursor-pointer flex items-center justify-center"
+                        title="Clear search (Esc)"
+                        aria-label="Clear search"
+                      >
+                        <i className="fa-solid fa-xmark text-xs"></i>
+                      </button>
+                    )}
                   </div>
                   <button 
                     onClick={handleNewNote} 
