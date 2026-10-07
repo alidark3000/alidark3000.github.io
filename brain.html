@@ -106,6 +106,13 @@
       --link-color: #ff5252;
       --link-hover: #ff7b7b;
       --link-underline: rgba(255, 82, 82, 0.4);
+      --left-sidebar-w: 320px;
+    }
+
+    @media (min-width: 1024px) {
+      :root {
+        --left-sidebar-w: 340px;
+      }
     }
 
     @media (prefers-color-scheme: light) {
@@ -278,6 +285,45 @@
       justify-content: space-between;
       align-items: center;
       padding: 50px 50px 14px 50px;
+    }
+
+    /* Absolutely Positioned View Toggles in Top Padding Zone */
+    .view-toggle-btn {
+      position: absolute;
+      top: 10px;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      background-color: var(--card-bg);
+      color: var(--text-muted);
+      cursor: pointer;
+      z-index: 35;
+      transition: left 300ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+    .view-toggle-btn:hover {
+      color: var(--text-main);
+      background-color: var(--bg-hover);
+      border-color: var(--accent);
+    }
+    .view-toggle-btn.is-active {
+      color: var(--accent);
+      background-color: var(--card-bg);
+    }
+    .view-toggle-btn.is-collapsed {
+      color: var(--text-muted);
+      background-color: var(--bg-main);
+      opacity: 0.85;
+    }
+    .view-toggle-btn.is-collapsed:hover {
+      opacity: 1;
+      color: var(--text-main);
+      border-color: var(--accent);
     }
     .app-brand-title {
       font-size: 0.95rem;
@@ -500,9 +546,17 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update brain-readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.6.2";
+    const APP_VERSION = "v2.6.3";
 
     const CHANGELOG = [
+      {
+        version: "v2.6.3",
+        date: "2026-10-07",
+        highlights: [
+          "Floating View Toggles in Top Padding: Sidebar toggles for the Library (taxonomies) and Notes list are now absolutely positioned inside the 50px top padding zone above each respective view.",
+          "Dynamic Left-Screen Docking on Collapse: When either view is collapsed, its toggle button smoothly transitions to the left edge of the screen, providing persistent, easy one-click retoggling without crowding the document reader toolbar."
+        ]
+      },
       {
         version: "v2.6.2",
         date: "2026-10-07",
@@ -4335,6 +4389,33 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             </div>
           )}
 
+          {/* ABSOLUTE VIEW TOGGLES (IN TOP PADDING ZONE) */}
+          <button 
+            type="button"
+            onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+            className={`view-toggle-btn ${isLeftSidebarOpen ? 'is-active' : 'is-collapsed'}`}
+            style={{ left: '14px' }}
+            title={isLeftSidebarOpen ? "Collapse Library (Taxonomies)" : "Expand Library (Taxonomies)"}
+            aria-label="Toggle Library sidebar"
+          >
+            <i className="fa-solid fa-folder-tree"></i>
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => setIsListSidebarOpen(!isListSidebarOpen)}
+            className={`view-toggle-btn ${isListSidebarOpen ? 'is-active' : 'is-collapsed'}`}
+            style={{ 
+              left: (isLeftSidebarOpen && isListSidebarOpen) 
+                ? 'calc(var(--left-sidebar-w) + 14px)' 
+                : '48px' 
+            }}
+            title={isListSidebarOpen ? "Collapse Notes list" : "Expand Notes list"}
+            aria-label="Toggle Notes list"
+          >
+            <i className="fa-solid fa-list"></i>
+          </button>
+
           {/* LEFT SIDEBAR: TAXONOMY & WORKSPACE */}
           <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
             isLeftSidebarOpen 
@@ -4935,36 +5016,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             {/* Top Bar / Actions */}
             <div className="px-[50px] pt-[50px] pb-4 flex justify-between items-center shrink-0 bg-[var(--bg-pane)]">
               <div className="flex items-center gap-2 h-8">
-                {/* Persistent Sidebar Toggles (Library & Notes) */}
-                <div className="flex items-center gap-0.5 bg-[var(--bg-main)] p-0.5 rounded h-8 box-border">
-                  <button 
-                    type="button"
-                    onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)} 
-                    className={`btn-icon w-7 h-7 text-xs rounded transition-colors ${
-                      isLeftSidebarOpen 
-                        ? 'text-[var(--accent)] bg-[var(--card-bg)] shadow-xs' 
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`} 
-                    title={isLeftSidebarOpen ? "Hide Library (Taxonomies)" : "Show Library (Taxonomies)"}
-                    aria-label="Toggle Library sidebar"
-                  >
-                    <i className="fa-solid fa-folder-tree text-[11px]"></i>
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setIsListSidebarOpen(!isListSidebarOpen)} 
-                    className={`btn-icon w-7 h-7 text-xs rounded transition-colors ${
-                      isListSidebarOpen 
-                        ? 'text-[var(--accent)] bg-[var(--card-bg)] shadow-xs' 
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`} 
-                    title={isListSidebarOpen ? "Hide Notes list" : "Show Notes list"}
-                    aria-label="Toggle Notes list"
-                  >
-                    <i className="fa-solid fa-list text-[11px]"></i>
-                  </button>
-                </div>
-
                 {/* Back / Forward Controls */}
                 <div className="flex items-center gap-0.5 bg-[var(--bg-main)] p-0.5 rounded h-8 box-border">
                   <button 

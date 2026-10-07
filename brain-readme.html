@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.6.2</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.6.3</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="brain.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -268,7 +268,7 @@
         </div>
       </div>
       <p class="text-xs text-[var(--text-muted)]">
-        <strong>Persistent Header Toggles & Smooth Transitions (v2.5.2):</strong> The main content view header includes persistently visible Library (<i class="fa-solid fa-folder-tree"></i>) and Notes list (<i class="fa-solid fa-list"></i>) toggle icons alongside history controls. When any sidebar (Library, Notes list, or AI Assistant) is opened or collapsed, animated width transitions (300ms ease-in-out) cause adjacent views to smoothly glide into their new positions, while maintaining scroll positions and view states.
+        <strong>Floating View Toggles & Left Docking on Collapse (v2.6.3):</strong> View toggles for the Library (<i class="fa-solid fa-folder-tree"></i>) and Notes list (<i class="fa-solid fa-list"></i>) are absolutely positioned in the 50px top padding zone above each respective view. When either view is collapsed, its toggle smoothly glides to the left edge of the screen to allow effortless retoggling at any time. When sidebars are open, smooth 300ms transitions maintain layout stability and scroll state without cluttering the document reader top bar.
       </p>
       <p class="text-xs text-[var(--text-muted)] mt-2">
         <strong>Responsive Prompt Layout (v2.5.3):</strong> For Theme Prompt entries, the Prompt Question and Answer Summary cards dynamically adapt to the note's actual available width via CSS container queries. When sidebars expand or the note width collapses below 580px, the cards smoothly transition from side-by-side to a vertical stack for optimal reading comfort.
@@ -367,7 +367,7 @@
         </li>
         <li><strong>Live API Model Discovery (v2.6.0):</strong> Click "Fetch Models from API" to dynamically populate model pickers with all generative models currently active on your Google AI Studio account, falling back resiliently to the current medium-speed model (<code>gemini-2.5-flash</code>) when offline while strictly honoring custom selections.</li>
         <li><strong>External Library Merge:</strong> Manually merge secondary JSON files into your active workspace with live count reporting.</li>
-        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.6.2</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
+        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.6.3</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
       </ul>
     </section>
 
@@ -379,7 +379,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.6.2</strong></span>
+      <span>Version <strong>v2.6.3</strong></span>
       <a href="brain.html">Back to Brain App</a>
     </div>
   </footer>
