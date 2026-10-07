@@ -89,6 +89,7 @@
       --card-bg: #202020;
       --card-shadow: rgba(0, 0, 0, 0.4);
       --track-card-bg: #202020;
+      --track-card-active: #000000;
       --track-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
       --thumb-bg: #222222;
       --thumb-placeholder: rgba(255, 255, 255, 0.06);
@@ -111,11 +112,12 @@
       :root {
         /* Clean Modern Light Theme - unified with player.html & index.html */
         --bg-main: #f7f7f9;
-        --bg-pane: #ffffff;
-        --bg-tracks: #f5f5f7;
-        --track-card-bg: #ffffff;
+        --bg-pane: #f7f7f9;
+        --bg-tracks: #ffffff;
+        --track-card-bg: #f7f7f9;
+        --track-card-active: #ffffff;
         --track-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        --bg-hover: #f0f0f3;
+        --bg-hover: #efeff2;
         --bg-active: #e5e5ea;
         --text-main: #111111;
         --text-muted: #555555;
@@ -324,10 +326,16 @@
       grid-template-rows: 1fr;
       opacity: 1;
     }
+    .tax-collapse-item.is-visible > div {
+      overflow: visible;
+    }
     .tax-collapse-item.is-hidden {
       grid-template-rows: 0fr;
       opacity: 0;
       pointer-events: none;
+    }
+    .tax-collapse-item.is-hidden > div {
+      overflow: hidden;
     }
 
     /* Custom Scrollbars */
@@ -388,6 +396,30 @@
     }
     .animate-focus-window {
       animation: focusWindowIn 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Responsive Prompt & Answer Summary Split Layout */
+    .note-reader-container {
+      container-type: inline-size;
+    }
+    .prompt-split-layout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .prompt-split-card {
+      flex: 1 1 270px;
+      min-width: 270px;
+      max-width: 100%;
+    }
+    @container (max-width: 580px) {
+      .prompt-split-layout {
+        flex-direction: column !important;
+      }
+      .prompt-split-card {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+      }
     }
 
     /* Markdown Prose & List Spacing */
@@ -468,9 +500,91 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update brain-readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.3.0";
+    const APP_VERSION = "v2.6.2";
 
     const CHANGELOG = [
+      {
+        version: "v2.6.2",
+        date: "2026-10-07",
+        highlights: [
+          "Enhanced Column Contrast: In light mode, the middle note list view features a clean white background, while the left taxonomy view and content view use an off-white background.",
+          "Theme-Adaptive Active Card Elevation: Selected note cards elevate onto pure black in dark mode (#000000) and crisp white in light mode (#ffffff) with a 1px colored accent border matching their entry type, contrasting cleanly against inactive note cards."
+        ]
+      },
+      {
+        version: "v2.6.1",
+        date: "2026-10-07",
+        highlights: [
+          "Pinned Note Double Thickness Border: Pinned note cards now feature a distinct double-thickness (8px) left border, providing an immediate visual distinction in the notes list."
+        ]
+      },
+      {
+        version: "v2.6.0",
+        date: "2026-10-07",
+        highlights: [
+          "Task-Specific Model Routing: Dedicated AI models can now be assigned to Quick Metadata (titles, summaries, takeaways, auto-tags), Theme Prompts, and the AI Assistant copilot.",
+          "Live Model Discovery via API: Dynamically fetch active generative models directly from Google AI Studio with one click, showing real-time account model access.",
+          "Resilient Medium Fallback: Clean fallback to current medium-speed model (gemini-2.5-flash) while strictly honoring user selections across reloads and file saves."
+        ]
+      },
+      {
+        version: "v2.5.5",
+        date: "2026-10-07",
+        highlights: [
+          "Taxonomy-Scoped Theme Prompts: Generating a prompt now strictly references entries matching active taxonomy filters (projects, categories, tags), allowing focused thematic questions within specific domains like music or research.",
+          "Automatic Taxonomy Inheritance: Notes created via 'Write' from a scoped prompt automatically inherit the active projects, categories, and tags.",
+          "Scoped Prompt UI Indicators: The Generate Prompt button and draft card dynamically display the active taxonomy scope."
+        ]
+      },
+      {
+        version: "v2.5.4",
+        date: "2026-10-07",
+        highlights: [
+          "Persistent View Visibility: View visibility states (Library, Notes list, AI Assistant) are now saved directly into the knowledge base file and restored automatically upon opening.",
+          "Preserved Layout on Note Selection: Removed automatic closing of the AI Assistant when browsing or selecting notes, keeping the user's chosen view arrangement persistent across note transitions."
+        ]
+      },
+      {
+        version: "v2.5.3",
+        date: "2026-10-07",
+        highlights: [
+          "Responsive Prompt Layout: Prompts and answer summaries dynamically transition from side-by-side to vertical stacking whenever note width collapses below 580px.",
+          "Container-Aware Breakpoints: Added container queries on the note reader container so prompt layout responds to the actual available note width regardless of viewport dimensions."
+        ]
+      },
+      {
+        version: "v2.5.2",
+        date: "2026-10-07",
+        highlights: [
+          "Smooth View Transitions: Implemented animated width and position transitions (300ms ease-in-out) across Library, Notes list, and AI Assistant views so adjacent columns smoothly glide into place when panels open or close.",
+          "Persistent State Preservation: Retained panel DOM structures during collapse to preserve scroll positions and active view state seamlessly."
+        ]
+      },
+      {
+        version: "v2.5.1",
+        date: "2026-10-07",
+        highlights: [
+          "Persistent View Header Toggles: Added persistent Library and Notes toggle icons in the main content header for seamless sidebar expansion and collapse.",
+          "Header Toolbar Cleanup: Removed individual chevron collapse buttons from the Library and Notes headers to streamline toolbar layouts."
+        ]
+      },
+      {
+        version: "v2.5.0",
+        date: "2026-10-07",
+        highlights: [
+          "Inline Entry Editing: Removed separate full-page edit mode and Edit button in favor of unified inline double-click editing across all fields.",
+          "Margin Auto-Generate Actions: Added round refresh icons hanging into the right margin for auto-generating titles, summaries, takeaways, and taxonomies.",
+          "In-Place Taxonomy Editor: Clicking taxonomy badges directly opens the taxonomy and tags editor in place."
+        ]
+      },
+      {
+        version: "v2.4.0",
+        date: "2026-10-07",
+        highlights: [
+          "Taxonomy Deletion: Added capability to delete categories, tags, and projects across all notes directly from the sidebar.",
+          "Taxonomy Hover Action: Hovering over any taxonomy item reveals a delete button hanging into the left padding without shifting list alignment."
+        ]
+      },
       {
         version: "v2.3.0",
         date: "2026-10-04",
@@ -654,7 +768,7 @@
         'Use the AI Assistant on the right to summarize or query your notes.',
         'Use [[kb-ref:ID]] to create backlinks between documents.'
       ],
-      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with a local JSON file on your machine.\n\n### Quick Start\n* **Ingest Notes:** Paste any article or YouTube link in the input bar above the list.\n* **Edit:** Click the Edit button on any note to refine title, summary, takeaways, or content.\n* **AI Assistant:** Open the Assistant in the right sidebar (or press Cmd+J) to synthesize information across notes or chat with the current note.\n* **Taxonomy:** Organize notes by Projects, Categories, and Tags in the left sidebar.',
+      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with a local JSON file on your machine.\n\n### Quick Start\n* **Ingest Notes:** Paste any article or YouTube link in the input bar above the list.\n* **Edit:** Double-click any field (title, summary, takeaways, or content) to edit inline, or click taxonomies to manage tags.\n* **AI Assistant:** Open the Assistant in the right sidebar (or press Cmd+J) to synthesize information across notes or chat with the current note.\n* **Taxonomy:** Organize notes by Projects, Categories, and Tags in the left sidebar.',
       categories: ['getting started'],
       tags: ['tutorial'],
       projects: [],
@@ -778,7 +892,7 @@
             }
             onSave(newText);
           } else if (!renderView) {
-            elementRef.current.innerText = (stripPrefix || '') + (text || '');
+            elementRef.current.innerText = (stripPrefix || '') + (text || placeholder || '');
           }
         }
       };
@@ -791,16 +905,16 @@
           e.preventDefault();
           setIsEditing(false);
           if (elementRef.current && !renderView) {
-            elementRef.current.innerText = (stripPrefix || '') + (text || '');
+            elementRef.current.innerText = (stripPrefix || '') + (text || placeholder || '');
           }
         }
       };
 
       useEffect(() => {
         if (elementRef.current && !isEditing && !renderView) {
-          elementRef.current.innerText = (stripPrefix || '') + (text || '');
+          elementRef.current.innerText = (stripPrefix || '') + (text || placeholder || '');
         }
-      }, [text, isEditing, stripPrefix, renderView]);
+      }, [text, isEditing, stripPrefix, renderView, placeholder]);
 
       useEffect(() => {
         if (isEditing && elementRef.current) {
@@ -823,7 +937,7 @@
           onDoubleClick={handleDoubleClick}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className={`${className} ${isEditing ? 'outline-none rounded bg-[var(--card-bg)] text-[var(--text-main)] cursor-text p-2 font-mono whitespace-pre-wrap text-sm block' : ''}`}
+          className={`${className} ${!text && placeholder ? 'italic opacity-60' : ''} ${isEditing ? 'outline-none rounded bg-[var(--card-bg)] text-[var(--text-main)] cursor-text p-2 font-mono whitespace-pre-wrap text-sm block not-italic opacity-100' : ''}`}
           suppressContentEditableWarning={true}
           title={!isEditing ? "Double-click to edit inline" : undefined}
         >
@@ -890,15 +1004,30 @@
         return () => window.removeEventListener('keydown', handleKeyDown);
       }, []);
 
+      const DEFAULT_MODEL = 'gemini-2.5-flash';
       const [apiKeys, setApiKeys] = useState([]);
-      const [model, setModel] = useState('gemini-2.5-flash');
+      const [model, setModel] = useState(DEFAULT_MODEL);
+      const [taskModels, setTaskModels] = useState({
+        metadata: DEFAULT_MODEL,
+        prompts: DEFAULT_MODEL,
+        assistant: DEFAULT_MODEL
+      });
       const [theme, setTheme] = useState('default');
       
       const [showKeyModal, setShowKeyModal] = useState(false);
       const [showManual, setShowManual] = useState(false);
       const [showChangelog, setShowChangelog] = useState(false);
       const [tempKeys, setTempKeys] = useState([]);
-      const [tempModel, setTempModel] = useState('gemini-2.5-flash');
+      const [tempModel, setTempModel] = useState(DEFAULT_MODEL);
+      const [tempTaskModels, setTempTaskModels] = useState({
+        metadata: DEFAULT_MODEL,
+        prompts: DEFAULT_MODEL,
+        assistant: DEFAULT_MODEL
+      });
+      const [availableModels, setAvailableModels] = useState([]);
+      const [isFetchingModels, setIsFetchingModels] = useState(false);
+      const [fetchModelsError, setFetchModelsError] = useState(null);
+      const [manualModelMode, setManualModelMode] = useState(false);
       const [tempTheme, setTempTheme] = useState('default');
 
       const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -951,7 +1080,6 @@
           }
         }
         setSelectedEntryIds(ids);
-        setIsAssistantOpen(false);
         if (!isHistoryAction && ids.length > 0) {
           setNavHistory(prev => {
             const sliced = prev.slice(0, navIndex + 1);
@@ -1010,6 +1138,7 @@
       const [addInput, setAddInput] = useState('');
       const [isDragging, setIsDragging] = useState(false);
       const [isAnalyzing, setIsAnalyzing] = useState(false);
+      const [generatingField, setGeneratingField] = useState(null);
       const [error, setError] = useState(null);
 
       const [editingEntries, setEditingEntries] = useState({});
@@ -1018,11 +1147,23 @@
       const [editTagInput, setEditTagInput] = useState({});
       const [editProjectInput, setEditProjectInput] = useState({});
       const [isContentFocused, setIsContentFocused] = useState(false);
+      const [isEditingTaxonomy, setIsEditingTaxonomy] = useState(false);
+      const [taxProjectInput, setTaxProjectInput] = useState('');
+      const [taxCatInput, setTaxCatInput] = useState('');
+      const [taxTagInput, setTaxTagInput] = useState('');
+
       const contentTextareaRef = useRef(null);
       const skipDefocusOnSelectRef = useRef(false);
 
       const selectedEntries = entries.filter(e => selectedEntryIds.includes(e.id));
       const activeSingleEntry = selectedEntryIds.length === 1 ? entries.find(e => e.id === selectedEntryIds[0]) : null;
+
+      useEffect(() => {
+        setIsEditingTaxonomy(false);
+        setTaxProjectInput('');
+        setTaxCatInput('');
+        setTaxTagInput('');
+      }, [selectedEntryIds]);
 
       useEffect(() => { editingEntriesRef.current = editingEntries; }, [editingEntries]);
       useEffect(() => { editDataRef.current = editData; }, [editData]);
@@ -1039,17 +1180,7 @@
         if (currentEntry && currentEntry.id) {
           if (contentTextareaRef.current) {
             const currentVal = contentTextareaRef.current.value;
-            editDataRef.current = {
-              ...editDataRef.current,
-              [currentEntry.id]: {
-                ...(editDataRef.current[currentEntry.id] || currentEntry),
-                fullContent: currentVal
-              }
-            };
-            setEditData(editDataRef.current);
-          }
-          if (saveNoteRef.current) {
-            saveNoteRef.current(currentEntry.id);
+            setEntries(prev => prev.map(e => e.id === currentEntry.id ? { ...e, fullContent: currentVal, updatedAt: Date.now() } : e));
           }
         }
       };
@@ -1110,11 +1241,9 @@
       useEffect(() => {
         if (skipDefocusOnSelectRef.current) {
           skipDefocusOnSelectRef.current = false;
-          setIsAssistantOpen(false);
           return;
         }
         setIsContentFocused(false);
-        setIsAssistantOpen(false);
       }, [selectedEntryIds]);
 
       useEffect(() => {
@@ -1172,8 +1301,47 @@
           throw new Error("Please set your Gemini API key in Settings (Gear Icon in left sidebar).");
         }
         const activeKey = apiKeys[0].key;
-        const activeModel = customModel || model || 'gemini-2.5-flash';
+        const activeModel = customModel || taskModels.assistant || model || DEFAULT_MODEL;
         return await callGemini(activeKey, payload, activeModel);
+      };
+
+      const fetchAvailableModels = async (keyToUse) => {
+        const activeKey = keyToUse || tempKeys?.[0]?.key || apiKeys?.[0]?.key;
+        if (!activeKey) {
+          setFetchModelsError("Please enter or select a Gemini API key first.");
+          return;
+        }
+        setIsFetchingModels(true);
+        setFetchModelsError(null);
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
+          const data = await res.json();
+          if (data.error) throw new Error(data.error.message);
+          if (!Array.isArray(data.models)) throw new Error("Unexpected response from Gemini API.");
+          
+          const contentModels = data.models
+            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => ({
+              id: m.name.replace(/^models\//, ''),
+              displayName: m.displayName || m.name.replace(/^models\//, ''),
+              description: m.description || ''
+            }))
+            .sort((a, b) => a.id.localeCompare(b.id));
+
+          if (contentModels.length === 0) {
+            throw new Error("No text generation models returned for this key.");
+          }
+
+          setAvailableModels(contentModels);
+          if (typeof idbKeyval !== 'undefined') {
+            idbKeyval.set('kb_available_models', contentModels).catch(() => {});
+          }
+        } catch (err) {
+          console.error("Failed to fetch models from API:", err);
+          setFetchModelsError(err.message);
+        } finally {
+          setIsFetchingModels(false);
+        }
       };
 
       // Auto-scroll assistant thread
@@ -1196,6 +1364,11 @@
           idbKeyval.get('kb_stored_prompts').then(p => {
             if (Array.isArray(p) && p.length > 0) {
               setStoredPrompts(p);
+            }
+          }).catch(() => {});
+          idbKeyval.get('kb_available_models').then(m => {
+            if (Array.isArray(m) && m.length > 0) {
+              setAvailableModels(m);
             }
           }).catch(() => {});
         } else {
@@ -1277,17 +1450,56 @@
           loadedStoredPrompts = data.generatedPrompts;
         }
 
+        let loadedLayout = {
+          isLeftSidebarOpen: true,
+          isListSidebarOpen: true,
+          isAssistantOpen: false
+        };
+        if (data && data.layout && typeof data.layout === 'object') {
+          if (typeof data.layout.isLeftSidebarOpen === 'boolean') loadedLayout.isLeftSidebarOpen = data.layout.isLeftSidebarOpen;
+          if (typeof data.layout.isListSidebarOpen === 'boolean') loadedLayout.isListSidebarOpen = data.layout.isListSidebarOpen;
+          if (typeof data.layout.isAssistantOpen === 'boolean') loadedLayout.isAssistantOpen = data.layout.isAssistantOpen;
+        } else if (data) {
+          if (typeof data.isLeftSidebarOpen === 'boolean') loadedLayout.isLeftSidebarOpen = data.isLeftSidebarOpen;
+          if (typeof data.isListSidebarOpen === 'boolean') loadedLayout.isListSidebarOpen = data.isListSidebarOpen;
+          if (typeof data.isAssistantOpen === 'boolean') loadedLayout.isAssistantOpen = data.isAssistantOpen;
+        }
+
+        let loadedTaskModels = {
+          metadata: DEFAULT_MODEL,
+          prompts: DEFAULT_MODEL,
+          assistant: DEFAULT_MODEL
+        };
+        if (data && data.taskModels && typeof data.taskModels === 'object') {
+          loadedTaskModels = {
+            metadata: data.taskModels.metadata || DEFAULT_MODEL,
+            prompts: data.taskModels.prompts || DEFAULT_MODEL,
+            assistant: data.taskModels.assistant || data.model || DEFAULT_MODEL
+          };
+        } else if (data && data.model) {
+          loadedTaskModels = {
+            metadata: data.model,
+            prompts: data.model,
+            assistant: data.model
+          };
+        }
+
         return {
           entries: migratedEntries,
           tombstones: loadedTombstones,
           storedPrompts: loadedStoredPrompts,
           apiKeys: parsedKeys,
-          model: data.model || 'gemini-2.5-flash',
+          model: data.model || loadedTaskModels.assistant || DEFAULT_MODEL,
+          taskModels: loadedTaskModels,
           theme: data.theme || 'default',
           assistantChats: (data.assistantChats && typeof data.assistantChats === 'object')
             ? data.assistantChats
             : (Array.isArray(data.assistantMessages) ? { workspace: data.assistantMessages } : { workspace: [] }),
-          archivedAssistantChats: loadedArchived
+          archivedAssistantChats: loadedArchived,
+          layout: loadedLayout,
+          isLeftSidebarOpen: loadedLayout.isLeftSidebarOpen,
+          isListSidebarOpen: loadedLayout.isListSidebarOpen,
+          isAssistantOpen: loadedLayout.isAssistantOpen
         };
       };
 
@@ -1297,13 +1509,17 @@
         storedPrompts,
         apiKeys,
         model,
+        taskModels,
         theme,
         assistantChats,
         archivedAssistantChats,
         appState,
         fileHandle,
         editData,
-        editingEntries
+        editingEntries,
+        isLeftSidebarOpen,
+        isListSidebarOpen,
+        isAssistantOpen
       });
 
       useEffect(() => {
@@ -1313,15 +1529,19 @@
           storedPrompts,
           apiKeys,
           model,
+          taskModels,
           theme,
           assistantChats,
           archivedAssistantChats,
           appState,
           fileHandle,
           editData,
-          editingEntries
+          editingEntries,
+          isLeftSidebarOpen,
+          isListSidebarOpen,
+          isAssistantOpen
         };
-      }, [entries, tombstones, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries]);
+      }, [entries, tombstones, storedPrompts, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
 
       // Non-Destructive Entry-Level 3-Way Merge Algorithm
       const mergeDatabases = (localState, incomingRawData) => {
@@ -1501,8 +1721,17 @@
           archivedAssistantChats: updatedArchived,
           storedPrompts: mergedPrompts,
           apiKeys: (localState.apiKeys && localState.apiKeys.length > 0) ? localState.apiKeys : incoming.apiKeys,
-          model: localState.model || incoming.model,
+          model: localState.model || incoming.model || DEFAULT_MODEL,
+          taskModels: localState.taskModels || incoming.taskModels || {
+            metadata: DEFAULT_MODEL,
+            prompts: DEFAULT_MODEL,
+            assistant: localState.model || incoming.model || DEFAULT_MODEL
+          },
           theme: localState.theme || incoming.theme,
+          layout: localState.isDirty ? (localState.layout || { isLeftSidebarOpen: localState.isLeftSidebarOpen, isListSidebarOpen: localState.isListSidebarOpen, isAssistantOpen: localState.isAssistantOpen }) : (incoming.layout || localState.layout),
+          isLeftSidebarOpen: localState.isDirty ? localState.isLeftSidebarOpen : (incoming.isLeftSidebarOpen ?? localState.isLeftSidebarOpen),
+          isListSidebarOpen: localState.isDirty ? localState.isListSidebarOpen : (incoming.isListSidebarOpen ?? localState.isListSidebarOpen),
+          isAssistantOpen: localState.isDirty ? localState.isAssistantOpen : (incoming.isAssistantOpen ?? localState.isAssistantOpen),
           addedCount,
           updatedCount,
           conflictCount
@@ -1531,6 +1760,7 @@
           let currentPrompts = current.storedPrompts || [];
           let currentKeys = current.apiKeys;
           let currentModel = current.model;
+          let currentTaskModels = current.taskModels || { metadata: DEFAULT_MODEL, prompts: DEFAULT_MODEL, assistant: current.model || DEFAULT_MODEL };
           let currentTheme = current.theme;
 
           // Non-destructive check: Did disk file change externally since our last sync?
@@ -1549,6 +1779,7 @@
                     storedPrompts: currentPrompts,
                     apiKeys: currentKeys,
                     model: currentModel,
+                    taskModels: currentTaskModels,
                     theme: currentTheme,
                     isDirty: isDirtyRef.current,
                     lastSyncTime: lastSyncTimeRef.current
@@ -1563,6 +1794,7 @@
                 currentPrompts = merged.storedPrompts;
                 currentKeys = merged.apiKeys;
                 currentModel = merged.model;
+                currentTaskModels = merged.taskModels || currentTaskModels;
                 currentTheme = merged.theme;
 
                 setHistoryState(h => ({
@@ -1574,6 +1806,8 @@
                 setAssistantChats(currentChats);
                 setArchivedAssistantChats(currentArchived);
                 setStoredPrompts(currentPrompts);
+                setTaskModels(currentTaskModels);
+                setModel(currentModel);
 
                 if (merged.addedCount > 0 || merged.updatedCount > 0 || merged.conflictCount > 0) {
                   setSyncNotification({
@@ -1593,11 +1827,20 @@
             storedPrompts: currentPrompts,
             apiKeys: currentKeys,
             model: currentModel,
+            taskModels: currentTaskModels,
             theme: currentTheme,
             assistantMessages: (currentChats['workspace'] || []).slice(-50),
             assistantChats: currentChats,
             archivedAssistantChats: currentArchived,
             chats: currentArchived,
+            layout: {
+              isLeftSidebarOpen: current.isLeftSidebarOpen,
+              isListSidebarOpen: current.isListSidebarOpen,
+              isAssistantOpen: current.isAssistantOpen
+            },
+            isLeftSidebarOpen: current.isLeftSidebarOpen,
+            isListSidebarOpen: current.isListSidebarOpen,
+            isAssistantOpen: current.isAssistantOpen,
             updatedAt: Date.now()
           };
 
@@ -1658,6 +1901,7 @@
                 storedPrompts: current.storedPrompts,
                 apiKeys: current.apiKeys,
                 model: current.model,
+                taskModels: current.taskModels,
                 theme: current.theme,
                 isDirty: isDirtyRef.current,
                 lastSyncTime: lastSyncTimeRef.current
@@ -1674,6 +1918,13 @@
             setAssistantChats(merged.assistantChats);
             setArchivedAssistantChats(merged.archivedAssistantChats);
             setStoredPrompts(merged.storedPrompts);
+            if (merged.taskModels) setTaskModels(merged.taskModels);
+            if (merged.model) setModel(merged.model);
+            if (!isDirtyRef.current && merged.layout) {
+              setIsLeftSidebarOpen(merged.layout.isLeftSidebarOpen);
+              setIsListSidebarOpen(merged.layout.isListSidebarOpen);
+              setIsAssistantOpen(merged.layout.isAssistantOpen);
+            }
 
             lastSyncTimeRef.current = file.lastModified;
             setLastSyncTime(file.lastModified);
@@ -1699,7 +1950,7 @@
           saveWorkspaceToDisk();
         }, 1200);
         return () => clearTimeout(timer);
-      }, [entries, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, tombstones]);
+      }, [entries, storedPrompts, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, tombstones, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
 
       // 2. Periodic sync (every 10 seconds): save if dirty, or pull external changes if clean
       useEffect(() => {
@@ -1793,10 +2044,20 @@
           setStoredPrompts(migrated.storedPrompts || []);
           setApiKeys(migrated.apiKeys);
           setModel(migrated.model);
+          setTaskModels(migrated.taskModels || {
+            metadata: DEFAULT_MODEL,
+            prompts: DEFAULT_MODEL,
+            assistant: migrated.model || DEFAULT_MODEL
+          });
           setTheme(migrated.theme);
           setAssistantChats(migrated.assistantChats || { workspace: [] });
           setArchivedAssistantChats(migrated.archivedAssistantChats || { workspace: [] });
           setExpandedArchivedChatIds([]);
+          if (migrated.layout) {
+            setIsLeftSidebarOpen(migrated.layout.isLeftSidebarOpen);
+            setIsListSidebarOpen(migrated.layout.isListSidebarOpen);
+            setIsAssistantOpen(migrated.layout.isAssistantOpen);
+          }
           
           setFileHandle(handle);
           setFileName(file.name);
@@ -1843,7 +2104,12 @@
           tombstonesRef.current = {};
           setStoredPrompts([]);
           setApiKeys([]);
-          setModel('gemini-2.5-flash');
+          setModel(DEFAULT_MODEL);
+          setTaskModels({
+            metadata: DEFAULT_MODEL,
+            prompts: DEFAULT_MODEL,
+            assistant: DEFAULT_MODEL
+          });
           setTheme('default');
           setAssistantChats({ workspace: [] });
           setArchivedAssistantChats({ workspace: [] });
@@ -1887,10 +2153,20 @@
             setStoredPrompts(migrated.storedPrompts || []);
             setApiKeys(migrated.apiKeys);
             setModel(migrated.model);
+            setTaskModels(migrated.taskModels || {
+              metadata: DEFAULT_MODEL,
+              prompts: DEFAULT_MODEL,
+              assistant: migrated.model || DEFAULT_MODEL
+            });
             setTheme(migrated.theme);
             setAssistantChats(migrated.assistantChats || { workspace: [] });
             setArchivedAssistantChats(migrated.archivedAssistantChats || { workspace: [] });
             setExpandedArchivedChatIds([]);
+            if (migrated.layout) {
+              setIsLeftSidebarOpen(migrated.layout.isLeftSidebarOpen);
+              setIsListSidebarOpen(migrated.layout.isListSidebarOpen);
+              setIsAssistantOpen(migrated.layout.isAssistantOpen);
+            }
             
             setFileName(file.name);
             setFileHandle(null);
@@ -1932,6 +2208,7 @@
               storedPrompts: current.storedPrompts,
               apiKeys: current.apiKeys,
               model: current.model,
+              taskModels: current.taskModels,
               theme: current.theme,
               isDirty: true,
               lastSyncTime: lastSyncTimeRef.current
@@ -1948,6 +2225,8 @@
           setAssistantChats(merged.assistantChats);
           setArchivedAssistantChats(merged.archivedAssistantChats);
           setStoredPrompts(merged.storedPrompts);
+          if (merged.taskModels) setTaskModels(merged.taskModels);
+          if (merged.model) setModel(merged.model);
           isDirtyRef.current = true;
 
           const summary = `Merged successfully${sourceFileName ? ` with "${sourceFileName}"` : ''}: ${merged.addedCount} new note${merged.addedCount === 1 ? '' : 's'} added, ${merged.updatedCount} note${merged.updatedCount === 1 ? '' : 's'} updated to latest changes${merged.conflictCount ? `, ${merged.conflictCount} conflict copies preserved` : ''}.`;
@@ -2193,7 +2472,8 @@
           };
           if (useSearchTool) payload.tools = [{ google_search: {} }];
 
-          const result = await handleGeminiCall(payload, model);
+          const metadataModel = taskModels.metadata || DEFAULT_MODEL;
+          const result = await handleGeminiCall(payload, metadataModel);
           const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
           const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
 
@@ -2329,9 +2609,9 @@
           promptQuestion: questionText,
           shortVersion: [],
           fullContent: '',
-          categories: ['notes'],
-          tags: ['prompt', 'reflection'],
-          projects: [],
+          categories: (draft.categories && draft.categories.length > 0) ? [...draft.categories] : (activeCategories.length > 0 ? [...activeCategories] : ['notes']),
+          tags: (draft.tags && draft.tags.length > 0) ? [...draft.tags] : (activeTags.length > 0 ? Array.from(new Set([...activeTags, 'prompt', 'reflection'])) : ['prompt', 'reflection']),
+          projects: (draft.projects && draft.projects.length > 0) ? [...draft.projects] : (activeProjects.length > 0 ? [...activeProjects] : []),
           createdAt: Date.now(),
           updatedAt: Date.now(),
           sourceUrl: null,
@@ -2368,12 +2648,38 @@
           const now = Date.now();
           const fourMonthsAgo = now - (120 * 24 * 60 * 60 * 1000);
           
-          // 1. Partition entries across all time into recent (last 4 months) and older history
-          const recentEntries = entries.filter(e => {
+          const hasActiveTaxonomy = activeProjects.length > 0 || activeCategories.length > 0 || activeTags.length > 0;
+
+          // Scope entries strictly to active taxonomies if any are selected
+          const scopedEntries = hasActiveTaxonomy
+            ? entries.filter(e => {
+                if (!e) return false;
+                const matchesProject = activeProjects.length === 0 || (Array.isArray(e.projects) && e.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
+                const matchesCat = activeCategories.length === 0 || (Array.isArray(e.categories) && e.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
+                const matchesTag = activeTags.length === 0 || (Array.isArray(e.tags) && e.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
+                return matchesProject && matchesCat && matchesTag;
+              })
+            : entries;
+
+          if (scopedEntries.length === 0) {
+            if (hasActiveTaxonomy) {
+              const scopeDesc = [
+                ...activeProjects,
+                ...activeCategories,
+                ...activeTags.map(t => '#' + t)
+              ].join(', ');
+              throw new Error(`No notes found matching the selected taxonomy filter(s) [${scopeDesc}] to analyze.`);
+            } else {
+              throw new Error("No notes found in knowledge base to analyze.");
+            }
+          }
+
+          // 1. Partition scoped entries across all time into recent (last 4 months) and older history
+          const recentEntries = scopedEntries.filter(e => {
             const time = Number(e.createdAt) || Number(e.updatedAt) || now;
             return time >= fourMonthsAgo;
           });
-          const olderEntries = entries.filter(e => {
+          const olderEntries = scopedEntries.filter(e => {
             const time = Number(e.createdAt) || Number(e.updatedAt) || now;
             return time < fourMonthsAgo;
           });
@@ -2418,7 +2724,8 @@
           addNotes(sample(older.context, 2));
 
           // Top up if we haven't reached 35 notes, preserving priority: manual -> prompt -> context
-          const remaining = entries.filter(e => !chosenIds.has(e.id));
+          // Strictly drawn from scopedEntries so notes outside selected taxonomies are never included
+          const remaining = scopedEntries.filter(e => !chosenIds.has(e.id));
           if (selectedNotes.length < 35 && remaining.length > 0) {
             const remManual = remaining.filter(e => getEntryType(e) === 'note');
             const remPrompt = remaining.filter(e => getEntryType(e) === 'prompt');
@@ -2429,7 +2736,7 @@
           }
 
           if (selectedNotes.length === 0) {
-            throw new Error("No notes found in knowledge base to analyze.");
+            throw new Error("No notes found in selected scope to analyze.");
           }
 
           const contextText = selectedNotes.map(e => {
@@ -2460,8 +2767,18 @@
               storedPrompts.slice(-30).map((p, i) => `${i + 1}. [${p.title}]: ${p.content || p.question}`).join('\n')
             : "";
 
+          const taxonomyScopeParts = [
+            activeProjects.length > 0 ? `Projects: ${activeProjects.join(', ')}` : '',
+            activeCategories.length > 0 ? `Categories: ${activeCategories.join(', ')}` : '',
+            activeTags.length > 0 ? `Tags: ${activeTags.map(t => '#' + t).join(', ')}` : ''
+          ].filter(Boolean);
+
+          const taxonomyFocusInstruction = hasActiveTaxonomy
+            ? `\n\nACTIVE TAXONOMY FOCUS:\nAll provided notes belong to the user's active taxonomy filter (${taxonomyScopeParts.join(' | ')}). Ground your reflection question exclusively in the context, themes, and goals of these active taxonomies.\n`
+            : '';
+
           const systemPrompt = `You are a perceptive thinking assistant inside the user's personal knowledge base.
-Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.
+Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.${taxonomyFocusInstruction}
 
 PROMPT MODES - SELECT EITHER A OR B:
 A) CHECK IN ON AN UNRESOLVED THEME OR LOOSE END:
@@ -2515,7 +2832,8 @@ Respond with valid JSON ONLY matching this structure:
             return;
           }
           
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`;
+          const promptModel = taskModels.prompts || DEFAULT_MODEL;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${promptModel}:generateContent?key=${activeKey}`;
           const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const result = await response.json();
           
@@ -2546,7 +2864,10 @@ Respond with valid JSON ONLY matching this structure:
             draft: {
               title: newPromptRecord.title,
               fullContent: newPromptRecord.content,
-              summary: newPromptRecord.content
+              summary: newPromptRecord.content,
+              projects: [...activeProjects],
+              categories: activeCategories.length > 0 ? [...activeCategories] : ['notes'],
+              tags: activeTags.length > 0 ? Array.from(new Set([...activeTags, 'prompt', 'reflection'])) : ['prompt', 'reflection']
             }
           });
         } catch (e) {
@@ -2685,7 +3006,7 @@ Respond with valid JSON ONLY matching this structure:
               }
             };
 
-            const result = await handleGeminiCall(payload, model);
+            const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
             const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
 
             setEntries(prev => prev.map(e => {
@@ -2767,59 +3088,121 @@ Respond with valid JSON ONLY matching this structure:
         }
       };
 
-      // Focused Note Edit AI Helpers
+      // Entry taxonomy helpers for in-place editor
+      const removeEntryProject = (id, proj) => {
+        setEntries(prev => prev.map(e => e.id === id ? {
+          ...e,
+          projects: (e.projects || []).filter(p => normTax(p) !== normTax(proj)),
+          updatedAt: Date.now()
+        } : e));
+      };
+
+      const removeEntryCategory = (id, cat) => {
+        setEntries(prev => prev.map(e => e.id === id ? {
+          ...e,
+          categories: (e.categories || []).filter(c => normTax(c) !== normTax(cat)),
+          updatedAt: Date.now()
+        } : e));
+      };
+
+      const removeEntryTag = (id, tag) => {
+        setEntries(prev => prev.map(e => e.id === id ? {
+          ...e,
+          tags: (e.tags || []).filter(t => normTax(t) !== normTax(tag)),
+          updatedAt: Date.now()
+        } : e));
+      };
+
+      const addEntryProject = (id, name) => {
+        const val = normTax(name);
+        if (!val) return;
+        setEntries(prev => prev.map(e => e.id === id ? {
+          ...e,
+          projects: [...new Set([...(e.projects || []), val])],
+          updatedAt: Date.now()
+        } : e));
+      };
+
+      const addEntryCategory = (id, name) => {
+        const val = normTax(name);
+        if (!val) return;
+        setEntries(prev => prev.map(e => e.id === id ? {
+          ...e,
+          categories: [...new Set([...(e.categories || []), val])],
+          updatedAt: Date.now()
+        } : e));
+      };
+
+      const addEntryTag = (id, name) => {
+        const val = normTax(name.replace(/^#/, ''));
+        if (!val) return;
+        setEntries(prev => prev.map(e => e.id === id ? {
+          ...e,
+          tags: [...new Set([...(e.tags || []), val])],
+          updatedAt: Date.now()
+        } : e));
+      };
+
+      // Focused Note AI Helpers (Margin Refresh Actions)
       const handleSuggestTitle = async (id) => {
         if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
         setIsAnalyzing(true);
+        setGeneratingField('title');
         try {
-          const data = editData[id] || entries.find(e => e.id === id);
+          const data = entries.find(e => e.id === id) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
           const prompt = `Read this note and suggest a punchy, highly descriptive title (maximum 6 words). Return strictly JSON: {"title": "The Title"}.\n\nContent: ${data.fullContent || data.summary}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { title: { type: "STRING" } } } }
           };
-          const result = await handleGeminiCall(payload, model);
+          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.title) {
-            setEditData(prev => ({ ...prev, [id]: { ...prev[id], title: resData.title } }));
+            const cleanTitle = resData.title.trim();
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, title: cleanTitle, updatedAt: Date.now() } : e));
           }
         } catch(err) {
           setError("Title suggestion failed: " + err.message);
         } finally {
           setIsAnalyzing(false);
+          setGeneratingField(null);
         }
       };
 
       const handleGenerateTLDR = async (id) => {
         if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
         setIsAnalyzing(true);
+        setGeneratingField('summary');
         try {
-          const data = editData[id] || entries.find(e => e.id === id);
+          const data = entries.find(e => e.id === id) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
           const isPrompt = isPromptEntry(data);
           const prompt = (isPrompt && data.promptQuestion)
             ? `Write an ultra-concise 1-sentence summary (strictly under 20 words) that directly synthesizes and summarizes the user's answer/response to the prompt question. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${data.fullContent || ''}`
-            : `Write an ultra-concise executive summary (TL;DR) of this note capturing only the single core takeaway. Limit strictly to 1 short sentence (under 15 words). Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
+            : `Write an ultra-concise executive summary (TL;DR) of this note capturing only the single core takeaway. Limit strictly to 1 short sentence (under 15 words). Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent || ''}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
           };
-          const result = await handleGeminiCall(payload, model);
+          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.summary) {
-            setEditData(prev => ({ ...prev, [id]: { ...prev[id], summary: resData.summary.trim() } }));
+            const cleanSummary = resData.summary.trim();
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
           }
         } catch(err) {
           setError("TL;DR generation failed: " + err.message);
         } finally {
           setIsAnalyzing(false);
+          setGeneratingField(null);
         }
       };
 
       const handleGenerateAnswerSummary = async (id) => {
         if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
         setIsAnalyzing(true);
+        setGeneratingField('summary');
         try {
           const entry = entries.find(e => e.id === id) || (editData && editData[id]);
           if (!entry) throw new Error("Note not found.");
@@ -2848,76 +3231,81 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
             }
           };
 
-          const result = await handleGeminiCall(payload, model);
+          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.summary) {
             const cleanSummary = resData.summary.trim();
             setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
-            setEditData(prev => ({
-              ...prev,
-              [id]: { ...(prev[id] || entry), summary: cleanSummary }
-            }));
           }
         } catch (err) {
           setError("Failed to generate answer summary: " + err.message);
         } finally {
           setIsAnalyzing(false);
+          setGeneratingField(null);
         }
       };
 
       const handleGenerateTakeaways = async (id) => {
         if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
         setIsAnalyzing(true);
+        setGeneratingField('takeaways');
         try {
-          const data = editData[id] || entries.find(e => e.id === id);
+          const data = entries.find(e => e.id === id) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
-          const prompt = `Analyze this note. Extract exactly 3-5 crucial key takeaways. Return strictly JSON: {"shortVersion": ["point 1", "point 2"]}.\nTitle: ${data.title}\nContent: ${data.fullContent}`;
+          const prompt = `Analyze this note. Extract exactly 3-5 crucial key takeaways. Return strictly JSON: {"shortVersion": ["point 1", "point 2"]}.\nTitle: ${data.title}\nContent: ${data.fullContent || data.summary}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } } }
           };
-          const result = await handleGeminiCall(payload, model);
+          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.shortVersion && Array.isArray(resData.shortVersion)) {
-            setEditData(prev => ({ ...prev, [id]: { ...prev[id], shortVersion: resData.shortVersion.join('\n') } }));
+            const cleanTakeaways = resData.shortVersion.map(s => String(s).trim()).filter(Boolean);
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, shortVersion: cleanTakeaways, updatedAt: Date.now() } : e));
           }
         } catch(err) {
           setError("Key points generation failed: " + err.message);
         } finally {
           setIsAnalyzing(false);
+          setGeneratingField(null);
         }
       };
 
       const handleGenerateTaxonomies = async (id) => {
         if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
         setIsAnalyzing(true);
+        setGeneratingField('taxonomies');
         try {
-          const data = editData[id] || entries.find(e => e.id === id);
+          const data = entries.find(e => e.id === id) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
           const prompt = `Analyze this note and return JSON matching: {"projects": ["proj"], "categories": ["cat"], "tags": ["tag1"]}.
           - Projects: Assign 0-1 from: ${JSON.stringify(Array.from(allProjects))}.
           - Categories: Assign 1-2 from: ${JSON.stringify(Array.from(allCategories))}.
           - Tags: Assign 2-4 specific concept keywords. Reuse: ${JSON.stringify(Array.from(allTags))}. Return in lowercase.
-          Title: ${data.title}\nContent: ${data.fullContent}`;
+          Title: ${data.title}\nContent: ${data.fullContent || data.summary}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { projects: { type: "ARRAY", items: { type: "STRING" } }, categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } } }
           };
-          const result = await handleGeminiCall(payload, model);
+          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
-          setEditData(prev => ({
-            ...prev,
-            [id]: {
-              ...prev[id],
-              projects: Array.isArray(resData.projects) ? resData.projects.map(p => p.toLowerCase()) : prev[id].projects,
-              categories: Array.isArray(resData.categories) ? resData.categories.map(c => c.toLowerCase()) : prev[id].categories,
-              tags: Array.isArray(resData.tags) ? resData.tags.map(t => t.toLowerCase()) : prev[id].tags
+          setEntries(prev => prev.map(e => {
+            if (e.id === id) {
+              return {
+                ...e,
+                projects: Array.isArray(resData.projects) ? [...new Set([...(e.projects || []), ...resData.projects.map(p => normTax(p)).filter(Boolean)])] : e.projects,
+                categories: Array.isArray(resData.categories) ? [...new Set([...(e.categories || []), ...resData.categories.map(c => normTax(c)).filter(Boolean)])] : e.categories,
+                tags: Array.isArray(resData.tags) ? [...new Set([...(e.tags || []), ...resData.tags.map(t => normTax(t)).filter(Boolean)])] : e.tags,
+                updatedAt: Date.now()
+              };
             }
+            return e;
           }));
         } catch(err) {
           setError("Auto-tag failed: " + err.message);
         } finally {
           setIsAnalyzing(false);
+          setGeneratingField(null);
         }
       };
 
@@ -2975,6 +3363,69 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
         if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
           performTaxonomyMigration(oldName, currentType, currentType, newName.trim());
         }
+      };
+
+      const deleteTaxonomy = (type, name) => {
+        if (!name) return;
+        const displayName = type === 'tag' ? `#${name}` : name;
+        if (!window.confirm(`Are you sure you want to delete the ${type} "${displayName}" from all notes?`)) return;
+        const targetLower = normTax(name);
+        isDirtyRef.current = true;
+        setEntries(prev => prev.map(entry => {
+          let wasModified = false;
+          let newProjs = Array.isArray(entry.projects) ? entry.projects : [];
+          let newCats = Array.isArray(entry.categories) ? entry.categories : [];
+          let newTags = Array.isArray(entry.tags) ? entry.tags : [];
+
+          if (type === 'project' && newProjs.some(p => normTax(p) === targetLower)) {
+            newProjs = newProjs.filter(p => normTax(p) !== targetLower);
+            wasModified = true;
+          } else if (type === 'category' && newCats.some(c => normTax(c) === targetLower)) {
+            newCats = newCats.filter(c => normTax(c) !== targetLower);
+            wasModified = true;
+          } else if (type === 'tag' && newTags.some(t => normTax(t) === targetLower)) {
+            newTags = newTags.filter(t => normTax(t) !== targetLower);
+            wasModified = true;
+          }
+
+          if (wasModified) {
+            return {
+              ...entry,
+              projects: newProjs,
+              categories: newCats,
+              tags: newTags,
+              updatedAt: Date.now()
+            };
+          }
+          return entry;
+        }));
+
+        if (type === 'project') {
+          setActiveProjects(prev => prev.filter(p => normTax(p) !== targetLower));
+        } else if (type === 'category') {
+          setActiveCategories(prev => prev.filter(c => normTax(c) !== targetLower));
+        } else if (type === 'tag') {
+          setActiveTags(prev => prev.filter(t => normTax(t) !== targetLower));
+        }
+
+        setEditData(prev => {
+          const next = { ...prev };
+          let modified = false;
+          Object.keys(next).forEach(id => {
+            if (!next[id]) return;
+            if (type === 'project' && Array.isArray(next[id].projects) && next[id].projects.some(p => normTax(p) === targetLower)) {
+              next[id] = { ...next[id], projects: next[id].projects.filter(p => normTax(p) !== targetLower) };
+              modified = true;
+            } else if (type === 'category' && Array.isArray(next[id].categories) && next[id].categories.some(c => normTax(c) === targetLower)) {
+              next[id] = { ...next[id], categories: next[id].categories.filter(c => normTax(c) !== targetLower) };
+              modified = true;
+            } else if (type === 'tag' && Array.isArray(next[id].tags) && next[id].tags.some(t => normTax(t) === targetLower)) {
+              next[id] = { ...next[id], tags: next[id].tags.filter(t => normTax(t) !== targetLower) };
+              modified = true;
+            }
+          });
+          return modified ? next : prev;
+        });
       };
 
       const handleEntryDrop = (e, targetId) => {
@@ -3139,7 +3590,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               payload.tools = [{ google_search: {} }];
             }
 
-            const result = await handleGeminiCall(payload, model);
+            const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
+            const result = await handleGeminiCall(payload, activeAssistantModel);
             const candidate = result.candidates?.[0];
             const parts = candidate?.content?.parts || [];
             const replyText = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
@@ -3148,12 +3600,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               ...prev,
               [chatKey]: [
                 ...(prev[chatKey] || updatedMessages),
-                { id: 'msg-' + (Date.now() + 1), role: 'model', text: replyText, timestamp: Date.now(), model }
+                { id: 'msg-' + (Date.now() + 1), role: 'model', text: replyText, timestamp: Date.now(), model: activeAssistantModel }
               ]
             }));
           } else {
             const candidateSummaries = entries.map(e => `[kb-ref:${e.id}] (Title: ${e.title}) - ${e.summary || e.fullContent?.substring(0, 150) || ''}`).join('\n');
 
+            const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
             const pass1Payload = {
               contents: [{ role: 'user', parts: [{ text: `User query: "${queryText}"\n\nIdentify up to 5 note IDs that are most relevant to answering this query comprehensively. Return ONLY a JSON array of strings (e.g. ["${entries[0]?.id || 'entry-1'}"]). If none apply, return [].\n\nAvailable Notes:\n${candidateSummaries}` }] }],
               generationConfig: { temperature: 0.1 }
@@ -3161,7 +3614,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
             let neededIds = [];
             try {
-              const pass1Res = await handleGeminiCall(pass1Payload, model);
+              const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
               neededIds = parseAIJson(pass1Res.candidates[0].content.parts[0].text);
               if (!Array.isArray(neededIds)) neededIds = [];
             } catch(e) {
@@ -3195,7 +3648,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               tools: [{ google_search: {} }]
             };
 
-            const result = await handleGeminiCall(pass2Payload, model);
+            const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
             const candidate = result.candidates?.[0];
             const parts = candidate?.content?.parts || [];
             const replyText = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
@@ -3204,7 +3657,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               ...prev,
               [chatKey]: [
                 ...(prev[chatKey] || updatedMessages),
-                { id: 'msg-' + (Date.now() + 1), role: 'model', text: replyText, timestamp: Date.now(), model }
+                { id: 'msg-' + (Date.now() + 1), role: 'model', text: replyText, timestamp: Date.now(), model: activeAssistantModel }
               ]
             }));
           }
@@ -3362,17 +3815,43 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
         return (b.numericId || 0) - (a.numericId || 0);
       });
 
+      const activeTaxonomyList = [
+        ...activeProjects,
+        ...activeCategories,
+        ...activeTags.map(t => `#${t}`)
+      ];
+      const activeTaxonomySummary = activeTaxonomyList.length > 0
+        ? (activeTaxonomyList.length <= 2 ? activeTaxonomyList.join(', ') : `${activeTaxonomyList.slice(0, 2).join(', ')} +${activeTaxonomyList.length - 2}`)
+        : '';
+
       const openSettings = () => {
-        setTempKeys([...apiKeys]);
+        const currentKeys = [...apiKeys];
+        setTempKeys(currentKeys);
         setTempModel(model);
+        setTempTaskModels({
+          metadata: taskModels.metadata || DEFAULT_MODEL,
+          prompts: taskModels.prompts || DEFAULT_MODEL,
+          assistant: taskModels.assistant || model || DEFAULT_MODEL
+        });
         setTempTheme(theme);
         setMergeStatus(null);
+        setFetchModelsError(null);
         setShowKeyModal(true);
+        if (availableModels.length === 0 && currentKeys[0]?.key) {
+          fetchAvailableModels(currentKeys[0].key);
+        }
       };
 
       const saveSettings = () => {
-        setApiKeys(tempKeys.filter(k => k.key.trim() !== ''));
-        setModel(tempModel);
+        const cleanKeys = tempKeys.filter(k => k.key.trim() !== '');
+        setApiKeys(cleanKeys);
+        const resolvedTaskModels = {
+          metadata: tempTaskModels.metadata || DEFAULT_MODEL,
+          prompts: tempTaskModels.prompts || DEFAULT_MODEL,
+          assistant: tempTaskModels.assistant || tempModel || DEFAULT_MODEL
+        };
+        setTaskModels(resolvedTaskModels);
+        setModel(resolvedTaskModels.assistant);
         setTheme(tempTheme);
         setShowKeyModal(false);
       };
@@ -3501,26 +3980,160 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   </p>
                 </div>
 
-                {/* Model Tier */}
+                {/* AI Models Configuration by Task */}
                 <div className="mb-5">
-                  <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2 font-mono">AI Model Tier</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button 
-                      type="button" 
-                      onClick={() => setTempModel('gemini-2.5-flash')} 
-                      className={`p-3 rounded text-left transition-colors ${tempModel.includes('flash') ? 'bg-[var(--accent)]/15 text-[var(--text-main)]' : 'bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                      AI Models by Task
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => fetchAvailableModels(tempKeys?.[0]?.key)}
+                      disabled={isFetchingModels || (!tempKeys?.[0]?.key && !apiKeys?.[0]?.key)}
+                      className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1.5 font-mono disabled:opacity-40 cursor-pointer"
+                      title="Fetch live active models directly from Google AI Studio"
                     >
-                      <div className="font-bold text-xs flex items-center gap-1.5 font-mono"><i className="fa-solid fa-bolt text-amber-500"></i> Fast (Flash)</div>
-                      <div className="text-[10px] text-[var(--text-muted)] mt-1">Quick scraping & responsive chats</div>
+                      <i className={`fa-solid fa-arrows-rotate text-[9px] ${isFetchingModels ? 'fa-spin' : ''}`}></i>
+                      {isFetchingModels ? 'Fetching...' : (availableModels.length > 0 ? 'Refresh Models' : 'Fetch Models from API')}
                     </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setTempModel('gemini-2.5-pro')} 
-                      className={`p-3 rounded text-left transition-colors ${tempModel.includes('pro') ? 'bg-[var(--accent)]/15 text-[var(--text-main)]' : 'bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}
-                    >
-                      <div className="font-bold text-xs flex items-center gap-1.5 font-mono"><i className="fa-solid fa-brain text-[var(--accent)]"></i> Deep (Pro)</div>
-                      <div className="text-[10px] text-[var(--text-muted)] mt-1">High reasoning for synthesis</div>
-                    </button>
+                  </div>
+
+                  {fetchModelsError && (
+                    <div className="mb-2.5 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] rounded font-mono flex items-start gap-1.5">
+                      <i className="fa-solid fa-circle-exclamation text-xs mt-0.5 shrink-0"></i>
+                      <span>{fetchModelsError}</span>
+                    </div>
+                  )}
+
+                  {availableModels.length > 0 && (
+                    <div className="text-[10px] text-[var(--text-muted)] font-mono mb-2 flex items-center justify-between px-1">
+                      <span>{availableModels.length} models fetched from Google AI Studio</span>
+                      <span className="text-[9px] text-emerald-400 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> API Connected
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 bg-[var(--bg-main)] p-3 rounded border border-[var(--border)]">
+                    {/* Metadata Extraction */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                          <i className="fa-solid fa-bolt text-amber-500 text-[9px]"></i> Quick Metadata & Summaries
+                        </label>
+                        <span className="text-[9px] text-[var(--text-muted)] font-mono">Titles, TL;DR, Takeaways, Tags</span>
+                      </div>
+                      {!manualModelMode && availableModels.length > 0 ? (
+                        <select
+                          value={tempTaskModels.metadata}
+                          onChange={e => setTempTaskModels(prev => ({ ...prev, metadata: e.target.value }))}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        >
+                          {!availableModels.some(m => m.id === tempTaskModels.metadata) && (
+                            <option value={tempTaskModels.metadata}>{tempTaskModels.metadata} (custom)</option>
+                          )}
+                          {availableModels.map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Medium)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={tempTaskModels.metadata}
+                          onChange={e => setTempTaskModels(prev => ({ ...prev, metadata: e.target.value }))}
+                          placeholder={DEFAULT_MODEL}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* Theme Prompts */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                          <i className="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-[9px]"></i> Theme Prompts
+                        </label>
+                        <span className="text-[9px] text-[var(--text-muted)] font-mono">Synthesis & Reflection</span>
+                      </div>
+                      {!manualModelMode && availableModels.length > 0 ? (
+                        <select
+                          value={tempTaskModels.prompts}
+                          onChange={e => setTempTaskModels(prev => ({ ...prev, prompts: e.target.value }))}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        >
+                          {!availableModels.some(m => m.id === tempTaskModels.prompts) && (
+                            <option value={tempTaskModels.prompts}>{tempTaskModels.prompts} (custom)</option>
+                          )}
+                          {availableModels.map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Medium)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={tempTaskModels.prompts}
+                          onChange={e => setTempTaskModels(prev => ({ ...prev, prompts: e.target.value }))}
+                          placeholder={DEFAULT_MODEL}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* AI Assistant */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                          <i className="fa-solid fa-comments text-sky-400 text-[9px]"></i> AI Assistant Copilot
+                        </label>
+                        <span className="text-[9px] text-[var(--text-muted)] font-mono">Chat & Whole Brain Search</span>
+                      </div>
+                      {!manualModelMode && availableModels.length > 0 ? (
+                        <select
+                          value={tempTaskModels.assistant}
+                          onChange={e => setTempTaskModels(prev => ({ ...prev, assistant: e.target.value }))}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        >
+                          {!availableModels.some(m => m.id === tempTaskModels.assistant) && (
+                            <option value={tempTaskModels.assistant}>{tempTaskModels.assistant} (custom)</option>
+                          )}
+                          {availableModels.map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Medium)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={tempTaskModels.assistant}
+                          onChange={e => setTempTaskModels(prev => ({ ...prev, assistant: e.target.value }))}
+                          placeholder={DEFAULT_MODEL}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* Quick Controls & Mode Toggle */}
+                    <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[10px] font-mono">
+                      <button
+                        type="button"
+                        onClick={() => setManualModelMode(!manualModelMode)}
+                        className="text-[var(--text-muted)] hover:text-[var(--text-main)] underline cursor-pointer"
+                      >
+                        {manualModelMode ? 'Use model dropdowns' : 'Type custom model IDs'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTempTaskModels({ metadata: DEFAULT_MODEL, prompts: DEFAULT_MODEL, assistant: DEFAULT_MODEL })}
+                        className="text-[var(--accent)] hover:underline cursor-pointer"
+                      >
+                        Reset to Medium ({DEFAULT_MODEL})
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -3723,8 +4336,12 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           )}
 
           {/* LEFT SIDEBAR: TAXONOMY & WORKSPACE */}
-          {isLeftSidebarOpen && (
-            <div className="w-80 lg:w-[340px] min-w-[280px] flex-shrink-0 flex flex-col z-20 transition-all duration-300 bg-[var(--bg-pane)]">
+          <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
+            isLeftSidebarOpen 
+              ? 'w-80 lg:w-[340px] opacity-100 visible' 
+              : 'w-0 min-w-0 opacity-0 invisible pointer-events-none'
+          }`}>
+            <div className="w-80 lg:w-[340px] h-full flex flex-col shrink-0">
               
               {/* Brand Header */}
               <div className="app-brand-header">
@@ -3765,7 +4382,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         </button>
                         <button 
                           onClick={() => {
-                            const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []) }, null, 2);
+                            const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
                             const blob = new Blob([dataStr], { type: "application/json" });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
@@ -3789,9 +4406,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       </div>
                     )}
                   </div>
-                  <button onClick={() => setIsLeftSidebarOpen(false)} className="btn-icon" title="Hide Sidebar">
-                    <i className="fa-solid fa-chevron-left text-[10px]"></i>
-                  </button>
                 </div>
               </div>
 
@@ -3870,15 +4484,30 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           className={`tax-collapse-item ${isVisible ? 'is-visible' : 'is-hidden'}`}
                           style={{ gridTemplateRows: isVisible ? '1fr' : '0fr' }}
                         >
-                          <div className="overflow-hidden min-h-0">
+                          <div className={`${isVisible ? 'overflow-visible' : 'overflow-hidden'} min-h-0`}>
                             <div 
                               draggable 
                               onDragStart={(e) => { e.dataTransfer.setData('kb-tax', JSON.stringify({ type: 'project', val: proj })); }}
                               onDragOver={(e) => e.preventDefault()}
                               onDrop={(e) => handleTaxonomyDrop(e, 'project', proj)}
                               onClick={(e) => handleProjectClick(proj, e)}
-                              className={`group flex items-center justify-between px-1.5 py-0.5 rounded text-xs cursor-pointer transition-colors ${activeProjects.some(p => normTax(p) === normTax(proj)) ? 'bg-[var(--bg-active)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}`}
+                              className={`group relative flex items-center justify-between px-1.5 py-0.5 rounded text-xs cursor-pointer transition-colors ${activeProjects.some(p => normTax(p) === normTax(proj)) ? 'bg-[var(--bg-active)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}`}
                             >
+                              <button
+                                type="button"
+                                draggable={false}
+                                onDragStart={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteTaxonomy('project', proj);
+                                }}
+                                className="absolute right-full top-1/2 -translate-y-1/2 mr-1 flex items-center justify-center w-4 h-4 rounded text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/15 opacity-0 group-hover:opacity-100 transition-all cursor-pointer after:absolute after:-right-1 after:inset-y-0 after:w-1"
+                                title={`Delete project "${proj}"`}
+                                aria-label={`Delete project ${proj}`}
+                              >
+                                <i className="fa-solid fa-xmark text-[10px]"></i>
+                              </button>
                               <EditableText text={proj} onSave={(newText) => submitTaxonomyRename(proj, newText, 'project')} className="truncate mr-2 flex-1 text-left" />
                               <span className="text-[10px] font-mono text-[var(--text-muted)] group-hover:text-[var(--text-main)]">{projectCounts[proj]}</span>
                             </div>
@@ -3912,15 +4541,30 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           className={`tax-collapse-item ${isVisible ? 'is-visible' : 'is-hidden'}`}
                           style={{ gridTemplateRows: isVisible ? '1fr' : '0fr' }}
                         >
-                          <div className="overflow-hidden min-h-0">
+                          <div className={`${isVisible ? 'overflow-visible' : 'overflow-hidden'} min-h-0`}>
                             <div 
                               draggable 
                               onDragStart={(e) => { e.dataTransfer.setData('kb-tax', JSON.stringify({ type: 'category', val: cat })); }}
                               onDragOver={(e) => e.preventDefault()}
                               onDrop={(e) => handleTaxonomyDrop(e, 'category', cat)}
                               onClick={(e) => handleCategoryClick(cat, e)}
-                              className={`group flex items-center justify-between px-1.5 py-0.5 rounded text-xs cursor-pointer transition-colors ${activeCategories.some(c => normTax(c) === normTax(cat)) ? 'bg-[var(--bg-active)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}`}
+                              className={`group relative flex items-center justify-between px-1.5 py-0.5 rounded text-xs cursor-pointer transition-colors ${activeCategories.some(c => normTax(c) === normTax(cat)) ? 'bg-[var(--bg-active)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}`}
                             >
+                              <button
+                                type="button"
+                                draggable={false}
+                                onDragStart={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteTaxonomy('category', cat);
+                                }}
+                                className="absolute right-full top-1/2 -translate-y-1/2 mr-1 flex items-center justify-center w-4 h-4 rounded text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/15 opacity-0 group-hover:opacity-100 transition-all cursor-pointer after:absolute after:-right-1 after:inset-y-0 after:w-1"
+                                title={`Delete category "${cat}"`}
+                                aria-label={`Delete category ${cat}`}
+                              >
+                                <i className="fa-solid fa-xmark text-[10px]"></i>
+                              </button>
                               <EditableText text={cat} onSave={(newText) => submitTaxonomyRename(cat, newText, 'category')} className="truncate mr-2 flex-1 text-left" />
                               <span className="text-[10px] font-mono text-[var(--text-muted)] group-hover:text-[var(--text-main)]">{categoryCounts[cat]}</span>
                             </div>
@@ -3966,15 +4610,30 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                             className={`tax-collapse-item ${isVisible ? 'is-visible' : 'is-hidden'}`}
                             style={{ gridTemplateRows: isVisible ? '1fr' : '0fr' }}
                           >
-                            <div className="overflow-hidden min-h-0">
+                            <div className={`${isVisible ? 'overflow-visible' : 'overflow-hidden'} min-h-0`}>
                               <div 
                                 draggable 
                                 onDragStart={(e) => { e.dataTransfer.setData('kb-tax', JSON.stringify({ type: 'tag', val: tag })); }}
                                 onDragOver={(e) => e.preventDefault()}
                                 onDrop={(e) => handleTaxonomyDrop(e, 'tag', tag)}
                                 onClick={(e) => handleTagClick(tag, e)}
-                                className={`group flex items-center justify-between px-1.5 py-0.5 rounded text-xs cursor-pointer transition-colors ${activeTags.some(t => normTax(t) === normTax(tag)) ? 'bg-[var(--bg-active)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}`}
+                                className={`group relative flex items-center justify-between px-1.5 py-0.5 rounded text-xs cursor-pointer transition-colors ${activeTags.some(t => normTax(t) === normTax(tag)) ? 'bg-[var(--bg-active)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}`}
                               >
+                                <button
+                                  type="button"
+                                  draggable={false}
+                                  onDragStart={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteTaxonomy('tag', tag);
+                                  }}
+                                  className="absolute right-full top-1/2 -translate-y-1/2 mr-1 flex items-center justify-center w-4 h-4 rounded text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/15 opacity-0 group-hover:opacity-100 transition-all cursor-pointer after:absolute after:-right-1 after:inset-y-0 after:w-1"
+                                  title={`Delete tag "#${tag}"`}
+                                  aria-label={`Delete tag #${tag}`}
+                                >
+                                  <i className="fa-solid fa-xmark text-[10px]"></i>
+                                </button>
                                 <EditableText stripPrefix="#" text={tag} onSave={(newText) => submitTaxonomyRename(tag, newText, 'tag')} className="truncate mr-2 flex-1 text-left" />
                                 <span className="text-[10px] font-mono text-[var(--text-muted)] group-hover:text-[var(--text-main)]">{tagCounts[tag]}</span>
                               </div>
@@ -3996,16 +4655,20 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 </span>
               </div>
             </div>
-          )}
+          </div>
 
           {/* MIDDLE COLUMN: NOTE LIST */}
-          {isListSidebarOpen && (
-            <div 
-              className="w-96 lg:w-[440px] flex-shrink-0 flex flex-col z-10 transition-all duration-300 relative bg-[var(--bg-tracks)]"
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={(e) => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false); }}
-              onDrop={(e) => { handleDrop(e); setIsDragging(false); }}
-            >
+          <div 
+            className={`flex-shrink-0 flex flex-col z-10 overflow-hidden relative bg-[var(--bg-tracks)] transition-all duration-300 ease-in-out ${
+              isListSidebarOpen 
+                ? 'w-96 lg:w-[440px] opacity-100 visible' 
+                : 'w-0 min-w-0 opacity-0 invisible pointer-events-none'
+            }`}
+            onDragOver={(e) => { e.preventDefault(); if (isListSidebarOpen) setIsDragging(true); }}
+            onDragLeave={(e) => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false); }}
+            onDrop={(e) => { if (isListSidebarOpen) { handleDrop(e); setIsDragging(false); } }}
+          >
+            <div className="w-96 lg:w-[440px] h-full flex flex-col shrink-0">
               {isDragging && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--accent)]/10 backdrop-blur-xs border-2 border-dashed border-[var(--accent)] m-2 rounded-lg pointer-events-none transition-all">
                   <div className="bg-[var(--card-bg)] p-6 text-center rounded-lg shadow-xl flex flex-col items-center">
@@ -4035,9 +4698,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     title="Create new blank note"
                   >
                     <i className="fa-solid fa-plus text-xs"></i> Note
-                  </button>
-                  <button onClick={() => setIsListSidebarOpen(false)} className="btn-icon hidden lg:flex shrink-0" title="Hide note list">
-                    <i className="fa-solid fa-chevron-left text-xs"></i>
                   </button>
                 </div>
 
@@ -4094,20 +4754,39 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 
                 {/* PROMPT NOTE SECTION */}
                 {!promptState.draft && !promptState.isGenerating && (
-                  <button onClick={generatePromptNote} className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer">
-                    <i className="fa-solid fa-wand-magic-sparkles"></i> Generate Prompt
+                  <button 
+                    onClick={generatePromptNote} 
+                    className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
+                    title={activeTaxonomySummary ? `Generate prompt analyzing notes in ${activeTaxonomySummary}` : "Generate prompt analyzing notes across your knowledge base"}
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles"></i> Generate Prompt{activeTaxonomySummary ? ` (${activeTaxonomySummary})` : ''}
                   </button>
                 )}
                 {promptState.isGenerating && (
-                  <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--text-muted)] text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2">
-                    <i className="fa-solid fa-spinner fa-spin"></i> Finding themes and loose ends across your notes...
+                  <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--text-muted)] text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
+                    <i className="fa-solid fa-spinner fa-spin"></i> {activeTaxonomySummary ? `Finding themes in ${activeTaxonomySummary}...` : 'Finding themes and loose ends across your notes...'}
                   </div>
                 )}
                 {promptState.draft && (
                   <div className="group relative p-4 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 border-l-4 bg-[var(--card-bg)]" style={{ borderLeftColor: '#f97316', borderLeftWidth: '4px' }}>
                     <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2 text-[#f97316] font-bold text-xs uppercase tracking-wider">
-                        <i className="fa-solid fa-brain"></i> Theme Prompt
+                      <div className="flex items-center gap-2 text-[#f97316] font-bold text-xs uppercase tracking-wider flex-wrap">
+                        <span className="flex items-center gap-1.5"><i className="fa-solid fa-brain"></i> Theme Prompt</span>
+                        {promptState.draft.projects && promptState.draft.projects.length > 0 && (
+                          <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
+                            <i className="fa-solid fa-folder-open text-[9px] mr-1"></i>{promptState.draft.projects.join(', ')}
+                          </span>
+                        )}
+                        {promptState.draft.categories && promptState.draft.categories.length > 0 && promptState.draft.categories[0] !== 'notes' && (
+                          <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded border border-blue-500/20">
+                            <i className="fa-solid fa-layer-group text-[9px] mr-1"></i>{promptState.draft.categories.join(', ')}
+                          </span>
+                        )}
+                        {promptState.draft.tags && promptState.draft.tags.filter(t => t !== 'prompt' && t !== 'reflection').length > 0 && (
+                          <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-purple-500/10 text-purple-500 rounded border border-purple-500/20">
+                            #{promptState.draft.tags.filter(t => t !== 'prompt' && t !== 'reflection').join(', #')}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <button 
@@ -4167,12 +4846,22 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       onDrop={(e) => handleEntryDrop(e, entry.id)}
                       style={{
                         borderLeftColor: typeColor,
-                        borderLeftWidth: '4px',
+                        borderLeftWidth: entry.pinned ? '8px' : (isSelected ? '4px' : '4px'),
+                        borderLeftStyle: 'solid',
+                        ...(isSelected ? {
+                          borderTop: `1px solid ${typeColor}`,
+                          borderRight: `1px solid ${typeColor}`,
+                          borderBottom: `1px solid ${typeColor}`
+                        } : {
+                          borderTop: '1px solid transparent',
+                          borderRight: '1px solid transparent',
+                          borderBottom: '1px solid transparent'
+                        })
                       }}
                       className={`group relative p-3.5 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 cursor-pointer ${
                         isSelected
-                          ? 'bg-[var(--bg-active)] shadow-md'
-                          : 'bg-[var(--track-card-bg)] hover:bg-[var(--table-row-hover)]'
+                          ? 'bg-[var(--track-card-active)] shadow-md'
+                          : 'bg-[var(--track-card-bg)] hover:bg-[var(--bg-hover)]'
                       } ${dragOverEntryId === entry.id ? 'scale-[0.98] bg-[var(--bg-hover)]' : ''}`}
                     >
                       <div className="flex justify-between items-start gap-2 mb-1">
@@ -4238,7 +4927,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* MAIN DOCUMENT COLUMN (READER / EDITOR) */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0 bg-[var(--bg-main)]">
@@ -4246,16 +4935,35 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             {/* Top Bar / Actions */}
             <div className="px-[50px] pt-[50px] pb-4 flex justify-between items-center shrink-0 bg-[var(--bg-pane)]">
               <div className="flex items-center gap-2 h-8">
-                {!isLeftSidebarOpen && (
-                  <button onClick={() => setIsLeftSidebarOpen(true)} className="btn-secondary h-8 px-2.5 text-xs" title="Open taxonomy sidebar">
-                    <i className="fa-solid fa-folder-tree mr-1"></i> Library
+                {/* Persistent Sidebar Toggles (Library & Notes) */}
+                <div className="flex items-center gap-0.5 bg-[var(--bg-main)] p-0.5 rounded h-8 box-border">
+                  <button 
+                    type="button"
+                    onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)} 
+                    className={`btn-icon w-7 h-7 text-xs rounded transition-colors ${
+                      isLeftSidebarOpen 
+                        ? 'text-[var(--accent)] bg-[var(--card-bg)] shadow-xs' 
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`} 
+                    title={isLeftSidebarOpen ? "Hide Library (Taxonomies)" : "Show Library (Taxonomies)"}
+                    aria-label="Toggle Library sidebar"
+                  >
+                    <i className="fa-solid fa-folder-tree text-[11px]"></i>
                   </button>
-                )}
-                {!isListSidebarOpen && (
-                  <button onClick={() => setIsListSidebarOpen(true)} className="btn-secondary h-8 px-2.5 text-xs" title="Open note list">
-                    <i className="fa-solid fa-list mr-1"></i> Notes
+                  <button 
+                    type="button"
+                    onClick={() => setIsListSidebarOpen(!isListSidebarOpen)} 
+                    className={`btn-icon w-7 h-7 text-xs rounded transition-colors ${
+                      isListSidebarOpen 
+                        ? 'text-[var(--accent)] bg-[var(--card-bg)] shadow-xs' 
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`} 
+                    title={isListSidebarOpen ? "Hide Notes list" : "Show Notes list"}
+                    aria-label="Toggle Notes list"
+                  >
+                    <i className="fa-solid fa-list text-[11px]"></i>
                   </button>
-                )}
+                </div>
 
                 {/* Back / Forward Controls */}
                 <div className="flex items-center gap-0.5 bg-[var(--bg-main)] p-0.5 rounded h-8 box-border">
@@ -4285,15 +4993,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               </div>
 
               <div className="flex items-center gap-2 h-8">
-                {activeSingleEntry && !editingEntries[activeSingleEntry.id] && (
-                  <button 
-                    onClick={() => startEditing(activeSingleEntry)} 
-                    className="btn-secondary h-8 px-3 text-xs" 
-                    title="Edit note"
-                  >
-                    <i className="fa-solid fa-pen text-xs mr-1"></i> Edit
-                  </button>
-                )}
 
                 <button 
                   onClick={() => setIsAssistantOpen(!isAssistantOpen)} 
@@ -4349,174 +5048,10 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     ))}
                   </div>
                 </div>
-              ) : activeSingleEntry && editingEntries[activeSingleEntry.id] ? (
-                /* Note Edit Mode */
-                <div ref={editFormRef} className="max-w-4xl mx-auto p-[50px] space-y-6 pb-24 font-mono">
-                  <div className="flex justify-between items-center pb-4">
-                    <h2 className="text-base font-bold text-[var(--text-main)]">Edit Note #{activeSingleEntry.numericId}</h2>
-                    <div className="flex gap-2">
-                      <button data-cancel-edit="true" onClick={() => cancelEdit(activeSingleEntry.id)} className="btn-secondary text-xs">Cancel</button>
-                      <button onClick={() => saveNote(activeSingleEntry.id)} className="btn-primary text-xs">Save Changes</button>
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Title</label>
-                      <button type="button" onClick={() => handleSuggestTitle(activeSingleEntry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1">
-                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i> Suggest Title
-                      </button>
-                    </div>
-                    <input 
-                      type="text" 
-                      value={editData[activeSingleEntry.id]?.title || ''} 
-                      onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], title: e.target.value } }))} 
-                      className="w-full px-4 py-2.5 text-base font-bold bg-[var(--card-bg)] text-[var(--text-main)] rounded font-mono" 
-                      placeholder="Note Title" 
-                    />
-                  </div>
-
-                  {/* Summary */}
-                  <div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                        {isPromptEntry(activeSingleEntry) ? 'Answer Summary' : 'Executive Summary (TL;DR)'}
-                      </label>
-                      <button type="button" onClick={() => handleGenerateTLDR(activeSingleEntry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1">
-                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i> {isPromptEntry(activeSingleEntry) ? 'Generate Summary' : 'Generate TL;DR'}
-                      </button>
-                    </div>
-                    <textarea 
-                      rows="2" 
-                      value={editData[activeSingleEntry.id]?.summary || ''} 
-                      onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], summary: e.target.value } }))} 
-                      className="w-full px-4 py-2.5 text-xs bg-[var(--card-bg)] text-[var(--text-main)] rounded leading-relaxed font-mono" 
-                      placeholder={isPromptEntry(activeSingleEntry) ? "Ultra-concise summary of your answer to the prompt question..." : "Ultra-concise 1-sentence executive summary (under 15 words)..."}
-                    ></textarea>
-                  </div>
-
-                  {/* Key Takeaways */}
-                  <div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Key Takeaways (One per line)</label>
-                      <button type="button" onClick={() => handleGenerateTakeaways(activeSingleEntry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1">
-                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i> Extract Key Points
-                      </button>
-                    </div>
-                    <textarea 
-                      rows="3" 
-                      value={editData[activeSingleEntry.id]?.shortVersion || ''} 
-                      onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], shortVersion: e.target.value } }))} 
-                      className="w-full px-4 py-2.5 text-xs bg-[var(--card-bg)] text-[var(--text-main)] rounded font-mono leading-relaxed" 
-                      placeholder="Point 1&#10;Point 2..."
-                    ></textarea>
-                  </div>
-
-                  {/* Markdown Content */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Content (Markdown)</label>
-                    <textarea 
-                      rows="12" 
-                      value={editData[activeSingleEntry.id]?.fullContent || ''}
-                      onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], fullContent: e.target.value } }))} 
-                      onFocus={() => setIsContentFocused(true)}
-                      className="w-full px-4 py-3 text-xs font-mono bg-[var(--card-bg)] text-[var(--text-main)] rounded leading-[1.4] cursor-text" 
-                      placeholder="Write your note in Markdown... (Drag any note from the list into this box to insert a backlink)"
-                    ></textarea>
-                  </div>
-
-                  {/* Taxonomies */}
-                  <div className="p-5 bg-[var(--card-bg)] rounded space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)]">Taxonomy & Tags</h3>
-                      <button type="button" onClick={() => handleGenerateTaxonomies(activeSingleEntry.id)} disabled={isAnalyzing} className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1">
-                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i> Auto-Tag
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Projects */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-amber-500 uppercase mb-1">Projects</label>
-                        <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
-                          {(editData[activeSingleEntry.id]?.projects || []).map(p => (
-                            <span key={p} className="badge text-xs">
-                              {p}
-                              <button type="button" onClick={() => removeEditProject(activeSingleEntry.id, p)} className="hover:text-[var(--danger)]"><i className="fa-solid fa-xmark text-[10px]"></i></button>
-                            </span>
-                          ))}
-                        </div>
-                        <input 
-                          type="text" 
-                          value={editProjectInput[activeSingleEntry.id] || ''} 
-                          onChange={e => setEditProjectInput(prev => ({ ...prev, [activeSingleEntry.id]: e.target.value }))} 
-                          onKeyDown={e => handleAddEditProject(activeSingleEntry.id, e)} 
-                          placeholder="Add project (Enter)" 
-                          className="w-full px-3 py-1.5 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono" 
-                        />
-                      </div>
-
-                      {/* Categories */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[var(--accent)] uppercase mb-1">Categories</label>
-                        <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
-                          {(editData[activeSingleEntry.id]?.categories || []).map(c => (
-                            <span key={c} className="badge text-xs">
-                              {c}
-                              <button type="button" onClick={() => removeEditCategory(activeSingleEntry.id, c)} className="hover:text-[var(--danger)]"><i className="fa-solid fa-xmark text-[10px]"></i></button>
-                            </span>
-                          ))}
-                        </div>
-                        <input 
-                          type="text" 
-                          value={editCatInput[activeSingleEntry.id] || ''} 
-                          onChange={e => setEditCatInput(prev => ({ ...prev, [activeSingleEntry.id]: e.target.value }))} 
-                          onKeyDown={e => handleAddEditCategory(activeSingleEntry.id, e)} 
-                          placeholder="Add category (Enter)" 
-                          className="w-full px-3 py-1.5 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono" 
-                        />
-                      </div>
-
-                      {/* Tags */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase mb-1">Tags</label>
-                        <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
-                          {(editData[activeSingleEntry.id]?.tags || []).map(t => (
-                            <span key={t} className="badge text-xs">
-                              #{t}
-                              <button type="button" onClick={() => removeEditTag(activeSingleEntry.id, t)} className="hover:text-[var(--danger)]"><i className="fa-solid fa-xmark text-[10px]"></i></button>
-                            </span>
-                          ))}
-                        </div>
-                        <input 
-                          type="text" 
-                          value={editTagInput[activeSingleEntry.id] || ''} 
-                          onChange={e => setEditTagInput(prev => ({ ...prev, [activeSingleEntry.id]: e.target.value }))} 
-                          onKeyDown={e => handleAddEditTag(activeSingleEntry.id, e)} 
-                          placeholder="Add tag (Enter)" 
-                          className="w-full px-3 py-1.5 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Source URL */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Source URL</label>
-                    <input 
-                      type="text" 
-                      value={editData[activeSingleEntry.id]?.sourceUrl || ''} 
-                      onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...prev[activeSingleEntry.id], sourceUrl: e.target.value } }))} 
-                      className="w-full px-4 py-2 text-xs bg-[var(--card-bg)] text-[var(--text-main)] rounded font-mono" 
-                      placeholder="https://example.com/article" 
-                    />
-                  </div>
-                </div>
               ) : activeSingleEntry ? (
                 /* Note Reading Mode: 50px view padding */
                 <div 
-                  className="max-w-3xl mx-auto p-[50px] space-y-6 pb-32"
+                  className="note-reader-container max-w-3xl mx-auto p-[50px] space-y-6 pb-32"
                   onClick={handleContentClick}
                   onMouseOver={handleContentMouseOver}
                   onMouseOut={handleContentMouseOut}
@@ -4525,16 +5060,28 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 >
                   {/* Note Header */}
                   <div>
-                    <EditableText 
-                      key={`title-${activeSingleEntry.id}`}
-                      tag="h1"
-                      className="text-2xl lg:text-3xl font-mono font-bold text-[var(--text-main)] tracking-tight leading-[1.3] mb-3" 
-                      text={activeSingleEntry.title || 'Untitled Note'} 
-                      onSave={(newText) => {
-                        const targetId = activeSingleEntry.id;
-                        setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText, updatedAt: Date.now() } : e));
-                      }} 
-                    />
+                    <div className="relative group mb-3">
+                      <EditableText 
+                        key={`title-${activeSingleEntry.id}`}
+                        tag="h1"
+                        className="text-2xl lg:text-3xl font-mono font-bold text-[var(--text-main)] tracking-tight leading-[1.3]" 
+                        text={activeSingleEntry.title || 'Untitled Note'} 
+                        onSave={(newText) => {
+                          const targetId = activeSingleEntry.id;
+                          setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText.trim() || 'Untitled Note', updatedAt: Date.now() } : e));
+                        }} 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSuggestTitle(activeSingleEntry.id)}
+                        disabled={isAnalyzing}
+                        className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'title') ? 'opacity-100' : ''}`}
+                        title="Auto-generate title"
+                        aria-label="Auto-generate title"
+                      >
+                        <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'title') ? 'animate-spin' : ''}`}></i>
+                      </button>
+                    </div>
                     
                     {(() => {
                       const createdVal = activeSingleEntry.createdAt || activeSingleEntry.updatedAt || Date.now();
@@ -4547,63 +5094,208 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                       return (
                         <>
-                          {hasDifferentEditedDate ? (
-                            <>
-                              {/* Both dates on their own dedicated line */}
-                              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-mono text-[var(--text-muted)] mb-2">
-                                <span className="flex items-center gap-1" title={`Created: ${createdDateObj.toLocaleString()}`}>
-                                  <i className="fa-regular fa-calendar text-[11px]"></i>
-                                  <span>Created {createdDateStr}</span>
-                                </span>
+                          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-mono text-[var(--text-muted)] mb-2.5">
+                            <span className="flex items-center gap-1" title={`Created: ${createdDateObj.toLocaleString()}`}>
+                              <i className="fa-regular fa-calendar text-[11px]"></i>
+                              <span>Created {createdDateStr}</span>
+                            </span>
+                            {hasDifferentEditedDate && (
+                              <>
                                 <span className="opacity-40">•</span>
                                 <span className="flex items-center gap-1" title={`Last edited: ${updatedDateObj.toLocaleString()}`}>
                                   <i className="fa-regular fa-pen-to-square text-[11px]"></i>
                                   <span>Edited {updatedDateStr}</span>
                                 </span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* In-Place Taxonomy Section */}
+                          {isEditingTaxonomy ? (
+                            <div className="relative group p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-md space-y-4 font-mono my-2 shadow-[var(--track-card-shadow)]">
+                              <div className="flex justify-between items-center">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)] flex items-center gap-1.5">
+                                  <i className="fa-solid fa-tags text-[var(--accent)]"></i> Taxonomy & Tags
+                                </h3>
+                                <button 
+                                  type="button" 
+                                  onClick={() => setIsEditingTaxonomy(false)} 
+                                  className="btn-primary h-6 px-3 text-[11px] font-semibold"
+                                >
+                                  Done
+                                </button>
                               </div>
 
-                              {/* Taxonomy badges on their own line */}
-                              <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-                                {Array.isArray(activeSingleEntry.projects) && activeSingleEntry.projects.map(p => (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Projects */}
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-amber-500 uppercase mb-1 flex items-center gap-1">
+                                    <i className="fa-solid fa-folder-open text-[10px]"></i> Projects
+                                  </label>
+                                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
+                                    {(activeSingleEntry.projects || []).map(p => (
+                                      <span key={p} className="badge text-xs">
+                                        {p}
+                                        <button type="button" onClick={() => removeEntryProject(activeSingleEntry.id, p)} className="hover:text-[var(--danger)] ml-1">
+                                          <i className="fa-solid fa-xmark text-[10px]"></i>
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <input 
+                                    type="text" 
+                                    value={taxProjectInput} 
+                                    onChange={e => setTaxProjectInput(e.target.value)} 
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addEntryProject(activeSingleEntry.id, taxProjectInput);
+                                        setTaxProjectInput('');
+                                      }
+                                    }} 
+                                    placeholder="Add project (Enter)" 
+                                    className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                                  />
+                                </div>
+
+                                {/* Categories */}
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-[var(--accent)] uppercase mb-1 flex items-center gap-1">
+                                    <i className="fa-solid fa-layer-group text-[10px]"></i> Categories
+                                  </label>
+                                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
+                                    {(activeSingleEntry.categories || []).map(c => (
+                                      <span key={c} className="badge text-xs">
+                                        {c}
+                                        <button type="button" onClick={() => removeEntryCategory(activeSingleEntry.id, c)} className="hover:text-[var(--danger)] ml-1">
+                                          <i className="fa-solid fa-xmark text-[10px]"></i>
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <input 
+                                    type="text" 
+                                    value={taxCatInput} 
+                                    onChange={e => setTaxCatInput(e.target.value)} 
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addEntryCategory(activeSingleEntry.id, taxCatInput);
+                                        setTaxCatInput('');
+                                      }
+                                    }} 
+                                    placeholder="Add category (Enter)" 
+                                    className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                                  />
+                                </div>
+
+                                {/* Tags */}
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase mb-1 flex items-center gap-1">
+                                    <i className="fa-solid fa-tag text-[10px]"></i> Tags
+                                  </label>
+                                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
+                                    {(activeSingleEntry.tags || []).map(t => (
+                                      <span key={t} className="badge text-xs">
+                                        #{t}
+                                        <button type="button" onClick={() => removeEntryTag(activeSingleEntry.id, t)} className="hover:text-[var(--danger)] ml-1">
+                                          <i className="fa-solid fa-xmark text-[10px]"></i>
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <input 
+                                    type="text" 
+                                    value={taxTagInput} 
+                                    onChange={e => setTaxTagInput(e.target.value)} 
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addEntryTag(activeSingleEntry.id, taxTagInput);
+                                        setTaxTagInput('');
+                                      }
+                                    }} 
+                                    placeholder="Add tag (Enter)" 
+                                    className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Source URL in taxonomy editor */}
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase mb-1">Source URL</label>
+                                <input 
+                                  type="text" 
+                                  value={activeSingleEntry.sourceUrl || ''} 
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    setEntries(prev => prev.map(ent => ent.id === activeSingleEntry.id ? { ...ent, sourceUrl: val || null, updatedAt: Date.now() } : ent));
+                                  }} 
+                                  placeholder="https://example.com/article" 
+                                  className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                                />
+                              </div>
+
+                              {/* Round refresh icon hanging in margin */}
+                              <button
+                                type="button"
+                                onClick={() => handleGenerateTaxonomies(activeSingleEntry.id)}
+                                disabled={isAnalyzing}
+                                className={`absolute left-full ml-3 top-4 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'taxonomies') ? 'opacity-100' : ''}`}
+                                title="Auto-generate taxonomy & tags"
+                                aria-label="Auto-generate taxonomy & tags"
+                              >
+                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'taxonomies') ? 'animate-spin' : ''}`}></i>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="relative group">
+                              <div 
+                                onClick={() => setIsEditingTaxonomy(true)}
+                                className="flex flex-wrap items-center gap-2 text-xs font-mono cursor-pointer rounded p-1 -m-1 hover:bg-[var(--bg-hover)] transition-colors"
+                                title="Click to edit taxonomy & tags"
+                              >
+                                {Array.isArray(activeSingleEntry.projects) && activeSingleEntry.projects.length > 0 && activeSingleEntry.projects.map(p => (
                                   <span key={p} className="badge text-[11px]">
                                     <i className="fa-solid fa-folder-open text-[10px] text-amber-500"></i>{p}
                                   </span>
                                 ))}
-                                {Array.isArray(activeSingleEntry.categories) && activeSingleEntry.categories.map(c => (
+                                {Array.isArray(activeSingleEntry.categories) && activeSingleEntry.categories.length > 0 && activeSingleEntry.categories.map(c => (
                                   <span key={c} className="badge text-[11px]">{c}</span>
                                 ))}
-                                {Array.isArray(activeSingleEntry.tags) && activeSingleEntry.tags.map(t => (
+                                {Array.isArray(activeSingleEntry.tags) && activeSingleEntry.tags.length > 0 && activeSingleEntry.tags.map(t => (
                                   <span key={t} className="badge text-[11px]">#{t}</span>
                                 ))}
+                                {(!activeSingleEntry.projects?.length && !activeSingleEntry.categories?.length && !activeSingleEntry.tags?.length) && (
+                                  <span className="text-[11px] text-[var(--text-muted)] italic flex items-center gap-1.5 py-0.5">
+                                    <i className="fa-solid fa-tags text-[10px]"></i> Click to add projects, categories & tags...
+                                  </span>
+                                )}
                                 {activeSingleEntry.sourceUrl && (
-                                  <a href={activeSingleEntry.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto btn-secondary text-xs px-2.5 py-1">
+                                  <a 
+                                    href={activeSingleEntry.sourceUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    onClick={e => e.stopPropagation()} 
+                                    className="ml-auto btn-secondary text-xs px-2.5 py-1"
+                                  >
                                     <i className="fa-solid fa-arrow-up-right-from-square text-[10px] mr-1"></i> View Source
                                   </a>
                                 )}
                               </div>
-                            </>
-                          ) : (
-                            <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono">
-                              <span className="text-[var(--text-muted)] flex items-center gap-1" title={`Created: ${createdDateObj.toLocaleString()}`}>
-                                <i className="fa-regular fa-calendar text-[11px]"></i>
-                                <span>Created {createdDateStr}</span>
-                              </span>
-                              {Array.isArray(activeSingleEntry.projects) && activeSingleEntry.projects.map(p => (
-                                <span key={p} className="badge text-[11px]">
-                                  <i className="fa-solid fa-folder-open text-[10px] text-amber-500"></i>{p}
-                                </span>
-                              ))}
-                              {Array.isArray(activeSingleEntry.categories) && activeSingleEntry.categories.map(c => (
-                                <span key={c} className="badge text-[11px]">{c}</span>
-                              ))}
-                              {Array.isArray(activeSingleEntry.tags) && activeSingleEntry.tags.map(t => (
-                                <span key={t} className="badge text-[11px]">#{t}</span>
-                              ))}
-                              {activeSingleEntry.sourceUrl && (
-                                <a href={activeSingleEntry.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto btn-secondary text-xs px-2.5 py-1">
-                                  <i className="fa-solid fa-arrow-up-right-from-square text-[10px] mr-1"></i> View Source
-                                </a>
-                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleGenerateTaxonomies(activeSingleEntry.id);
+                                }}
+                                disabled={isAnalyzing}
+                                className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.projects?.length && !activeSingleEntry.categories?.length && !activeSingleEntry.tags?.length) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'taxonomies') ? 'opacity-100' : ''}`}
+                                title="Auto-generate taxonomy & tags"
+                                aria-label="Auto-generate taxonomy & tags"
+                              >
+                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'taxonomies') ? 'animate-spin' : ''}`}></i>
+                              </button>
                             </div>
                           )}
                         </>
@@ -4613,9 +5305,9 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                   {/* Theme Prompt & Answer Summary Display for Prompt Entries */}
                   {isPromptEntry(activeSingleEntry) ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="prompt-split-layout">
                       {/* Left Column: Prompt Question */}
-                      <div className="bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
+                      <div className="prompt-split-card bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
                         <div>
                           <div className="text-[10px] font-bold uppercase tracking-wider text-[#f97316] mb-1.5 flex items-center gap-1.5">
                             <i className="fa-solid fa-brain"></i>
@@ -4628,43 +5320,35 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       </div>
 
                       {/* Right Column: Answer Summary */}
-                      <div className="bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
+                      <div className="prompt-split-card relative group bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
                         <div>
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] mb-1.5 flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                              <i className="fa-solid fa-lightbulb"></i>
-                              <span>Answer Summary</span>
-                            </span>
-                            {(!activeSingleEntry.summary && activeSingleEntry.fullContent && apiKeys && apiKeys.length > 0) && (
-                              <button
-                                type="button"
-                                onClick={() => handleGenerateAnswerSummary(activeSingleEntry.id)}
-                                disabled={isAnalyzing}
-                                className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer lowercase"
-                                title="Summarize answer to prompt"
-                              >
-                                <i className="fa-solid fa-wand-magic-sparkles text-[9px]"></i> summarize
-                              </button>
-                            )}
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] mb-1.5 flex items-center gap-1.5">
+                            <i className="fa-solid fa-lightbulb"></i>
+                            <span>Answer Summary</span>
                           </div>
-                          {activeSingleEntry.summary ? (
-                            <EditableText 
-                              key={`summary-${activeSingleEntry.id}`}
-                              tag="p"
-                              multiline={true}
-                              className="text-xs leading-relaxed"
-                              text={activeSingleEntry.summary} 
-                              onSave={(newText) => {
-                                const targetId = activeSingleEntry.id;
-                                setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
-                              }} 
-                            />
-                          ) : (
-                            <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
-                              {activeSingleEntry.fullContent ? 'No summary yet. Click "summarize" to generate an answer summary.' : 'Write your response in Focus Mode to generate an answer summary.'}
-                            </p>
-                          )}
+                          <EditableText 
+                            key={`summary-${activeSingleEntry.id}`}
+                            tag="p"
+                            multiline={true}
+                            className="text-xs leading-relaxed cursor-text"
+                            text={activeSingleEntry.summary || ''} 
+                            placeholder="Double-click to write answer summary..."
+                            onSave={(newText) => {
+                              const targetId = activeSingleEntry.id;
+                              setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
+                            }} 
+                          />
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateAnswerSummary(activeSingleEntry.id)}
+                          disabled={isAnalyzing}
+                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${!activeSingleEntry.summary ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'summary') ? 'opacity-100' : ''}`}
+                          title="Auto-generate answer summary"
+                          aria-label="Auto-generate answer summary"
+                        >
+                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'summary') ? 'animate-spin' : ''}`}></i>
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -4681,34 +5365,62 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       )}
 
                       {/* Executive Summary for normal entries */}
-                      {activeSingleEntry.summary && (
-                        <div className="bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-sm leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
-                          <EditableText 
-                            key={`summary-${activeSingleEntry.id}`}
-                            tag="p"
-                            multiline={true}
-                            text={activeSingleEntry.summary} 
-                            onSave={(newText) => {
-                              const targetId = activeSingleEntry.id;
-                              setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
-                            }} 
-                          />
+                      <div className="relative group bg-[var(--card-bg)] border-l-4 border-l-[var(--accent)] rounded p-4 text-[var(--text-main)] text-sm leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] mb-1 flex items-center gap-1.5">
+                          <i className="fa-solid fa-lightbulb"></i>
+                          <span>Executive Summary</span>
                         </div>
-                      )}
+                        <EditableText 
+                          key={`summary-${activeSingleEntry.id}`}
+                          tag="p"
+                          multiline={true}
+                          className="text-sm leading-relaxed cursor-text"
+                          text={activeSingleEntry.summary || ''} 
+                          placeholder="Double-click to write executive summary (TL;DR)..."
+                          onSave={(newText) => {
+                            const targetId = activeSingleEntry.id;
+                            setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
+                          }} 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateTLDR(activeSingleEntry.id)}
+                          disabled={isAnalyzing}
+                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${!activeSingleEntry.summary ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'summary') ? 'opacity-100' : ''}`}
+                          title="Auto-generate TL;DR summary"
+                          aria-label="Auto-generate TL;DR summary"
+                        >
+                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'summary') ? 'animate-spin' : ''}`}></i>
+                        </button>
+                      </div>
                     </>
                   )}
 
                   {/* Key Takeaways */}
-                  {Array.isArray(activeSingleEntry.shortVersion) && activeSingleEntry.shortVersion.length > 0 && (
-                    <div className="bg-[var(--card-bg)] rounded p-5 shadow-[var(--track-card-shadow)] font-mono">
-                      <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-                          <i className="fa-solid fa-list-check text-[var(--accent)]"></i> Key Takeaways
-                        </h3>
-                      </div>
+                  <div className="relative group bg-[var(--card-bg)] rounded p-5 shadow-[var(--track-card-shadow)] font-mono">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                        <i className="fa-solid fa-list-check text-[var(--accent)]"></i> Key Takeaways
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetId = activeSingleEntry.id;
+                          setEntries(prev => prev.map(e => {
+                            if (e.id !== targetId) return e;
+                            return { ...e, shortVersion: [...(e.shortVersion || []), 'New takeaway'], updatedAt: Date.now() };
+                          }));
+                        }}
+                        className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                        title="Add key takeaway"
+                      >
+                        <i className="fa-solid fa-plus text-[10px]"></i> add point
+                      </button>
+                    </div>
+                    {Array.isArray(activeSingleEntry.shortVersion) && activeSingleEntry.shortVersion.length > 0 ? (
                       <ul className="space-y-2">
                         {activeSingleEntry.shortVersion.map((point, idx) => (
-                          <li key={idx} className="flex items-start text-xs text-[var(--text-main)] leading-relaxed">
+                          <li key={idx} className="flex items-start text-xs text-[var(--text-main)] leading-relaxed group/item">
                             <span className="text-[var(--accent)] mr-2 font-bold shrink-0 mt-0.5">•</span>
                             <EditableText 
                               key={`takeaway-${activeSingleEntry.id}-${idx}`}
@@ -4731,11 +5443,41 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                                 }));
                               }} 
                             />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetId = activeSingleEntry.id;
+                                setEntries(prev => prev.map(e => {
+                                  if (e.id !== targetId) return e;
+                                  const updated = [...(e.shortVersion || [])];
+                                  updated.splice(idx, 1);
+                                  return { ...e, shortVersion: updated, updatedAt: Date.now() };
+                                }));
+                              }}
+                              className="opacity-0 group-hover/item:opacity-100 text-[var(--text-muted)] hover:text-[var(--danger)] ml-2 text-[10px] cursor-pointer"
+                              title="Delete this point"
+                            >
+                              <i className="fa-solid fa-xmark"></i>
+                            </button>
                           </li>
                         ))}
                       </ul>
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
+                        No key takeaways yet. Click "add point" or click the refresh icon to extract key points.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
+                      disabled={isAnalyzing}
+                      className={`absolute left-full ml-3 top-5 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.shortVersion || activeSingleEntry.shortVersion.length === 0) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'takeaways') ? 'opacity-100' : ''}`}
+                      title="Auto-generate key takeaways"
+                      aria-label="Auto-generate key takeaways"
+                    >
+                      <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'takeaways') ? 'animate-spin' : ''}`}></i>
+                    </button>
+                  </div>
 
                   {/* Media Embed */}
                   {getEmbedUrl(activeSingleEntry.sourceUrl) && (
@@ -4758,7 +5500,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           <button 
                             type="button" 
                             onClick={() => {
-                              startEditing(activeSingleEntry);
                               setIsContentFocused(true);
                             }} 
                             className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
@@ -4771,7 +5512,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           <div 
                             onDoubleClick={(e) => {
                               e.stopPropagation();
-                              startEditing(activeSingleEntry);
                               setIsContentFocused(true);
                             }}
                             className="prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono cursor-text min-h-[60px]"
@@ -4782,7 +5522,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           <div 
                             onDoubleClick={(e) => {
                               e.stopPropagation();
-                              startEditing(activeSingleEntry);
                               setIsContentFocused(true);
                             }}
                             className="text-[var(--text-muted)] italic leading-relaxed font-mono cursor-text min-h-[60px] py-4 border border-dashed border-[var(--border)] rounded px-4 text-center"
@@ -4828,8 +5567,12 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           </div>
 
           {/* RIGHT COLUMN: UNIFIED AI ASSISTANT SIDEBAR */}
-          {isAssistantOpen && (
-            <div className="w-96 lg:w-[440px] flex-shrink-0 flex flex-col z-20 transition-all duration-300 bg-[var(--bg-pane)]">
+          <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
+            isAssistantOpen 
+              ? 'w-96 lg:w-[440px] opacity-100 visible' 
+              : 'w-0 min-w-0 opacity-0 invisible pointer-events-none'
+          }`}>
+            <div className="w-96 lg:w-[440px] h-full flex flex-col shrink-0">
               
               {/* Assistant Header */}
               <div className="px-[50px] pt-[50px] pb-4 shrink-0 space-y-3">
@@ -4840,8 +5583,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     </div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xs font-bold text-[var(--text-main)] font-mono">AI Assistant</h3>
-                      <span className="badge text-[10px] font-mono">
-                        {model.includes('pro') ? '🧠 Pro' : '⚡ Flash'}
+                      <span className="badge text-[10px] font-mono" title={`Model: ${taskModels.assistant || DEFAULT_MODEL}`}>
+                        {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
                       </span>
                     </div>
                   </div>
@@ -5182,9 +5925,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   </button>
                 </form>
               </div>
-
             </div>
-          )}
+          </div>
 
           {/* Hover Preview for [[kb-ref:ID]] */}
           {hoveredRef && (() => {

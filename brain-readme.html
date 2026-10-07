@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.3.0</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.6.2</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="brain.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -116,11 +116,12 @@
       <li>&bull; <a href="#overview">1. Architecture & Local-First Design</a></li>
       <li>&bull; <a href="#sync">2. Multi-Computer Non-Destructive Sync</a></li>
       <li>&bull; <a href="#taxonomies">3. Entry Types & Solo Filtering</a></li>
-      <li>&bull; <a href="#ingestion">4. Content Ingestion & Scrubbing</a></li>
-      <li>&bull; <a href="#ai">5. Gemini AI Synthesis & Prompt Generator</a></li>
-      <li>&bull; <a href="#assistant">6. Unified AI Assistant & Chat Modes</a></li>
-      <li>&bull; <a href="#referencing">7. Backlinks & Decimal Numeric IDs</a></li>
-      <li>&bull; <a href="#settings">8. Settings & Workspace Management</a></li>
+      <li>&bull; <a href="#editing">4. Inline Editing & Margin Field Generators</a></li>
+      <li>&bull; <a href="#ingestion">5. Content Ingestion & Scrubbing</a></li>
+      <li>&bull; <a href="#ai">6. Gemini AI Synthesis & Prompt Generator</a></li>
+      <li>&bull; <a href="#assistant">7. Unified AI Assistant & Chat Modes</a></li>
+      <li>&bull; <a href="#referencing">8. Backlinks & Decimal Numeric IDs</a></li>
+      <li>&bull; <a href="#settings">9. Settings & Workspace Management</a></li>
     </ul>
   </nav>
 
@@ -218,14 +219,69 @@
         <div><strong>Type Filtering Shortcuts:</strong></div>
         <div>&bull; <strong>Click:</strong> Toggles that individual type on or off in the list.</div>
         <div>&bull; <strong>Shift + Click:</strong> Solos that specific type &mdash; untoggling all other types in one click. Shift-clicking the active solo type again restores all types back to visible.</div>
-        <div>&bull; <strong>Taxonomies:</strong> Filter notes by Projects, Categories, and Tags. Drag notes onto taxonomy tags to assign them.</div>
+        <div>&bull; <strong>Taxonomies:</strong> Filter notes by Projects, Categories, and Tags. Drag notes onto taxonomy tags to assign them. Hover any project, category, or tag in the sidebar to reveal an &times; button in the left padding to delete it across all notes.</div>
+        <div>&bull; <strong>Pinned Note Card Styling:</strong> Note cards in the list sidebar display a left border coded to their entry type. Pinned notes are rendered with a prominent double-thickness (8px) left border compared to unpinned cards (4px), making pinned entries instantly identifiable.</div>
+        <div>&bull; <strong>Column & Card Background Contrast (v2.6.2):</strong> In light mode, the middle note list view features a clean white background contrasting against the off-white backgrounds of the sidebars. Selected note cards adapt seamlessly across themes &mdash; elevating onto pure black in dark mode (<code>#000000</code>) and crisp white in light mode (<code>#ffffff</code>) with a 1px colored line matching their entry type.</div>
       </div>
     </section>
 
-    <!-- 4. Content Ingestion -->
+    <!-- 4. Inline Editing & Margin Generators -->
+    <section id="editing" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-amber-400 text-sm"></i> 4. Inline Editing & Margin Field Generators
+      </h2>
+      <p class="mb-3 text-[var(--text-muted)]">
+        In <strong>v2.5.0</strong>, the rigid "Edit" button and full-entry edit form were replaced with a fluid, click-to-edit experience:
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-i-cursor text-sky-400"></i> Double-Click Inline Editing
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            Double-click any field &mdash; Title, Executive Summary, Answer Summary, or individual Takeaway points &mdash; to edit it directly in place. Empty fields present subtle placeholders that open a clean editor upon double-clicking. Edits save on blur or Enter.
+          </p>
+        </div>
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate-right text-emerald-400"></i> Margin Auto-Generate Buttons
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            Round refresh icons hang neatly into the right margin beside generatable fields (Title, Taxonomies, Summary, and Takeaways). Clicking any icon prompts Gemini AI to re-extract or suggest content for only that specific section.
+          </p>
+        </div>
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-tags text-purple-400"></i> In-Place Taxonomy Editor
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            Clicking the taxonomy badges in the note header reveals an inline editor right in place. Remove tags with <code>&times;</code>, type and press <kbd class="px-1 py-0.5 rounded bg-[var(--code-bg)] border border-[var(--border)] text-[10px]">Enter</kbd> to add new ones, auto-tag via the margin refresh button, or click <strong>Done</strong> to save.
+          </p>
+        </div>
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
+            <i class="fa-solid fa-expand text-[var(--accent)]"></i> Distraction-Free Focus Mode
+          </div>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed">
+            Double-clicking the note body or clicking the <strong>Focus Mode</strong> button expands the Markdown content into a distraction-free full-screen editor with live auto-saving.
+          </p>
+        </div>
+      </div>
+      <p class="text-xs text-[var(--text-muted)]">
+        <strong>Persistent Header Toggles & Smooth Transitions (v2.5.2):</strong> The main content view header includes persistently visible Library (<i class="fa-solid fa-folder-tree"></i>) and Notes list (<i class="fa-solid fa-list"></i>) toggle icons alongside history controls. When any sidebar (Library, Notes list, or AI Assistant) is opened or collapsed, animated width transitions (300ms ease-in-out) cause adjacent views to smoothly glide into their new positions, while maintaining scroll positions and view states.
+      </p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">
+        <strong>Responsive Prompt Layout (v2.5.3):</strong> For Theme Prompt entries, the Prompt Question and Answer Summary cards dynamically adapt to the note's actual available width via CSS container queries. When sidebars expand or the note width collapses below 580px, the cards smoothly transition from side-by-side to a vertical stack for optimal reading comfort.
+      </p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">
+        <strong>Saved View Visibility & Layout Persistence (v2.5.4):</strong> The active visibility state of all views (Library, Notes list, and AI Assistant) is saved directly into the knowledge base file and restored automatically whenever the file is opened. Selecting or browsing notes now preserves your open views without resetting sidebar states.
+      </p>
+    </section>
+
+    <!-- 5. Content Ingestion -->
     <section id="ingestion" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-cloud-arrow-down text-sky-400 text-sm"></i> 4. Content Ingestion & Media Scrubbing
+        <i class="fa-solid fa-cloud-arrow-down text-sky-400 text-sm"></i> 5. Content Ingestion & Media Scrubbing
       </h2>
       <p class="mb-3 text-[var(--text-muted)]">
         Paste any URL, YouTube link, or raw text into the top ingestion bar:
@@ -237,10 +293,10 @@
       </ul>
     </section>
 
-    <!-- 5. AI Prompt Generator -->
+    <!-- 6. AI Prompt Generator -->
     <section id="ai" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-sm"></i> 5. Gemini AI Synthesis & Theme Prompt Generator
+        <i class="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-sm"></i> 6. Gemini AI Synthesis & Theme Prompt Generator
       </h2>
       <p class="mb-3 text-[var(--text-muted)]">
         Clicking <strong>"Generate Prompt"</strong> above the note list synthesizes an exploratory reflection question designed to prompt immediate deep thought:
@@ -254,15 +310,18 @@
           <strong>Time Span:</strong> Evaluates your <em>entire knowledge base across all time</em>, with ~65% weighting given to entries from the last 4 months.
         </div>
         <div>
+          <strong>Taxonomy Scope (v2.5.5):</strong> When any project, category, or tag filters are active in the sidebar, the prompt generator strictly isolates candidate notes to matching entries (for example, selecting project <code>music</code> feeds only music notes into the prompt generator). Notes written from the resulting prompt automatically inherit the active taxonomy.
+        </div>
+        <div>
           <strong>Non-Repetition:</strong> Remembers all previous prompts in <code>storedPrompts</code> to prevent repeating or closely retreading questions.
         </div>
       </div>
     </section>
 
-    <!-- 6. Unified Assistant -->
+    <!-- 7. Unified Assistant -->
     <section id="assistant" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-comments text-[var(--accent)] text-sm"></i> 6. Unified AI Assistant & Chat Context
+        <i class="fa-solid fa-comments text-[var(--accent)] text-sm"></i> 7. Unified AI Assistant & Chat Context
       </h2>
       <p class="mb-3 text-[var(--text-muted)]">
         The Assistant panel (toggle via <code>Cmd+J</code> / <code>Ctrl+J</code> or the sidebar chat icon) provides an interactive conversational copilot:
@@ -274,10 +333,10 @@
       </ul>
     </section>
 
-    <!-- 7. Backlinks & IDs -->
+    <!-- 8. Backlinks & IDs -->
     <section id="referencing" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-link text-[var(--accent)] text-sm"></i> 7. Backlinks & Decimal Numeric IDs
+        <i class="fa-solid fa-link text-[var(--accent)] text-sm"></i> 8. Backlinks & Decimal Numeric IDs
       </h2>
       <p class="mb-3 text-[var(--text-muted)]">
         Ali Brain implements bi-directional knowledge graphs without database dependencies:
@@ -289,19 +348,26 @@
       </ul>
     </section>
 
-    <!-- 8. Settings & Protocol -->
+    <!-- 9. Settings & Protocol -->
     <section id="settings" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-sliders text-[var(--accent)] text-sm"></i> 8. Settings & Version Protocol
+        <i class="fa-solid fa-sliders text-[var(--accent)] text-sm"></i> 9. Settings & Version Protocol
       </h2>
       <p class="mb-3 text-[var(--text-muted)]">
         Settings are accessible via the gear icon in the workspace header:
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Gemini API Keys:</strong> Configure one or more Gemini API keys (managed in rotation).</li>
-        <li><strong>Model Tier:</strong> Switch between <code>gemini-2.5-flash</code> (ultra fast) and <code>gemini-2.5-pro</code> (deep reasoning).</li>
+        <li><strong>Task-Specific AI Models (v2.6.0):</strong> Assign specialized models tailored to each task category:
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li><em>Quick Metadata & Summaries:</em> High-speed models for scraping, TL;DR, key takeaways, and auto-tagging.</li>
+            <li><em>Theme Prompts:</em> Balanced models for exploring loose ends and juxtaposing notes.</li>
+            <li><em>AI Assistant Copilot:</em> Interactive chat and whole-brain multi-pass knowledge graph synthesis.</li>
+          </ul>
+        </li>
+        <li><strong>Live API Model Discovery (v2.6.0):</strong> Click "Fetch Models from API" to dynamically populate model pickers with all generative models currently active on your Google AI Studio account, falling back resiliently to the current medium-speed model (<code>gemini-2.5-flash</code>) when offline while strictly honoring custom selections.</li>
         <li><strong>External Library Merge:</strong> Manually merge secondary JSON files into your active workspace with live count reporting.</li>
-        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.3.0</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
+        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.6.2</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
       </ul>
     </section>
 
@@ -313,7 +379,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.3.0</strong></span>
+      <span>Version <strong>v2.6.2</strong></span>
       <a href="brain.html">Back to Brain App</a>
     </div>
   </footer>
