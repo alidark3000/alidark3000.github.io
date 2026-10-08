@@ -325,6 +325,18 @@
       color: var(--text-main);
       border-color: var(--accent);
     }
+
+    /* Persistent Top-Right Workspace Controls in Top Padding Zone */
+    .workspace-top-controls {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+    }
     .app-brand-title {
       font-size: 0.95rem;
       font-weight: 700;
@@ -544,11 +556,40 @@
     // With each functional change or new feature, maintainers MUST:
     // 1. Bump APP_VERSION below (e.g. v2.3.0 -> v2.3.1 or v2.4.0).
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
-    // 3. Update brain-readme.html to reflect the modified/new functionality.
+    // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.6.5";
+    const APP_VERSION = "v2.7.0";
 
     const CHANGELOG = [
+      {
+        version: "v2.7.0",
+        date: "2026-10-09",
+        highlights: [
+          "Subfolder Reorganization: Relocated the Brain application and documentation into its dedicated '/brain/' directory (/brain/index.html and /brain/readme.html), establishing clean modular routing and root portfolio linking."
+        ]
+      },
+      {
+        version: "v2.6.8",
+        date: "2026-10-09",
+        highlights: [
+          "Taxonomy & Entry-Type Separation: Prevented auto-generated categories and tags from colliding with entry types (e.g. notes, videos/media, web, prompts, pdfs). Added negative prompt constraints and strict post-generation filtering to keep categories and tags focused on subject matter rather than format."
+        ]
+      },
+      {
+        version: "v2.6.7",
+        date: "2026-10-09",
+        highlights: [
+          "Clean Library Indicator: Streamlined the workspace title in the top-right controls to display purely as text without a button background, border, or shadow, reflecting its role as a clear informational status label."
+        ]
+      },
+      {
+        version: "v2.6.6",
+        date: "2026-10-09",
+        highlights: [
+          "Persistent Top-Right Workspace Controls: Relocated the current library name, settings gear, and workspace options menu to the top-right corner opposite the view toggles, preventing them from being buried when the taxonomy sidebar is collapsed.",
+          "Seamless Content Header: Removed the solid background color from the content view top bar for a clean, unified document reading experience."
+        ]
+      },
       {
         version: "v2.6.5",
         date: "2026-10-08",
@@ -728,6 +769,21 @@
       { id: 'web', label: 'Web', color: '#38bdf8', icon: 'fa-link' },
       { id: 'pdf', label: 'PDFs', color: '#ec4899', icon: 'fa-file-pdf' }
     ];
+
+    // Keywords and aliases corresponding to entry types that should not be used as categories or tags
+    const ENTRY_TYPE_TAXONOMY_KEYWORDS = new Set([
+      'note', 'notes',
+      'prompt', 'prompts',
+      'media', 'video', 'videos', 'audio', 'podcast', 'podcasts',
+      'web', 'website', 'webpage', 'article', 'articles',
+      'pdf', 'pdfs', 'document', 'documents'
+    ]);
+
+    const isEntryTypeTaxonomy = (term) => {
+      if (!term || typeof term !== 'string') return false;
+      const clean = term.trim().toLowerCase().replace(/^[#@]/, '');
+      return ENTRY_TYPE_TAXONOMY_KEYWORDS.has(clean);
+    };
 
     const getEntryType = (entry) => {
       if (!entry) return 'note';
@@ -2374,13 +2430,17 @@
         }
         if (Array.isArray(e.categories)) {
           e.categories.forEach(c => {
-            allCategories.add(c);
+            if (!isEntryTypeTaxonomy(c)) {
+              allCategories.add(c);
+            }
             categoryCounts[c] = (categoryCounts[c] || 0) + 1;
           });
         }
         if (Array.isArray(e.tags)) {
           e.tags.forEach(t => {
-            allTags.add(t);
+            if (!isEntryTypeTaxonomy(t)) {
+              allTags.add(t);
+            }
             tagCounts[t] = (tagCounts[t] || 0) + 1;
           });
         }
@@ -2477,8 +2537,9 @@
           const taxonomyRules = `
           Taxonomy guidelines:
           - Projects: Assign 0-1 scoped initiative from: ${JSON.stringify(Array.from(allProjects))}. Return in lowercase.
-          - Categories: Assign 1-2 broad categories from existing list: ${JSON.stringify(Array.from(allCategories))}. Return in lowercase.
-          - Tags: Assign 2-4 concept tags from existing list if possible: ${JSON.stringify(Array.from(allTags))}. Include author/creator name as tag. Return in lowercase.`;
+          - Categories: Assign 1-2 broad topic/domain categories from existing list: ${JSON.stringify(Array.from(allCategories))}. Return in lowercase.
+          - Tags: Assign 2-4 concept tags from existing list if possible: ${JSON.stringify(Array.from(allTags))}. Include author/creator name as tag. Return in lowercase.
+          - CRITICAL: Categories and tags MUST represent domain subjects/topics only. NEVER create or assign categories or tags that overlap with entry types or document formats (e.g. do NOT use "notes", "note", "video", "videos", "media", "audio", "web", "website", "prompt", "pdf", "document").`;
 
           if (file && file.type === 'application/pdf') {
             const base64Data = await readFileAsBase64(file);
@@ -2553,14 +2614,13 @@
           const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
           const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
 
-          const autoTags = [];
-          if (file && file.type === 'application/pdf') autoTags.push('pdf');
-          else if (sourceUrl) {
-            if (isMediaSource(sourceUrl)) autoTags.push('video');
-            else autoTags.push('web');
-          } else {
-            autoTags.push('note');
-          }
+          const cleanedCategories = (parsed.categories || [])
+            .map(c => String(c).toLowerCase().trim())
+            .filter(c => c && !isEntryTypeTaxonomy(c));
+
+          const cleanedTags = (parsed.tags || [])
+            .map(t => String(t).toLowerCase().trim())
+            .filter(t => t && !isEntryTypeTaxonomy(t));
 
           const newEntry = {
             id: 'entry-' + Date.now(),
@@ -2569,9 +2629,9 @@
             summary: parsed.summary || '',
             shortVersion: Array.isArray(parsed.shortVersion) ? parsed.shortVersion : [],
             fullContent: parsed.fullContent || '',
-            categories: (parsed.categories || []).map(c => String(c).toLowerCase()),
-            tags: [...new Set([...(parsed.tags || []).map(t => String(t).toLowerCase()), ...autoTags])],
-            projects: (parsed.projects || []).map(p => String(p).toLowerCase()),
+            categories: cleanedCategories,
+            tags: [...new Set(cleanedTags)],
+            projects: (parsed.projects || []).map(p => String(p).toLowerCase().trim()).filter(Boolean),
             createdAt: Date.now(),
             updatedAt: Date.now(),
             sourceUrl: sourceUrl,
@@ -2685,8 +2745,12 @@
           promptQuestion: questionText,
           shortVersion: [],
           fullContent: '',
-          categories: (draft.categories && draft.categories.length > 0) ? [...draft.categories] : (activeCategories.length > 0 ? [...activeCategories] : ['notes']),
-          tags: (draft.tags && draft.tags.length > 0) ? [...draft.tags] : (activeTags.length > 0 ? Array.from(new Set([...activeTags, 'prompt', 'reflection'])) : ['prompt', 'reflection']),
+          categories: (draft.categories && draft.categories.length > 0)
+            ? draft.categories.filter(c => !isEntryTypeTaxonomy(c))
+            : activeCategories.filter(c => !isEntryTypeTaxonomy(c)),
+          tags: (draft.tags && draft.tags.length > 0)
+            ? draft.tags.filter(t => !isEntryTypeTaxonomy(t))
+            : activeTags.filter(t => !isEntryTypeTaxonomy(t)),
           projects: (draft.projects && draft.projects.length > 0) ? [...draft.projects] : (activeProjects.length > 0 ? [...activeProjects] : []),
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -2942,8 +3006,8 @@ Respond with valid JSON ONLY matching this structure:
               fullContent: newPromptRecord.content,
               summary: newPromptRecord.content,
               projects: [...activeProjects],
-              categories: activeCategories.length > 0 ? [...activeCategories] : ['notes'],
-              tags: activeTags.length > 0 ? Array.from(new Set([...activeTags, 'prompt', 'reflection'])) : ['prompt', 'reflection']
+              categories: activeCategories.filter(c => !isEntryTypeTaxonomy(c)),
+              tags: activeTags.filter(t => !isEntryTypeTaxonomy(t))
             }
           });
         } catch (e) {
@@ -3050,8 +3114,9 @@ Respond with valid JSON ONLY matching this structure:
             if (needsTaxonomies) {
               const taxRules = [];
               if (needsProjects) taxRules.push(`- Projects: Assign 0-1 from: ${JSON.stringify(Array.from(allProjects))}.`);
-              if (needsCategories) taxRules.push(`- Categories: Assign 1-2 from: ${JSON.stringify(Array.from(allCategories))}.`);
+              if (needsCategories) taxRules.push(`- Categories: Assign 1-2 domain/topic categories from: ${JSON.stringify(Array.from(allCategories))}.`);
               if (needsTags) taxRules.push(`- Tags: Assign 2-4 specific concept keywords. Reuse: ${JSON.stringify(Array.from(allTags))}.`);
+              taxRules.push('- IMPORTANT: Categories and tags MUST describe the subject matter. NEVER use words denoting entry types or document formats (e.g. "notes", "note", "video", "videos", "media", "audio", "web", "website", "prompt", "pdf", "document").');
               instructions.push(`4. Classify taxonomy metadata in lowercase:\n${taxRules.join('\n')}`);
             }
 
@@ -3102,10 +3167,10 @@ Respond with valid JSON ONLY matching this structure:
                     ? [...new Set([...(e.projects || []), ...parsed.projects.map(p => String(p).toLowerCase().trim()).filter(Boolean)])]
                     : e.projects,
                   categories: needsCategories && Array.isArray(parsed.categories) && parsed.categories.length > 0
-                    ? [...new Set([...(e.categories || []), ...parsed.categories.map(c => String(c).toLowerCase().trim()).filter(Boolean)])]
+                    ? [...new Set([...(e.categories || []), ...parsed.categories.map(c => String(c).toLowerCase().trim()).filter(c => c && !isEntryTypeTaxonomy(c))])]
                     : e.categories,
                   tags: needsTags && Array.isArray(parsed.tags) && parsed.tags.length > 0
-                    ? [...new Set([...(e.tags || []), ...parsed.tags.map(t => String(t).toLowerCase().trim()).filter(Boolean)])]
+                    ? [...new Set([...(e.tags || []), ...parsed.tags.map(t => String(t).toLowerCase().trim()).filter(t => t && !isEntryTypeTaxonomy(t))])]
                     : e.tags,
                   updatedAt: Date.now()
                 };
@@ -3356,8 +3421,9 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
           if (!data) throw new Error("Note not found.");
           const prompt = `Analyze this note and return JSON matching: {"projects": ["proj"], "categories": ["cat"], "tags": ["tag1"]}.
           - Projects: Assign 0-1 from: ${JSON.stringify(Array.from(allProjects))}.
-          - Categories: Assign 1-2 from: ${JSON.stringify(Array.from(allCategories))}.
+          - Categories: Assign 1-2 topic/domain categories from: ${JSON.stringify(Array.from(allCategories))}.
           - Tags: Assign 2-4 specific concept keywords. Reuse: ${JSON.stringify(Array.from(allTags))}. Return in lowercase.
+          - IMPORTANT: Categories and tags MUST represent domain topics only. NEVER assign words representing entry types or document formats (e.g. "notes", "note", "video", "videos", "media", "audio", "web", "website", "prompt", "pdf", "document").
           Title: ${data.title}\nContent: ${data.fullContent || data.summary}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -3370,8 +3436,8 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
               return {
                 ...e,
                 projects: Array.isArray(resData.projects) ? [...new Set([...(e.projects || []), ...resData.projects.map(p => normTax(p)).filter(Boolean)])] : e.projects,
-                categories: Array.isArray(resData.categories) ? [...new Set([...(e.categories || []), ...resData.categories.map(c => normTax(c)).filter(Boolean)])] : e.categories,
-                tags: Array.isArray(resData.tags) ? [...new Set([...(e.tags || []), ...resData.tags.map(t => normTax(t)).filter(Boolean)])] : e.tags,
+                categories: Array.isArray(resData.categories) ? [...new Set([...(e.categories || []), ...resData.categories.map(c => normTax(c)).filter(c => c && !isEntryTypeTaxonomy(c))])] : e.categories,
+                tags: Array.isArray(resData.tags) ? [...new Set([...(e.tags || []), ...resData.tags.map(t => normTax(t)).filter(t => t && !isEntryTypeTaxonomy(t))])] : e.tags,
                 updatedAt: Date.now()
               };
             }
@@ -3971,7 +4037,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   <button onClick={() => setShowManual(true)} className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-book mr-2"></i> User Manual
                   </button>
-                  <a href="brain-readme.html" target="_blank" rel="noopener noreferrer" className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
+                  <a href="readme.html" target="_blank" rel="noopener noreferrer" className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-file-lines mr-2"></i> Full Documentation (Readme)
                   </a>
                   <button onClick={() => setShowChangelog(true)} className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
@@ -4257,7 +4323,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                 <div className="flex justify-between items-center pt-4 border-t border-[var(--border)]">
                   <div className="flex items-center gap-3">
-                    <a href="brain-readme.html" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
+                    <a href="readme.html" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
                       <i className="fa-solid fa-file-lines mr-1.5"></i> Readme
                     </a>
                     <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
@@ -4438,6 +4504,89 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             <i className="fa-solid fa-list"></i>
           </button>
 
+          {/* TOP RIGHT: WORKSPACE / CURRENT LIBRARY, SETTINGS & OPTIONS */}
+          <div 
+            className="workspace-top-controls font-mono"
+            style={{ zIndex: 40 }}
+          >
+            {/* Current Library Title */}
+            <div className="flex items-center text-xs font-semibold text-[var(--text-main)] px-1.5 h-7 select-none">
+              <div 
+                className={`w-2 h-2 rounded-full mr-2 shrink-0 ${syncNotification ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} 
+                title={syncNotification ? syncNotification.msg : "Non-destructive file syncing active"}
+              ></div>
+              <span className="truncate max-w-[100px] sm:max-w-[160px] text-[11px]" title={fileName}>
+                {fileName || 'Workspace'}
+              </span>
+              {syncNotification && (
+                <span className="ml-1.5 px-1 py-0.5 text-[9px] bg-emerald-500/20 text-emerald-400 rounded shrink-0 font-mono" title={syncNotification.msg}>
+                  Synced
+                </span>
+              )}
+            </div>
+
+            {/* Settings Button */}
+            <button 
+              type="button"
+              onClick={openSettings} 
+              className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors shadow-xs cursor-pointer" 
+              title="Settings"
+              aria-label="Settings"
+            >
+              <i className="fa-solid fa-gear text-xs"></i>
+            </button>
+
+            {/* Workspace Options Button */}
+            <div className="relative">
+              <button 
+                type="button"
+                onClick={() => setShowWorkspaceOptions(!showWorkspaceOptions)} 
+                className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors shadow-xs cursor-pointer" 
+                title="Workspace options"
+                aria-label="Workspace options"
+              >
+                <i className="fa-solid fa-ellipsis-vertical text-xs"></i>
+              </button>
+              {showWorkspaceOptions && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowWorkspaceOptions(false)}></div>
+                  <div className="absolute top-full right-0 mt-1.5 w-48 bg-[var(--card-bg)] rounded-md shadow-xl z-50 py-1 text-xs font-mono border border-[var(--border)]">
+                    <button 
+                      onClick={() => { undoEntries(); setShowWorkspaceOptions(false); }} 
+                      disabled={historyState.past.length === 0} 
+                      className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-40 flex items-center gap-2"
+                    >
+                      <i className="fa-solid fa-rotate-left w-4 text-[var(--text-muted)]"></i> Undo (Cmd+Z)
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
+                        const blob = new Blob([dataStr], { type: "application/json" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName || 'knowledge-base-backup.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        setShowWorkspaceOptions(false);
+                      }} 
+                      className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                    >
+                      <i className="fa-solid fa-download w-4 text-[var(--text-muted)]"></i> Export Backup
+                    </button>
+                    <div className="my-1 border-t border-[var(--border)]"></div>
+                    <button 
+                      onClick={() => { setShowWorkspaceOptions(false); handleCloseWorkspace(); }} 
+                      className="w-full text-left px-3 py-1.5 text-[var(--danger)] hover:bg-[var(--danger)]/10 flex items-center gap-2"
+                    >
+                      <i className="fa-solid fa-right-from-bracket w-4"></i> Switch File
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* LEFT SIDEBAR: TAXONOMY & WORKSPACE */}
           <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
             isLeftSidebarOpen 
@@ -4455,65 +4604,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 <a href="https://alidark.com" className="app-brand-link" target="_blank" rel="noopener">alidark.com</a>
               </div>
 
-              {/* Workspace Header */}
-              <div className="px-[50px] py-3 flex justify-between items-center shrink-0">
-                <div className="flex items-center text-xs font-semibold text-[var(--text-main)] truncate h-8">
-                  <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${syncNotification ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} title={syncNotification ? syncNotification.msg : "Non-destructive file syncing active"}></div>
-                  <span className="truncate max-w-[130px]" title={fileName}>{fileName || 'Workspace'}</span>
-                  {syncNotification && (
-                    <span className="ml-1.5 px-1 py-0.5 text-[9px] bg-emerald-500/20 text-emerald-400 rounded shrink-0 font-mono" title={syncNotification.msg}>
-                      Synced
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 h-8">
-                  <button onClick={openSettings} className="btn-icon" title="Settings">
-                    <i className="fa-solid fa-gear text-xs"></i>
-                  </button>
-                  <div className="relative">
-                    <button onClick={() => setShowWorkspaceOptions(!showWorkspaceOptions)} className="btn-icon" title="Workspace options">
-                      <i className="fa-solid fa-ellipsis-vertical text-xs"></i>
-                    </button>
-                    {showWorkspaceOptions && (
-                      <div className="absolute top-full right-0 mt-1.5 w-48 bg-[var(--card-bg)] rounded-md shadow-xl z-50 py-1 text-xs font-mono">
-                        <button 
-                          onClick={() => { undoEntries(); setShowWorkspaceOptions(false); }} 
-                          disabled={historyState.past.length === 0} 
-                          className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-40 flex items-center gap-2"
-                        >
-                          <i className="fa-solid fa-rotate-left w-4 text-[var(--text-muted)]"></i> Undo (Cmd+Z)
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
-                            const blob = new Blob([dataStr], { type: "application/json" });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = fileName || 'knowledge-base-backup.json';
-                            a.click();
-                            URL.revokeObjectURL(url);
-                            setShowWorkspaceOptions(false);
-                          }} 
-                          className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
-                        >
-                          <i className="fa-solid fa-download w-4 text-[var(--text-muted)]"></i> Export Backup
-                        </button>
-                        <div className="my-1"></div>
-                        <button 
-                          onClick={() => { setShowWorkspaceOptions(false); handleCloseWorkspace(); }} 
-                          className="w-full text-left px-3 py-1.5 text-[var(--danger)] hover:bg-[var(--danger)]/10 flex items-center gap-2"
-                        >
-                          <i className="fa-solid fa-right-from-bracket w-4"></i> Switch File
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
               {/* Taxonomy Navigation */}
-              <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-5">
+              <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-3 space-y-5">
                 
                 {/* Entry Types */}
                 <div>
@@ -5057,7 +5149,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0 bg-[var(--bg-main)]">
             
             {/* Top Bar / Actions */}
-            <div className="px-[50px] pt-[50px] pb-4 flex justify-between items-center shrink-0 bg-[var(--bg-pane)]">
+            <div className="px-[50px] pt-[50px] pb-4 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2 h-8">
                 {/* Back / Forward Controls */}
                 <div className="flex items-center gap-0.5 bg-[var(--bg-main)] p-0.5 rounded h-8 box-border">
