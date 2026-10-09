@@ -726,7 +726,6 @@
       const [theme, setTheme] = useState('default');
       
       const [showKeyModal, setShowKeyModal] = useState(false);
-      const [showManual, setShowManual] = useState(false);
       const [showChangelog, setShowChangelog] = useState(false);
       const [tempKeys, setTempKeys] = useState([]);
       const [tempModel, setTempModel] = useState(DEFAULT_MODEL);
@@ -3625,11 +3624,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     <i className="fa-solid fa-upload mr-2"></i> Manual Import JSON (Fallback)
                     <input type="file" accept=".json" className="hidden" onChange={handleManualImport} />
                   </label>
-                  <button onClick={() => setShowManual(true)} className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
-                    <i className="fa-solid fa-book mr-2"></i> User Manual
-                  </button>
                   <a href="readme.html" target="_blank" rel="noopener noreferrer" className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
-                    <i className="fa-solid fa-file-lines mr-2"></i> Full Documentation (Readme)
+                    <i className="fa-solid fa-file-lines mr-2"></i> Documentation (Readme)
                   </a>
                   <button onClick={() => setShowChangelog(true)} className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-clock-rotate-left mr-2"></i> Release Notes & Changelog
@@ -3641,29 +3637,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               </p>
               {error && <p className="mt-4 text-xs text-[var(--danger)] bg-[var(--danger)]/10 p-2 rounded">{error}</p>}
             </div>
-            
-            {showManual && (
-              <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-[50px]">
-                <div className="bg-[var(--card-bg)] rounded-lg shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden text-left">
-                  <div className="flex justify-between items-center p-6 shrink-0">
-                    <h2 className="text-sm font-bold text-[var(--text-main)] flex items-center font-mono">
-                      <i className="fa-solid fa-book text-[var(--accent)] mr-2"></i> User Manual
-                    </h2>
-                    <button onClick={() => setShowManual(false)} className="btn-icon"><i className="fa-solid fa-xmark text-lg"></i></button>
-                  </div>
-                  <div className="p-6 overflow-y-auto prose prose-player max-w-none text-xs leading-relaxed">
-                    <h3>1. Local Storage</h3>
-                    <p>All notes and taxonomy are stored in your selected local JSON file. Zero background cloud tracking.</p>
-                    <h3>2. Ingesting Content</h3>
-                    <p>Paste any web article URL, YouTube link, or raw text into the input field above your note list. The AI will parse it, create a TL;DR summary, and tag it.</p>
-                    <h3>3. AI Assistant</h3>
-                    <p>Open the <strong>AI Assistant</strong> in the top right (shortcut: <code>Cmd+J</code> / <code>Ctrl+J</code>). Toggle between <strong>Whole Brain</strong> to query your archive and <strong>Current Entry</strong> for focused note context.</p>
-                    <h3>4. Cross-Referencing</h3>
-                    <p>Type <code>[[kb-ref:ID]]</code> in any note to link documents together. Hovering shows a preview card, and clicking jumps to that note.</p>
-                  </div>
-                </div>
-              </div>
-            )}
             {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
           </div>
         );
@@ -3917,10 +3890,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     <a href="readme.html" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
                       <i className="fa-solid fa-file-lines mr-1.5"></i> Readme
                     </a>
-                    <button onClick={() => { setShowKeyModal(false); setShowManual(true); }} className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
-                      <i className="fa-solid fa-book mr-1.5"></i> Manual
-                    </button>
-                    <button onClick={() => { setShowKeyModal(false); setShowChangelog(true); }} className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
+                    <button type="button" onClick={() => { setShowKeyModal(false); setShowChangelog(true); }} className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center cursor-pointer">
                       <i className="fa-solid fa-clock-rotate-left mr-1.5"></i> Changelog
                     </button>
                   </div>
@@ -3928,30 +3898,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     <button onClick={() => setShowKeyModal(false)} className="btn-secondary text-xs">Cancel</button>
                     <button onClick={saveSettings} className="btn-primary text-xs">Save</button>
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* USER MANUAL MODAL */}
-          {showManual && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[80] p-[50px]">
-              <div className="bg-[var(--card-bg)] rounded-lg shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden text-left">
-                <div className="flex justify-between items-center p-6 shrink-0">
-                  <h2 className="text-sm font-bold text-[var(--text-main)] flex items-center font-mono">
-                    <i className="fa-solid fa-book text-[var(--accent)] mr-2"></i> KnowledgeBase Manual
-                  </h2>
-                  <button onClick={() => setShowManual(false)} className="btn-icon"><i className="fa-solid fa-xmark text-lg"></i></button>
-                </div>
-                <div className="p-6 overflow-y-auto prose prose-player max-w-none text-xs leading-relaxed">
-                  <h3>1. Local-First Design</h3>
-                  <p>All notes and taxonomy are stored in your selected local JSON file. Auto-save occurs seamlessly with zero background polling.</p>
-                  <h3>2. Adding Notes & Links</h3>
-                  <p>Paste or drop article URLs, YouTube links, or raw text into the input field above the note list. The AI will parse the content, generate a clean Markdown note, and categorize it.</p>
-                  <h3>3. Unified AI Assistant</h3>
-                  <p>Open the Assistant panel on the right (shortcut: <code>Cmd+J</code> / <code>Ctrl+J</code>). You can prompt the AI to summarize, extract takeaways, or find cross-note connections. Click <strong>Insert into Note</strong> to append AI insights directly into your note.</p>
-                  <h3>4. Backlinks</h3>
-                  <p>Drag any note card into an existing note's markdown editor to create a <code>[[kb-ref:ID]]</code> backlink.</p>
                 </div>
               </div>
             </div>

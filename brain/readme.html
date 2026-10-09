@@ -94,8 +94,8 @@
     </div>
   </header>
 
-  <!-- Important Maintainer Notice -->
-  <section class="mb-10 p-5 rounded-lg border-2 border-dashed border-[var(--accent)] bg-[var(--accent)]/5">
+  <!-- Important Maintainer Notice (Hidden from visual layout, preserved for AI maintainers) -->
+  <section class="hidden" aria-hidden="true" style="display: none;">
     <div class="flex items-center gap-2 text-sm font-bold text-[var(--accent)] uppercase tracking-wider mb-2">
       <i class="fa-solid fa-triangle-exclamation"></i> Developer & Maintainer Protocol
     </div>
@@ -375,7 +375,7 @@
         </li>
         <li><strong>Live API Model Discovery (v2.6.4):</strong> Click "Fetch Models from API" to dynamically populate model pickers with 'latest' alias models (e.g. <code>gemini-flash-latest</code>, <code>gemini-pro-latest</code>, <code>gemini-1.5-flash-latest</code>) currently active on your Google AI Studio account, filtering out deprecated snapshots and version clutter, while falling back resiliently to the current medium-speed model (<code>gemini-2.5-flash</code>) when offline.</li>
         <li><strong>External Library Merge:</strong> Manually merge secondary JSON files into your active workspace with live count reporting.</li>
-        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.7.4</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
+        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.7.4</code>) with direct access to this Readme manual documentation.</li>
       </ul>
     </section>
 
