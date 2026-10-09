@@ -115,9 +115,25 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.7.2";
+    const APP_VERSION = "v2.7.4";
 
     const CHANGELOG = [
+      {
+        version: "v2.7.4",
+        date: "2026-10-09",
+        highlights: [
+          "Unified Top View Toggles & Content Settings Toggle: Positioned the Settings gear toggle in the top padding zone directly above the Content view, docking dynamically with the Library and Notes List view toggles.",
+          "Magic Wand AI Assistant Toggle: The AI Assistant view toggle is docked in the top right with an intuitive magic wand icon (`fa-wand-magic-sparkles`), while removing redundant assistant text buttons from content headers.",
+          "Taxonomy Footer Workspace Controls: Placed the library name, live sync indicator, and library options dropdown menu at the bottom of the taxonomy view sidebar for convenient, uncluttered access."
+        ]
+      },
+      {
+        version: "v2.7.3",
+        date: "2026-10-09",
+        highlights: [
+          "Interactive Inline References in Generated Prompts: When the AI prompt generator references previous notes or loose ends, it now embeds inline references using [[kb-ref:ID]] syntax. Rendered across the draft card, reader views, and focus mode, these badges reveal instant summary popovers on hover and open full note previews on click."
+        ]
+      },
       {
         version: "v2.7.2",
         date: "2026-10-09",
@@ -2519,14 +2535,18 @@ WEIGHTING & TOPIC SELECTION GUIDELINES:
    - Keep the entire prompt brief (around 30–60 words).
    - Get straight to the point without any introductory throat-clearing, filler, or fluff.
 
-5. NO REPETITION:
+5. CITE REFERENCED NOTES WITH INLINE [[kb-ref:ID]]:
+   - Whenever your prompt question or context mentions or refers to ideas, themes, or loose ends from specific previous entries, ALWAYS include the exact inline reference tag [[kb-ref:ID]] for that entry (e.g. "In [[kb-ref:entry-1234567890]] you were exploring...").
+   - Use the exact IDs provided in the archive headers above (e.g. [[kb-ref:entry-...]]). This enables the user to hover or click the reference badge to bring up the pop-up summary.
+
+6. NO REPETITION:
    - Do NOT repeat or retread questions from previous prompts.${pastPromptsList}
 
 OUTPUT FORMAT:
 Respond with valid JSON ONLY matching this structure:
 {
   "title": "A short 3-5 word direct title",
-  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes."
+  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes, with inline [[kb-ref:ID]] tags for any referenced entries."
 }`;
 
           const payload = {
@@ -4049,6 +4069,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           )}
 
           {/* ABSOLUTE VIEW TOGGLES (IN TOP PADDING ZONE) */}
+          {/* 1. Taxonomy / Library Sidebar Toggle */}
           <button 
             type="button"
             onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
@@ -4060,6 +4081,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             <i className="fa-solid fa-folder-tree"></i>
           </button>
 
+          {/* 2. Notes List Toggle */}
           <button 
             type="button"
             onClick={() => setIsListSidebarOpen(!isListSidebarOpen)}
@@ -4075,88 +4097,37 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             <i className="fa-solid fa-list"></i>
           </button>
 
-          {/* TOP RIGHT: WORKSPACE / CURRENT LIBRARY, SETTINGS & OPTIONS */}
-          <div 
-            className="workspace-top-controls font-mono"
-            style={{ zIndex: 40 }}
+          {/* 3. Content View Settings Toggle (Docked at top of Content view) */}
+          <button 
+            type="button"
+            onClick={openSettings} 
+            className="view-toggle-btn settings-toggle-btn"
+            style={{ 
+              left: (isLeftSidebarOpen && isListSidebarOpen) 
+                ? 'calc(var(--left-sidebar-w) + var(--list-sidebar-w) + 14px)' 
+                : isLeftSidebarOpen 
+                  ? 'calc(var(--left-sidebar-w) + 48px)' 
+                  : isListSidebarOpen 
+                    ? 'calc(var(--list-sidebar-w) + 48px)' 
+                    : '82px' 
+            }}
+            title="Settings"
+            aria-label="Settings"
           >
-            {/* Current Library Title */}
-            <div className="flex items-center text-xs font-semibold text-[var(--text-main)] px-1.5 h-7 select-none">
-              <div 
-                className={`w-2 h-2 rounded-full mr-2 shrink-0 ${syncNotification ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} 
-                title={syncNotification ? syncNotification.msg : "Non-destructive file syncing active"}
-              ></div>
-              <span className="truncate max-w-[100px] sm:max-w-[160px] text-[11px]" title={fileName}>
-                {fileName || 'Workspace'}
-              </span>
-              {syncNotification && (
-                <span className="ml-1.5 px-1 py-0.5 text-[9px] bg-emerald-500/20 text-emerald-400 rounded shrink-0 font-mono" title={syncNotification.msg}>
-                  Synced
-                </span>
-              )}
-            </div>
+            <i className="fa-solid fa-gear"></i>
+          </button>
 
-            {/* Settings Button */}
-            <button 
-              type="button"
-              onClick={openSettings} 
-              className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors shadow-xs cursor-pointer" 
-              title="Settings"
-              aria-label="Settings"
-            >
-              <i className="fa-solid fa-gear text-xs"></i>
-            </button>
-
-            {/* Workspace Options Button */}
-            <div className="relative">
-              <button 
-                type="button"
-                onClick={() => setShowWorkspaceOptions(!showWorkspaceOptions)} 
-                className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors shadow-xs cursor-pointer" 
-                title="Workspace options"
-                aria-label="Workspace options"
-              >
-                <i className="fa-solid fa-ellipsis-vertical text-xs"></i>
-              </button>
-              {showWorkspaceOptions && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowWorkspaceOptions(false)}></div>
-                  <div className="absolute top-full right-0 mt-1.5 w-48 bg-[var(--card-bg)] rounded-md shadow-xl z-50 py-1 text-xs font-mono border border-[var(--border)]">
-                    <button 
-                      onClick={() => { undoEntries(); setShowWorkspaceOptions(false); }} 
-                      disabled={historyState.past.length === 0} 
-                      className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-40 flex items-center gap-2"
-                    >
-                      <i className="fa-solid fa-rotate-left w-4 text-[var(--text-muted)]"></i> Undo (Cmd+Z)
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
-                        const blob = new Blob([dataStr], { type: "application/json" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = fileName || 'knowledge-base-backup.json';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        setShowWorkspaceOptions(false);
-                      }} 
-                      className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
-                    >
-                      <i className="fa-solid fa-download w-4 text-[var(--text-muted)]"></i> Export Backup
-                    </button>
-                    <div className="my-1 border-t border-[var(--border)]"></div>
-                    <button 
-                      onClick={() => { setShowWorkspaceOptions(false); handleCloseWorkspace(); }} 
-                      className="w-full text-left px-3 py-1.5 text-[var(--danger)] hover:bg-[var(--danger)]/10 flex items-center gap-2"
-                    >
-                      <i className="fa-solid fa-right-from-bracket w-4"></i> Switch File
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          {/* 4. Assistant View Toggle (Docked at Top Right with Magic Wand) */}
+          <button 
+            type="button"
+            onClick={() => setIsAssistantOpen(!isAssistantOpen)}
+            className={`view-toggle-btn ${isAssistantOpen ? 'is-active' : 'is-collapsed'}`}
+            style={{ right: '14px' }}
+            title={isAssistantOpen ? "Collapse AI Assistant (Cmd+J)" : "Expand AI Assistant (Cmd+J)"}
+            aria-label="Toggle AI Assistant"
+          >
+            <i className="fa-solid fa-wand-magic-sparkles"></i>
+          </button>
 
           {/* LEFT SIDEBAR: TAXONOMY & WORKSPACE */}
           <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
@@ -4413,12 +4384,78 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
               </div>
 
-              {/* Sidebar Footer */}
-              <div className="px-[50px] py-4 flex justify-between items-center text-[11px] font-mono text-[var(--text-muted)]">
-                <span>{entries.length} notes</span>
-                <span className="opacity-75" title={syncNotification ? syncNotification.msg : `Last synced: ${new Date(lastSyncTime).toLocaleTimeString()}`}>
-                  {syncNotification ? syncNotification.msg : new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+              {/* Sidebar Footer: Library Info & Workspace Options */}
+              <div className="px-[50px] py-3.5 border-t border-[var(--border)] bg-[var(--bg-pane)] flex flex-col gap-2 font-mono text-[11px] shrink-0">
+                {/* Library Name & Options Row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center min-w-0 text-xs font-semibold text-[var(--text-main)] select-none">
+                    <div 
+                      className={`w-2 h-2 rounded-full mr-2 shrink-0 ${syncNotification ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} 
+                      title={syncNotification ? syncNotification.msg : "Non-destructive file syncing active"}
+                    ></div>
+                    <span className="truncate" title={fileName || 'Workspace'}>
+                      {fileName || 'Workspace'}
+                    </span>
+                  </div>
+
+                  {/* Library Options Button */}
+                  <div className="relative shrink-0">
+                    <button 
+                      type="button"
+                      onClick={() => setShowWorkspaceOptions(!showWorkspaceOptions)} 
+                      className="tax-workspace-btn" 
+                      title="Library options"
+                      aria-label="Library options"
+                    >
+                      <i className="fa-solid fa-ellipsis-vertical text-xs"></i>
+                    </button>
+                    {showWorkspaceOptions && (
+                      <>
+                        <div className="fixed inset-0 z-[80]" onClick={() => setShowWorkspaceOptions(false)}></div>
+                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-[var(--card-bg)] rounded-md shadow-2xl z-[90] py-1 text-xs font-mono border border-[var(--border)]">
+                          <button 
+                            onClick={() => { undoEntries(); setShowWorkspaceOptions(false); }} 
+                            disabled={historyState.past.length === 0} 
+                            className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-40 flex items-center gap-2"
+                          >
+                            <i className="fa-solid fa-rotate-left w-4 text-[var(--text-muted)]"></i> Undo (Cmd+Z)
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
+                              const blob = new Blob([dataStr], { type: "application/json" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = fileName || 'knowledge-base-backup.json';
+                              a.click();
+                              URL.revokeObjectURL(url);
+                              setShowWorkspaceOptions(false);
+                            }} 
+                            className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                          >
+                            <i className="fa-solid fa-download w-4 text-[var(--text-muted)]"></i> Export Backup
+                          </button>
+                          <div className="my-1 border-t border-[var(--border)]"></div>
+                          <button 
+                            onClick={() => { setShowWorkspaceOptions(false); handleCloseWorkspace(); }} 
+                            className="w-full text-left px-3 py-1.5 text-[var(--danger)] hover:bg-[var(--danger)]/10 flex items-center gap-2"
+                          >
+                            <i className="fa-solid fa-right-from-bracket w-4"></i> Switch File
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes count & sync timestamp */}
+                <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)]">
+                  <span>{entries.length} notes</span>
+                  <span className="opacity-75" title={syncNotification ? syncNotification.msg : `Last synced: ${new Date(lastSyncTime).toLocaleTimeString()}`}>
+                    {syncNotification ? syncNotification.msg : new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -4593,7 +4630,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       </div>
                     </div>
                     <div className="font-bold text-[var(--text-main)] mb-2 font-mono text-base">{promptState.draft.title}</div>
-                    <div className="text-xs text-[var(--text-main)] font-mono leading-relaxed pb-1 whitespace-pre-wrap">{promptState.draft.fullContent}</div>
+                    <div 
+                      className="text-xs text-[var(--text-main)] font-mono leading-relaxed pb-1 whitespace-pre-wrap select-text"
+                      dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(promptState.draft.fullContent), entries) }}
+                      onClick={handleContentClick}
+                      onMouseOver={handleContentMouseOver}
+                      onMouseOut={handleContentMouseOut}
+                    />
                   </div>
                 )}
 
@@ -4750,18 +4793,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               </div>
 
               <div className="flex items-center gap-2 h-8">
-
-                <button 
-                  onClick={() => setIsAssistantOpen(!isAssistantOpen)} 
-                  className={`h-8 px-3 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors ${
-                    isAssistantOpen 
-                      ? 'btn-primary' 
-                      : 'btn-secondary'
-                  }`}
-                  title="Toggle AI Assistant (Cmd+J)"
-                >
-                  <i className="fa-solid fa-sparkles text-xs"></i> Assistant
-                </button>
               </div>
             </div>
 
@@ -5070,9 +5101,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                             <i className="fa-solid fa-brain"></i>
                             <span>Theme Prompt</span>
                           </div>
-                          <p className="italic text-xs font-medium leading-relaxed select-text">
-                            {activeSingleEntry.promptQuestion || 'No prompt question recorded.'}
-                          </p>
+                          <div 
+                            className="italic text-xs font-medium leading-relaxed select-text"
+                            dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(activeSingleEntry.promptQuestion || 'No prompt question recorded.'), entries) }}
+                            onClick={handleContentClick}
+                            onMouseOver={handleContentMouseOver}
+                            onMouseOut={handleContentMouseOut}
+                          />
                         </div>
                       </div>
 
@@ -5117,7 +5152,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                             <i className="fa-solid fa-brain"></i>
                             <span>Theme Prompt</span>
                           </div>
-                          <p className="italic text-xs font-medium leading-relaxed select-text">{activeSingleEntry.promptQuestion}</p>
+                          <div 
+                            className="italic text-xs font-medium leading-relaxed select-text"
+                            dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(activeSingleEntry.promptQuestion), entries) }}
+                            onClick={handleContentClick}
+                            onMouseOver={handleContentMouseOver}
+                            onMouseOut={handleContentMouseOut}
+                          />
                         </div>
                       )}
 
@@ -5733,9 +5774,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       <i className="fa-solid fa-brain"></i>
                       <span>Theme Prompt</span>
                     </div>
-                    <p className="text-xs font-mono text-[var(--text-main)] leading-relaxed italic font-medium">
-                      {activeSingleEntry.promptQuestion}
-                    </p>
+                    <div 
+                      className="text-xs font-mono text-[var(--text-main)] leading-relaxed italic font-medium"
+                      dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(activeSingleEntry.promptQuestion), entries) }}
+                      onClick={handleContentClick}
+                      onMouseOver={handleContentMouseOver}
+                      onMouseOut={handleContentMouseOut}
+                    />
                   </div>
                 )}
 

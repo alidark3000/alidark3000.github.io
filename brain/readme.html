@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.7.2</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.7.4</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -318,6 +318,9 @@
           <strong>Taxonomy Scope (v2.5.5):</strong> When any project, category, or tag filters are active in the sidebar, the prompt generator strictly isolates candidate notes to matching entries (for example, selecting project <code>music</code> feeds only music notes into the prompt generator). Notes written from the resulting prompt automatically inherit the active taxonomy.
         </div>
         <div>
+          <strong>Inline Note References (v2.7.3):</strong> When a generated prompt references ideas, loose ends, or themes from previous entries, it automatically embeds inline references using <code>[[kb-ref:ENTRY_ID]]</code> syntax. Hovering over a reference badge displays an instant summary card popover, and clicking it brings up the full note preview.
+        </div>
+        <div>
           <strong>Non-Repetition:</strong> Remembers all previous prompts in <code>storedPrompts</code> to prevent repeating or closely retreading questions.
         </div>
       </div>
@@ -329,7 +332,7 @@
         <i class="fa-solid fa-comments text-[var(--accent)] text-sm"></i> 7. Unified AI Assistant & Chat Context
       </h2>
       <p class="mb-3 text-[var(--text-muted)]">
-        The Assistant panel (toggle via <code>Cmd+J</code> / <code>Ctrl+J</code> or the sidebar chat icon) provides an interactive conversational copilot:
+        The Assistant panel (toggle via <code>Cmd+J</code> / <code>Ctrl+J</code> or the dedicated top-right magic wand icon toggle button <code>fa-wand-magic-sparkles</code> matching the Library and Notes toggles) provides an interactive conversational copilot:
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Current Entry Mode:</strong> Focuses exclusively on the active note to brainstorm, expand, critique, or extract specific concepts.</li>
@@ -356,10 +359,10 @@
     <!-- 9. Settings & Protocol -->
     <section id="settings" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-sliders text-[var(--accent)] text-sm"></i> 9. Settings & Version Protocol
+        <i class="fa-solid fa-sliders text-[var(--accent)] text-sm"></i> 9. Settings & Workspace Management
       </h2>
       <p class="mb-3 text-[var(--text-muted)]">
-        Settings are accessible via the gear icon in the workspace header:
+        Settings are accessible via the gear view toggle docked directly above the Content view, while file name, sync status, and workspace options are neatly docked at the bottom of the Taxonomy view sidebar:
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Gemini API Keys:</strong> Configure one or more Gemini API keys (managed in rotation).</li>
@@ -372,7 +375,7 @@
         </li>
         <li><strong>Live API Model Discovery (v2.6.4):</strong> Click "Fetch Models from API" to dynamically populate model pickers with 'latest' alias models (e.g. <code>gemini-flash-latest</code>, <code>gemini-pro-latest</code>, <code>gemini-1.5-flash-latest</code>) currently active on your Google AI Studio account, filtering out deprecated snapshots and version clutter, while falling back resiliently to the current medium-speed model (<code>gemini-2.5-flash</code>) when offline.</li>
         <li><strong>External Library Merge:</strong> Manually merge secondary JSON files into your active workspace with live count reporting.</li>
-        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.7.2</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
+        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.7.4</code>) and provides direct links to the in-app Changelog, Manual, and this documentation file.</li>
       </ul>
     </section>
 
@@ -384,7 +387,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.7.2</strong></span>
+      <span>Version <strong>v2.7.4</strong></span>
       <a href="index.html">Back to Brain App</a>
     </div>
   </footer>

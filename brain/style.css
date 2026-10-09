@@ -34,11 +34,13 @@
   --link-hover: #ff7b7b;
   --link-underline: rgba(255, 82, 82, 0.4);
   --left-sidebar-w: 320px;
+  --list-sidebar-w: 384px;
 }
 
 @media (min-width: 1024px) {
   :root {
     --left-sidebar-w: 340px;
+    --list-sidebar-w: 440px;
   }
 }
 
@@ -230,7 +232,7 @@ input:focus, textarea:focus, select:focus {
   color: var(--text-muted);
   cursor: pointer;
   z-index: 35;
-  transition: left 300ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  transition: left 300ms cubic-bezier(0.4, 0, 0.2, 1), right 300ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .view-toggle-btn:hover {
@@ -253,16 +255,38 @@ input:focus, textarea:focus, select:focus {
   border-color: var(--accent);
 }
 
-/* Persistent Top-Right Workspace Controls in Top Padding Zone */
-.workspace-top-controls {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  z-index: 40;
+/* Content View Settings Toggle (Above Content View, docked with view toggles) */
+.settings-toggle-btn {
+  /* Inherits .view-toggle-btn styles */
+}
+
+/* Taxonomy Sidebar Bottom Workspace Controls */
+.tax-workspace-footer {
+  padding: 10px 50px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  background-color: var(--bg-pane);
+}
+.tax-workspace-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background-color: transparent;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.tax-workspace-btn:hover {
+  color: var(--text-main);
+  background-color: var(--bg-hover);
+  border-color: var(--border);
 }
 .app-brand-title {
   font-size: 0.95rem;
