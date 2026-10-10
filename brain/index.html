@@ -115,9 +115,17 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.7.4";
+    const APP_VERSION = "v2.7.5";
 
     const CHANGELOG = [
+      {
+        version: "v2.7.5",
+        date: "2026-10-10",
+        highlights: [
+          "Default AI Model Updated to Gemini Flash-Lite Latest: Configured `gemini-flash-lite-latest` as the default model across all tasks (Quick Metadata, Theme Prompts, and AI Assistant), reducing latency and token overhead while allowing users to increase capacity to Pro or standard Flash as needed.",
+          "Minimum Entry Requirement for Prompt Synthesis: The 'Generate Prompt' button is now cleanly hidden until the library contains at least 2 entries, ensuring meaningful synthesis and comparison."
+        ]
+      },
       {
         version: "v2.7.4",
         date: "2026-10-09",
@@ -558,7 +566,7 @@
     });
 
     const callGemini = async (key, payload, model) => {
-      const activeModel = model || 'gemini-2.5-flash';
+      const activeModel = model || 'gemini-flash-lite-latest';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${key}`;
       const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await response.json();
@@ -715,7 +723,7 @@
         return () => window.removeEventListener('keydown', handleKeyDown);
       }, []);
 
-      const DEFAULT_MODEL = 'gemini-2.5-flash';
+      const DEFAULT_MODEL = 'gemini-flash-lite-latest';
       const [apiKeys, setApiKeys] = useState([]);
       const [model, setModel] = useState(DEFAULT_MODEL);
       const [taskModels, setTaskModels] = useState({
@@ -2387,16 +2395,16 @@
               })
             : entries;
 
-          if (scopedEntries.length === 0) {
+          if (scopedEntries.length < 2) {
             if (hasActiveTaxonomy) {
               const scopeDesc = [
                 ...activeProjects,
                 ...activeCategories,
                 ...activeTags.map(t => '#' + t)
               ].join(', ');
-              throw new Error(`No notes found matching the selected taxonomy filter(s) [${scopeDesc}] to analyze.`);
+              throw new Error(`At least 2 notes are required to generate a theme prompt. Only ${scopedEntries.length} found matching filter(s) [${scopeDesc}].`);
             } else {
-              throw new Error("No notes found in knowledge base to analyze.");
+              throw new Error("At least 2 notes are required in the knowledge base to synthesize themes and loose ends.");
             }
           }
 
@@ -3740,7 +3748,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           )}
                           {availableModels.map(m => (
                             <option key={m.id} value={m.id}>
-                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Medium)' : ''}
+                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
                             </option>
                           ))}
                         </select>
@@ -3774,7 +3782,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           )}
                           {availableModels.map(m => (
                             <option key={m.id} value={m.id}>
-                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Medium)' : ''}
+                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
                             </option>
                           ))}
                         </select>
@@ -3808,7 +3816,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           )}
                           {availableModels.map(m => (
                             <option key={m.id} value={m.id}>
-                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Medium)' : ''}
+                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
                             </option>
                           ))}
                         </select>
@@ -3837,7 +3845,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         onClick={() => setTempTaskModels({ metadata: DEFAULT_MODEL, prompts: DEFAULT_MODEL, assistant: DEFAULT_MODEL })}
                         className="text-[var(--accent)] hover:underline cursor-pointer"
                       >
-                        Reset to Medium ({DEFAULT_MODEL})
+                        Reset to Default Lite ({DEFAULT_MODEL})
                       </button>
                     </div>
                   </div>
@@ -4522,8 +4530,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Note Cards List: 30px margin between cards */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
                 
-                {/* PROMPT NOTE SECTION */}
-                {!promptState.draft && !promptState.isGenerating && (
+                {/* PROMPT NOTE SECTION (Only visible when at least 2 entries exist) */}
+                {entries.length >= 2 && !promptState.draft && !promptState.isGenerating && (
                   <button 
                     onClick={generatePromptNote} 
                     className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"

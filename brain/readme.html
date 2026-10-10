@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.7.4</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.7.5</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -321,6 +321,9 @@
           <strong>Inline Note References (v2.7.3):</strong> When a generated prompt references ideas, loose ends, or themes from previous entries, it automatically embeds inline references using <code>[[kb-ref:ENTRY_ID]]</code> syntax. Hovering over a reference badge displays an instant summary card popover, and clicking it brings up the full note preview.
         </div>
         <div>
+          <strong>Minimum Entry Threshold (v2.7.5):</strong> The "Generate Prompt" button is displayed only when the library contains at least 2 entries to ensure comparative synthesis across notes.
+        </div>
+        <div>
           <strong>Non-Repetition:</strong> Remembers all previous prompts in <code>storedPrompts</code> to prevent repeating or closely retreading questions.
         </div>
       </div>
@@ -366,16 +369,16 @@
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Gemini API Keys:</strong> Configure one or more Gemini API keys (managed in rotation).</li>
-        <li><strong>Task-Specific AI Models (v2.6.0):</strong> Assign specialized models tailored to each task category:
+        <li><strong>Task-Specific AI Models (v2.6.0, v2.7.5):</strong> Assign specialized models tailored to each task category. Defaults across all tasks to <code>gemini-flash-lite-latest</code> for fast response and reduced token overhead:
           <ul class="list-disc pl-5 mt-1 space-y-1">
             <li><em>Quick Metadata & Summaries:</em> High-speed models for scraping, TL;DR, key takeaways, and auto-tagging.</li>
-            <li><em>Theme Prompts:</em> Balanced models for exploring loose ends and juxtaposing notes.</li>
+            <li><em>Theme Prompts:</em> Models for exploring loose ends and juxtaposing notes.</li>
             <li><em>AI Assistant Copilot:</em> Interactive chat and whole-brain multi-pass knowledge graph synthesis.</li>
           </ul>
         </li>
-        <li><strong>Live API Model Discovery (v2.6.4):</strong> Click "Fetch Models from API" to dynamically populate model pickers with 'latest' alias models (e.g. <code>gemini-flash-latest</code>, <code>gemini-pro-latest</code>, <code>gemini-1.5-flash-latest</code>) currently active on your Google AI Studio account, filtering out deprecated snapshots and version clutter, while falling back resiliently to the current medium-speed model (<code>gemini-2.5-flash</code>) when offline.</li>
+        <li><strong>Live API Model Discovery (v2.6.4):</strong> Click "Fetch Models from API" to dynamically populate model pickers with 'latest' alias models (e.g. <code>gemini-flash-lite-latest</code>, <code>gemini-flash-latest</code>, <code>gemini-pro-latest</code>) currently active on your Google AI Studio account, filtering out deprecated snapshots and version clutter, while falling back resiliently to the default lite model (<code>gemini-flash-lite-latest</code>) when offline.</li>
         <li><strong>External Library Merge:</strong> Manually merge secondary JSON files into your active workspace with live count reporting.</li>
-        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.7.4</code>) with direct access to this Readme manual documentation.</li>
+        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.7.5</code>) with direct access to this Readme manual documentation.</li>
       </ul>
     </section>
 
@@ -387,7 +390,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.7.4</strong></span>
+      <span>Version <strong>v2.7.5</strong></span>
       <a href="index.html">Back to Brain App</a>
     </div>
   </footer>
