@@ -115,9 +115,24 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.7.5";
+    const APP_VERSION = "v2.7.7";
 
     const CHANGELOG = [
+      {
+        version: "v2.7.7",
+        date: "2026-10-10",
+        highlights: [
+          "Centered Dismissable Warning Modals: Replaced the top content warning/error banner with a centered dismissable modal dialog with backdrop blur, clean typography, and a direct new-tab link to the Readme system manual."
+        ]
+      },
+      {
+        version: "v2.7.6",
+        date: "2026-10-10",
+        highlights: [
+          "Exclude Welcome Note from Entry Counts & Prompt Synthesis: The sample starter welcome note (`#1`) is excluded from library note counts, entry type tallies, and theme prompt thresholds. Only actual user-created notes contribute to the 2-entry minimum required for synthesis.",
+          "Updated Welcome Note Content: Modernized the starter note content to document the top view toggles, magic wand assistant trigger, non-destructive file syncing, and Gemini task model defaults."
+        ]
+      },
       {
         version: "v2.7.5",
         date: "2026-10-10",
@@ -480,14 +495,14 @@
     const INITIAL_ENTRY = {
       id: 'sample-1',
       title: 'Welcome to your Knowledge Base',
-      summary: 'A clean, offline-first personal knowledge base with built-in AI Assistant.',
+      summary: 'A clean, local-first personal knowledge base with built-in Gemini AI copilots.',
       shortVersion: [
-        'Drag and drop web links or text into the top-left box to add notes.',
-        'All data is saved locally to your selected JSON file.',
-        'Use the AI Assistant on the right to summarize or query your notes.',
-        'Use [[kb-ref:ID]] to create backlinks between documents.'
+        'All data auto-saves non-destructively to your local JSON file with zero cloud lock-in.',
+        'Paste web links, YouTube videos, PDFs, or raw text into the input bar above the list.',
+        'Toggle AI Assistant with the top-right magic wand (Cmd+J / Ctrl+J) or settings above the document reader.',
+        'Use [[kb-ref:ID]] syntax or drag note cards into the editor to create instant interactive backlinks.'
       ],
-      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with a local JSON file on your machine.\n\n### Quick Start\n* **Ingest Notes:** Paste any article or YouTube link in the input bar above the list.\n* **Edit:** Double-click any field (title, summary, takeaways, or content) to edit inline, or click taxonomies to manage tags.\n* **AI Assistant:** Open the Assistant in the right sidebar (or press Cmd+J) to synthesize information across notes or chat with the current note.\n* **Taxonomy:** Organize notes by Projects, Categories, and Tags in the left sidebar.',
+      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with your selected local JSON file on your machine.\n\n### Core Features & Workflow\n* **Ingest Knowledge:** Paste any web article, YouTube URL, PDF document, or raw notes into the input bar above the note list for automated TL;DR summaries, key takeaways, and content extraction.\n* **Local-First & Non-Destructive Sync:** Your active file remains on your disk. Background saving occurs automatically, and you can undo actions anytime using `Cmd+Z` / `Ctrl+Z`.\n* **AI Assistant & Task Routing:** Toggle the AI Assistant in the top right (`Cmd+J` / `Ctrl+J`) using the magic wand button. Choose between **Whole Brain** mode (synthesizing across all notes) and **Current Entry** mode (deep diving into the active note). Models default to `gemini-flash-lite-latest` and can be customized per task in Settings.\n* **Theme Prompts & Reflection:** When your library has two or more notes, generate exploratory theme questions and reflection prompts that juxtapose ideas and check in on open threads.\n* **Interactive Backlinks:** Type `[[kb-ref:ID]]` (or drag any note card from the list into the content editor) to embed rich previewable backlinks.\n* **Taxonomy & Navigation:** Organize notes by Projects, Categories, and Tags in the collapsible left Library sidebar. Use the top toggle buttons to collapse or expand views seamlessly.',
       categories: ['getting started'],
       tags: ['tutorial'],
       projects: [],
@@ -2007,7 +2022,14 @@
         reader.readAsText(file);
       };
 
-      // Taxonomy stats
+      const isWelcomeEntry = (entry) => {
+        if (!entry) return false;
+        return entry.id === 'sample-1' || entry.id === INITIAL_ENTRY.id || (entry.numericId === 1 && entry.title === 'Welcome to your Knowledge Base');
+      };
+
+      const userEntries = entries.filter(e => !isWelcomeEntry(e));
+
+      // Taxonomy stats (excluding sample welcome note from counts)
       const projectCounts = {};
       const categoryCounts = {};
       const tagCounts = {};
@@ -2015,7 +2037,7 @@
       const allCategories = new Set();
       const allTags = new Set();
 
-      entries.forEach(e => {
+      userEntries.forEach(e => {
         if (Array.isArray(e.projects)) {
           e.projects.forEach(p => {
             allProjects.add(p);
@@ -2046,7 +2068,7 @@
       const availableCategories = new Set();
       const availableTags = new Set();
 
-      entries.forEach(e => {
+      userEntries.forEach(e => {
         const matchesType = activeTypeFilters.includes(getEntryType(e));
         if (!matchesType) return;
 
@@ -2384,16 +2406,17 @@
           
           const hasActiveTaxonomy = activeProjects.length > 0 || activeCategories.length > 0 || activeTags.length > 0;
 
-          // Scope entries strictly to active taxonomies if any are selected
+          // Scope entries strictly to active taxonomies if any are selected (excluding sample welcome note)
+          const candidateEntries = userEntries;
           const scopedEntries = hasActiveTaxonomy
-            ? entries.filter(e => {
+            ? candidateEntries.filter(e => {
                 if (!e) return false;
                 const matchesProject = activeProjects.length === 0 || (Array.isArray(e.projects) && e.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
                 const matchesCat = activeCategories.length === 0 || (Array.isArray(e.categories) && e.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
                 const matchesTag = activeTags.length === 0 || (Array.isArray(e.tags) && e.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
                 return matchesProject && matchesCat && matchesTag;
               })
-            : entries;
+            : candidateEntries;
 
           if (scopedEntries.length < 2) {
             if (hasActiveTaxonomy) {
@@ -3914,6 +3937,55 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           {/* CHANGELOG MODAL */}
           {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
 
+          {/* WARNING / ERROR MODAL */}
+          {error && (
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[95] p-[50px]"
+              onClick={() => setError(null)}
+            >
+              <div 
+                className="bg-[var(--card-bg)] rounded-lg shadow-2xl w-full max-w-md flex flex-col overflow-hidden text-left border border-[var(--border)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center p-5 border-b border-[var(--border)] shrink-0 bg-[var(--bg-pane)]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded bg-[var(--danger)]/15 text-[var(--danger)] flex items-center justify-center text-xs">
+                      <i className="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 className="text-sm font-bold text-[var(--text-main)] font-mono">Notice</h3>
+                  </div>
+                  <button 
+                    onClick={() => setError(null)} 
+                    className="btn-icon"
+                    title="Dismiss"
+                    aria-label="Dismiss notice"
+                  >
+                    <i className="fa-solid fa-xmark text-sm"></i>
+                  </button>
+                </div>
+                <div className="p-5 space-y-3 font-mono text-xs leading-relaxed text-[var(--text-main)]">
+                  <p>{error}</p>
+                </div>
+                <div className="p-4 bg-[var(--bg-pane)] border-t border-[var(--border)] flex justify-between items-center shrink-0">
+                  <a 
+                    href="readme.html" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-xs font-mono text-[var(--accent)] hover:underline flex items-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-file-lines text-xs"></i> View Documentation (Readme)
+                  </a>
+                  <button 
+                    onClick={() => setError(null)} 
+                    className="btn-secondary text-xs px-3 py-1.5 font-mono"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* INLINE REFERENCE MODAL */}
           {activeRefModal && (
             <div 
@@ -4125,7 +4197,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   <div className="flex flex-wrap gap-1.5 px-0.5">
                     {ENTRY_TYPES.map(t => {
                       const isActive = activeTypeFilters.includes(t.id);
-                      const count = entries.filter(e => getEntryType(e) === t.id).length;
+                      const count = userEntries.filter(e => getEntryType(e) === t.id).length;
                       return (
                         <button
                           key={t.id}
@@ -4405,7 +4477,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                 {/* Notes count & sync timestamp */}
                 <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)]">
-                  <span>{entries.length} notes</span>
+                  <span>{userEntries.length} notes</span>
                   <span className="opacity-75" title={syncNotification ? syncNotification.msg : `Last synced: ${new Date(lastSyncTime).toLocaleTimeString()}`}>
                     {syncNotification ? syncNotification.msg : new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
@@ -4530,8 +4602,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Note Cards List: 30px margin between cards */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
                 
-                {/* PROMPT NOTE SECTION (Only visible when at least 2 entries exist) */}
-                {entries.length >= 2 && !promptState.draft && !promptState.isGenerating && (
+                {/* PROMPT NOTE SECTION (Only visible when at least 2 actual notes exist) */}
+                {userEntries.length >= 2 && !promptState.draft && !promptState.isGenerating && (
                   <button 
                     onClick={generatePromptNote} 
                     className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
@@ -4749,14 +4821,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               <div className="flex items-center gap-2 h-8">
               </div>
             </div>
-
-            {/* Error Notification */}
-            {error && (
-              <div className="bg-[var(--danger)] text-white px-[50px] py-2 text-xs flex justify-between items-center shrink-0 font-mono">
-                <span>{error}</span>
-                <button onClick={() => setError(null)} className="ml-4 hover:opacity-75"><i className="fa-solid fa-xmark"></i></button>
-              </div>
-            )}
 
             {/* Content Area: 50px view padding */}
             <div className="flex-1 overflow-y-auto min-h-0 bg-[var(--bg-main)]">
