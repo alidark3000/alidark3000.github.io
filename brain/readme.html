@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.14</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.23</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -246,10 +246,10 @@
         </div>
           <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
           <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
-            <i class="fa-solid fa-rotate-right text-emerald-400"></i> Targeted Field Generators (On-Demand Only)
+            <i class="fa-solid fa-rotate-right text-emerald-400"></i> Targeted Field Generators & Auto-Metadata
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Takeaways) without affecting the rest of the document. To preserve API quota and avoid token inflation, saving notes does not run automatic AI calls; metadata is generated strictly on demand when requested.
+            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Key Takeaways) without affecting the rest of the document. When a user finishes editing a note (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes a descriptive title (if untitled) and a substantive executive summary in the background, while key takeaways are generated on-demand when the user clicks the refresh action. Title generation features strict token bounds, low temperature decoding, runaway token sanitization with auto-healing on workspace load, and automatic background synthesis the first time the content editor is unfocused/blurred.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -285,7 +285,7 @@
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Web Article Scraping:</strong> Strips navigation bars, advertisements, cookie notices, and scripts using <code>turndown</code> to capture clean article text and formatting.</li>
         <li><strong>Media Embedding:</strong> Automatically recognizes YouTube and Vimeo links to embed a responsive media player alongside synchronized note-taking capabilities.</li>
-        <li><strong>Direct Substance Metadata Extraction:</strong> On ingestion or when explicitly requested via field generator buttons, Gemini AI extracts a concise title and a direct, substantive executive summary (2&ndash;3 informative sentences articulating context, core arguments, and takeaways) without throat-clearing preambles (e.g. "This note summarises..."), alongside 3&ndash;5 context-rich key takeaways and domain taxonomy tags. Metadata generation never runs automatically during routine note saves.</li>
+        <li><strong>Direct Substance Metadata Extraction:</strong> When a user finishes editing a note, Gemini AI automatically synthesizes a concise title (if untitled) and a substantive executive summary (2&ndash;3 informative sentences articulating context, core arguments, and takeaways without throat-clearing preambles). Key takeaways and domain taxonomy tags are generated on-demand when explicitly triggered via their respective refresh buttons.</li>
       </ul>
     </section>
 
@@ -306,7 +306,19 @@
           <strong>Temporal Weighting:</strong> Evaluates your complete knowledge base across all time, giving ~65% priority to notes created or modified in the last 4 months.
         </div>
         <div>
-          <strong>Scoped Context:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. If filters are active, prompt generation isolates its synthesis strictly to those visible notes, and notes created from the prompt inherit active taxonomies. <em>AI Chat</em> archive entries are strictly excluded from the prompt candidate pool under all conditions. When only the default-hidden <em>AI Chat</em> type is deselected, the "Generate Prompt" button cleanly displays its standard label without listing type filters, treating all content types as active.
+          <strong>Scoped Context & Candidate Limits:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. The synthesis payload selects up to a hard ceiling of <strong>35 entries</strong> from the visible pool to stay safely within token and reasoning limits:
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li><em>Recent Window (Last 4 Months, ~65% weight):</em> Up to 15 manual notes, 6 prompt responses, and 4 external context notes.</li>
+            <li><em>All-Time / Earlier History (~35% weight):</em> Up to 8 manual notes, 4 prompt responses, and 2 external context notes.</li>
+            <li><em>Priority Fill:</em> If fewer than 35 notes are selected, remaining slots are topped up preserving priority (manual &rarr; prompt &rarr; external context).</li>
+          </ul>
+          If list filters are active, prompt synthesis isolates itself strictly to those visible notes, and notes created from the prompt inherit active taxonomies. <em>AI Chat</em> archive entries and the starter welcome note are strictly excluded from the prompt candidate pool under all conditions. When only the default-hidden <em>AI Chat</em> type is deselected, the "Generate Prompt" button cleanly displays its standard label without listing type filters, treating all content types as active.
+        </div>
+        <div>
+          <strong>Minimum Entry Requirement:</strong> The "Generate Prompt" button requires at least 2 non-chat notes visible in the list view; when fewer than 2 notes exist, the button is hidden to ensure meaningful synthesis and comparison.
+        </div>
+        <div>
+          <strong>Injected Entry Fields:</strong> Prompt generation injects each candidate note's title, ID, type/age labels, executive summary, takeaways, and up to a 350-character snippet of content if unsummarized.
         </div>
         <div>
           <strong>Inline Note References:</strong> Prompts automatically embed bi-directional references (<code>[[kb-ref:ENTRY_ID]]</code>) to source notes, allowing immediate preview and navigation.
@@ -326,9 +338,9 @@
         The integrated AI Assistant provides conversational intelligence directly alongside your notes. It can switch dynamically between deep inspection of your currently open document and multi-pass synthesis across your entire library of notes.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Current Entry Mode:</strong> Focuses on the active document to brainstorm, outline, critique, elaborate, or summarize specific sections. To minimize token usage, background archive context is strictly scoped to the 10 most recent prior notes sharing the current note's category or project, rather than dumping the entire library. The conversation is hosted inside the right collapsible drawer, bound to the open document with quick prompt chips.</li>
+        <li><strong>Current Entry Mode:</strong> Injects the active note's full text, summary, takeaways, and source link alongside the summaries and takeaways of up to 10 same-category/project notes. The conversation is hosted inside the right collapsible drawer, bound to the open document with quick prompt chips.</li>
         <li><strong>Search Grounding Disabled:</strong> Google Search grounding tools are disabled across all assistant modes (single-note, workspace, and whole brain) to eliminate massive token retrieval overhead and keep conversations grounded exclusively in your notes.</li>
-        <li><strong>Full-Width Whole Brain AI View:</strong> When Whole Brain chat is selected (via the list header <em>+ Chat</em> button, the assistant drawer segmented switch, or an existing AI chat note), the main document view is fully replaced with an expansive, dedicated AI Chat interface featuring pinned message history, real-time citation synthesis, and a bottom input bar.</li>
+        <li><strong>Full-Width Whole Brain AI View:</strong> Uses two-pass retrieval that scans one-line note summaries across the library to identify relevant entries, then injects the complete text of the top 5 matching notes for synthesis. The main document view is fully replaced with an expansive, dedicated AI Chat interface featuring pinned message history, real-time citation synthesis, and a bottom input bar.</li>
         <li><strong>Immediate Placeholder Creation:</strong> Starting a new Whole Brain chat immediately creates a dedicated <em>AI Chat</em> placeholder entry (purple) in the library so every conversation exists as its own persistent entity from the very first moment.</li>
         <li><strong>Non-Destructive Archival & Natural Continuation:</strong> Every message exchange is stored non-destructively directly on the active AI Chat entry. When you select an archived AI chat from the notes list, its entire conversational transcript and message history are automatically repopulated into the full-width AI view, allowing you to continue the conversation naturally while preserving session integrity and auto-updating summaries.</li>
         <li><strong>Initial Note Selection on Load:</strong> Because <em>AI Chat</em> entries have visibility turned off by default in the list view, opening the application automatically selects the most recent non-AI Chat note (or top visible entry according to active type filters) so you are immediately presented with an active, visible document.</li>
@@ -386,7 +398,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.14</strong></span>
+      <span>Version <strong>v2.8.23</strong></span>
       <a href="index.html">Back to Brain App</a>
     </div>
   </footer>

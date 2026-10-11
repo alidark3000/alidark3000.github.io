@@ -115,9 +115,73 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.14";
+    const APP_VERSION = "v2.8.23";
 
     const CHANGELOG = [
+      {
+        version: "v2.8.23",
+        date: "2026-10-12",
+        highlights: [
+          "Prompt Generation Button Styling: Updated the 'Generate Prompt' button and loading placeholder with a green border matching the prompt entry type (#10e567) alongside dark/grey typography."
+        ]
+      },
+      {
+        version: "v2.8.22",
+        date: "2026-10-12",
+        highlights: [
+          "Suppress Self-References in Current Entry AI Chat: Instructed the single-note AI Assistant copilot to never insert redundant [[kb-ref:ID]] self-citations pointing to the active note being viewed, reserving reference tags exclusively for cross-referenced related notes."
+        ]
+      },
+      {
+        version: "v2.8.21",
+        date: "2026-10-12",
+        highlights: [
+          "Calibrated Concise Summaries (<=100 words & <=150% note length): Constrained AI prompts and schema descriptions to generate crisp, punchy executive summaries capped at 100 words max and proportional to content length. Upgraded cleanExecutiveSummary to strictly enforce the 100-word ceiling and prevent summaries from exceeding 1.5x note length."
+        ]
+      },
+      {
+        version: "v2.8.20",
+        date: "2026-10-12",
+        highlights: [
+          "Mandatory JSON Schema Specification for Simultaneous Metadata: Added explicit required array to responseSchema for title and executive summary auto-generation, ensuring Gemini generates the summary alongside the title rather than omitting optional object properties."
+        ]
+      },
+      {
+        version: "v2.8.19",
+        date: "2026-10-12",
+        highlights: [
+          "Resilient JSON Parsing & Token Budget Expansion for Auto-Metadata: Expanded maxOutputTokens from 300 to 800 for simultaneous title and executive summary generation, preventing mid-stream token truncation. Upgraded parseAIJson with robust fallback regex extraction so partial or malformed model responses never silently drop generated metadata."
+        ]
+      },
+      {
+        version: "v2.8.18",
+        date: "2026-10-12",
+        highlights: [
+          "Direct Textarea Injection for First-Unfocus Title & Summary Generation: Fixed auto-generation on textarea blur by directly capturing live textarea DOM content into analysis prompt and state, preventing empty content payloads or unhandled reference errors during background generation."
+        ]
+      },
+      {
+        version: "v2.8.17",
+        date: "2026-10-12",
+        highlights: [
+          "First-Unfocus Title & Executive Summary Auto-Generation: Unfocusing (blurring) the content editing textarea for the first time on a note now automatically triggers background title and executive summary synthesis if untitled or summary is needed, without waiting for the Done button or outside dismiss click."
+        ]
+      },
+      {
+        version: "v2.8.16",
+        date: "2026-10-12",
+        highlights: [
+          "Runaway Title Sanitization & Model Token Guard: Added strict title cleaning (`cleanTitle`) to strip concatenated runaway token loops, non-Latin script transitions, and text dumps. Calibrated metadata AI calls to temperature 0.2 and strict `maxOutputTokens` constraints, preventing generative babble while automatically healing existing corrupted titles on workspace load."
+        ]
+      },
+      {
+        version: "v2.8.15",
+        date: "2026-10-12",
+        highlights: [
+          "Automatic Title & Summary Generation on Stop Editing: When a user finishes editing a note (via Done, clicking outside, or exiting Focus Mode), Gemini AI automatically synthesizes a descriptive title (if untitled) and a substantive executive summary in the background without blocking the UI.",
+          "On-Demand Key Takeaways on Refresh: Key takeaways are generated on-demand when the user clicks the refresh action (available via the margin refresh icon and the card header button), avoiding unnecessary API calls and preserving customized takeaways across routine edits."
+        ]
+      },
       {
         version: "v2.8.14",
         date: "2026-10-12",
@@ -579,7 +643,40 @@
       return content || '';
     };
 
-    const cleanExecutiveSummary = (text) => {
+    const cleanTitle = (text) => {
+      if (!text || typeof text !== 'string') return 'Untitled Note';
+      let t = text.trim();
+      // Remove outer markdown formatting, brackets, quotes
+      t = t.replace(/^[#*"'`]+|[#*"'`]+$/g, '').trim();
+      t = t.replace(/^(title|suggested title|titre|subject)\s*:\s*/i, '').trim();
+      // Only keep the first line
+      t = t.split('\n')[0].trim();
+      // If there is a period followed by a sentence and the first sentence has at least 2 words, take the first sentence
+      const sentences = t.split(/\.\s+/);
+      if (sentences.length > 1 && sentences[0].split(/\s+/).filter(Boolean).length >= 2) {
+        t = sentences[0];
+      }
+      // If there is an abrupt script transition from Latin letters directly to non-Latin characters (e.g. Devanagari/Hindi token glitch), strip from the glitch onwards
+      t = t.replace(/([A-Za-z\u00C0-\u024F]{2,})[^\x00-\x7F\u00C0-\u024F\s].*$/, '$1');
+      // Tokenize into words and prevent runaway strings or overly long titles
+      const rawWords = t.split(/\s+/).filter(Boolean);
+      const cleanWords = [];
+      for (const w of rawWords) {
+        // If an individual unhyphenated word is suspiciously long (> 25 chars), it's runaway text; stop adding
+        if (w.length > 25 && !w.includes('-') && !w.includes('/') && !w.includes('_')) {
+          break;
+        }
+        cleanWords.push(w);
+        // Strictly enforce a maximum 8 words ceiling for titles
+        if (cleanWords.length >= 8) {
+          break;
+        }
+      }
+      let result = cleanWords.join(' ').replace(/^[\s,:;.\-]+|[\s,:;.\-]+$/g, '').trim();
+      return result || 'Untitled Note';
+    };
+
+    const cleanExecutiveSummary = (text, sourceContent = '') => {
       if (!text || typeof text !== 'string') return '';
       let cleaned = text.trim();
       // Strip redundant meta-intros: "This note summarises...", "This document explores...", etc.
@@ -593,6 +690,33 @@
       cleaned = cleaned.replace(/^(this\s+(note|document|article|entry)\s+is\s+about\s+)/i, '');
       cleaned = cleaned.replace(/^(summary|executive\s+summary|tl;?dr):\s*/i, '');
       cleaned = cleaned.trim();
+
+      // Word count constraints:
+      // 1. Strictly no longer than 100 words
+      // 2. Not more than 50% longer than content (i.e. summary words <= Math.ceil(sourceWords * 1.5)) when source is substantive
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      let maxAllowedWords = 100;
+      if (sourceContent && typeof sourceContent === 'string') {
+        const sourceWords = sourceContent.trim().split(/\s+/).filter(Boolean).length;
+        if (sourceWords > 0) {
+          const proportionalCap = Math.max(15, Math.ceil(sourceWords * 1.5));
+          maxAllowedWords = Math.min(100, proportionalCap);
+        }
+      }
+
+      if (words.length > maxAllowedWords) {
+        cleaned = words.slice(0, maxAllowedWords).join(' ');
+        // If cut off mid-sentence, finish with ellipsis or closest punctuation
+        if (!/[.!?]$/.test(cleaned)) {
+          const lastPunct = Math.max(cleaned.lastIndexOf('.'), cleaned.lastIndexOf('!'), cleaned.lastIndexOf('?'));
+          if (lastPunct > cleaned.length * 0.7) {
+            cleaned = cleaned.slice(0, lastPunct + 1);
+          } else {
+            cleaned += '...';
+          }
+        }
+      }
+
       if (cleaned.length > 0) {
         cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
       }
@@ -763,10 +887,35 @@
     };
 
     const parseAIJson = (text) => {
+      if (!text || typeof text !== 'string') return null;
       let t = text.trim();
       const match = t.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-      if (match) t = match[1];
-      return JSON.parse(t);
+      if (match) t = match[1].trim();
+      try {
+        return JSON.parse(t);
+      } catch (e) {
+        // Fallback for truncated or slightly malformed JSON
+        try {
+          let fixed = t;
+          if (!fixed.endsWith('}')) {
+            if (fixed.lastIndexOf('"') > fixed.lastIndexOf(':')) {
+              fixed += '"';
+            }
+            fixed += '}';
+          }
+          return JSON.parse(fixed);
+        } catch (e2) {
+          // Extract known fields via regex fallback
+          const extracted = {};
+          const titleMatch = t.match(/"title"\s*:\s*"([^"]+)/i);
+          if (titleMatch) extracted.title = titleMatch[1];
+          const summaryMatch = t.match(/"summary"\s*:\s*"([^"]+)/i);
+          if (summaryMatch) extracted.summary = summaryMatch[1];
+          if (Object.keys(extracted).length > 0) return extracted;
+          console.warn('Failed to parse AI JSON:', t, e);
+          return null;
+        }
+      }
     };
 
     const EditableText = ({ text, onSave, className = '', tag = 'span', multiline = false, stripPrefix = '', renderView = null, placeholder = '', disabled = false }) => {
@@ -955,6 +1104,41 @@
       const activeSingleEntryRef = useRef(null);
       const isContentFocusedRef = useRef(false);
       const entriesRef = useRef(entries);
+      const autoGeneratedMetaIdsRef = useRef(new Set());
+
+      const triggerAutoMetadataOnFirstBlur = async (id) => {
+        if (!id || autoGeneratedMetaIdsRef.current.has(id)) return;
+        
+        // Grab live textarea content directly from DOM if available
+        let liveVal = '';
+        if (contentTextareaRef.current) {
+          liveVal = contentTextareaRef.current.value || '';
+        } else if (editDataRef.current && editDataRef.current[id] && editDataRef.current[id].fullContent !== undefined) {
+          liveVal = editDataRef.current[id].fullContent || '';
+        }
+        
+        const currentEntry = (entriesRef.current || []).find(e => e.id === id);
+        const finalContent = (liveVal || currentEntry?.fullContent || '').trim();
+        if (finalContent.length <= 5) return;
+
+        const existingTitle = (currentEntry?.title || '').trim();
+        const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
+        const needsSummary = !currentEntry?.summary || (currentEntry?.fullContent || '').trim() !== finalContent;
+
+        if (isUntitled || needsSummary) {
+          autoGeneratedMetaIdsRef.current.add(id);
+          // Sync staged data so saveNote has the latest textarea content
+          if (editDataRef.current) {
+            editDataRef.current[id] = {
+              ...(editDataRef.current[id] || currentEntry || {}),
+              fullContent: liveVal || finalContent
+            };
+          }
+          if (saveNoteRef.current) {
+            await saveNoteRef.current(id);
+          }
+        }
+      };
 
       const toggleTypeFilter = (typeId, e) => {
         if (e && e.shiftKey) {
@@ -1425,6 +1609,7 @@
         if (data.entries && Array.isArray(data.entries)) {
           migratedEntries = processLoadedEntries(data.entries).map(e => ({
             ...e,
+            title: cleanTitle(e.title || 'Untitled Note'),
             summary: cleanExecutiveSummary(e.summary || ''),
             updatedAt: e.updatedAt || e.createdAt || Date.now()
           }));
@@ -2617,7 +2802,7 @@
           const newEntry = {
             id: 'entry-' + Date.now(),
             numericId: nextNumericId,
-            title: originalWebTitle || parsed.title || 'Untitled Note',
+            title: cleanTitle(originalWebTitle || parsed.title || 'Untitled Note'),
             summary: cleanExecutiveSummary(parsed.summary || ''),
             shortVersion: Array.isArray(parsed.shortVersion) ? parsed.shortVersion : [],
             fullContent: parsed.fullContent || '',
@@ -3112,6 +3297,97 @@ Respond with valid JSON ONLY matching this structure:
         setEditData(prev => { const n = { ...prev }; delete n[id]; return n; });
         if (editDataRef.current) { delete editDataRef.current[id]; }
         savingIdsRef.current.delete(id);
+
+        // Auto-generate title and summary when user stops editing
+        if (isAiChatEntry(initialSavedEntry)) return;
+
+        const existingTitle = (initialSavedEntry.title || '').trim();
+        const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
+        const isPrompt = isPromptEntry(initialSavedEntry);
+        const contentChanged = Boolean(!existingEntry || (existingEntry.fullContent || '').trim() !== (initialSavedEntry.fullContent || '').trim());
+        const needsTitle = isUntitled;
+        const needsSummary = !initialSavedEntry.summary || contentChanged;
+
+        let liveContent = '';
+        if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+          liveContent = contentTextareaRef.current.value || '';
+        }
+        const contentToAnalyze = (liveContent || initialSavedEntry.fullContent || initialSavedEntry.summary || '').trim();
+
+        if ((needsTitle || needsSummary) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
+          setIsAnalyzing(true);
+          setGeneratingField('metadata');
+          try {
+            const instructions = [];
+            const schemaProps = {};
+
+            if (needsTitle) {
+              if (isPrompt) {
+                instructions.push("1. In 'title': Suggest a punchy, reflective title (strictly 3 to 6 words maximum) based on the user's answer. Never append explanations, quotes, or summaries.");
+              } else {
+                instructions.push("1. In 'title': Suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Never append explanations, quotes, or summaries.");
+              }
+              schemaProps.title = {
+                type: "STRING",
+                description: "Concise title, strictly 3 to 6 words maximum. Never include quotes or summaries."
+              };
+            }
+
+            if (needsSummary) {
+              if (isPrompt && initialSavedEntry.promptQuestion) {
+                instructions.push("2. In 'summary': Provide a concise, thoughtful executive summary (1-2 sentences, strictly under 70 words, and no more than 50% longer than the user's response) directly synthesizing the answer. CRITICAL: Jump straight into substance; no meta-intros.");
+              } else {
+                instructions.push("2. In 'summary': Provide a concise, punchy executive summary (1-2 sentences, strictly under 70 words, maximum 100 words, and never more than 50% longer than the note content). CRITICAL: Jump straight into substance; no meta-intros.");
+              }
+              schemaProps.summary = {
+                type: "STRING",
+                description: "Concise executive summary, strictly no longer than 100 words and proportional to content length."
+              };
+            }
+
+            const titleContext = isUntitled ? '' : `Title: ${initialSavedEntry.title}\n`;
+            const promptContext = (isPrompt && initialSavedEntry.promptQuestion)
+              ? `Prompt Question:\n${initialSavedEntry.promptQuestion}\n\nUser's Answer/Response:\n`
+              : 'Content:\n';
+            const aiPrompt = `Analyze this note and generate the requested metadata:\n${instructions.join('\n')}\n\n${titleContext}${promptContext}${contentToAnalyze.substring(0, 30000)}`;
+
+            const requiredProps = Object.keys(schemaProps);
+            const payload = {
+              contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: schemaProps,
+                  required: requiredProps
+                },
+                temperature: 0.2,
+                maxOutputTokens: 800
+              }
+            };
+
+            const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+            const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
+            if (parsed) {
+              const updates = {};
+              if (needsTitle && parsed.title && typeof parsed.title === 'string' && parsed.title.trim()) {
+                updates.title = cleanTitle(parsed.title);
+              }
+              if (needsSummary && parsed.summary && typeof parsed.summary === 'string' && parsed.summary.trim()) {
+                updates.summary = cleanExecutiveSummary(parsed.summary.trim(), contentToAnalyze);
+              }
+              if (Object.keys(updates).length > 0) {
+                setEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates, updatedAt: Date.now() } : e));
+              }
+            }
+          } catch (err) {
+            console.error("Auto-generation of title/summary failed:", err);
+            setError("Metadata auto-generation: " + err.message);
+          } finally {
+            setIsAnalyzing(false);
+            setGeneratingField(null);
+          }
+        }
       };
       saveNoteRef.current = saveNote;
 
@@ -3221,18 +3497,31 @@ Respond with valid JSON ONLY matching this structure:
         setIsAnalyzing(true);
         setGeneratingField('title');
         try {
-          const data = entries.find(e => e.id === id) || (editData && editData[id]);
+          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
-          const prompt = `Read this note and suggest a punchy, highly descriptive title (maximum 6 words). Return strictly JSON: {"title": "The Title"}.\n\nContent: ${data.fullContent || data.summary}`;
+          const prompt = `Read this note and suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Do NOT include quotes, explanations, preambles, or summaries. Return strictly JSON: {"title": "The Title"}.\n\nContent: ${data.fullContent || data.summary}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { title: { type: "STRING" } } } }
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  title: {
+                    type: "STRING",
+                    description: "A punchy, highly descriptive title, strictly 3 to 6 words. Never include quotes, explanations, or summaries."
+                  }
+                }
+              },
+              temperature: 0.2,
+              maxOutputTokens: 60
+            }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.title) {
-            const cleanTitle = resData.title.trim();
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, title: cleanTitle, updatedAt: Date.now() } : e));
+            const formattedTitle = cleanTitle(resData.title);
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, title: formattedTitle, updatedAt: Date.now() } : e));
           }
         } catch(err) {
           setError("Title suggestion failed: " + err.message);
@@ -3247,20 +3536,33 @@ Respond with valid JSON ONLY matching this structure:
         setIsAnalyzing(true);
         setGeneratingField('summary');
         try {
-          const data = entries.find(e => e.id === id) || (editData && editData[id]);
+          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
           const isPrompt = isPromptEntry(data);
           const prompt = (isPrompt && data.promptQuestion)
-            ? `Write a descriptive, thoughtful executive summary (2-3 sentences) synthesizing the user's answer/response to the prompt question. CRITICAL: Jump straight into the substance. NEVER begin with "This note summarises", "This note summarizes", "This response", or redundant meta-intros. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${data.fullContent || ''}`
-            : `Write a descriptive, substantive executive summary (2-3 informative sentences) capturing essential context, arguments, and conclusions. CRITICAL: Jump straight into the substance. NEVER begin with "This note summarises", "This note summarizes", "This document", or redundant meta-intros. Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent || ''}`;
+            ? `Write a concise, thoughtful executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than user's response) synthesizing the user's answer. CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${data.fullContent || ''}`
+            : `Write a concise, punchy executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than the content). CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent || ''}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  summary: {
+                    type: "STRING",
+                    description: "Executive summary in 2 to 3 informative sentences."
+                  }
+                }
+              },
+              temperature: 0.2,
+              maxOutputTokens: 250
+            }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.summary) {
-            const cleanSummary = cleanExecutiveSummary(resData.summary);
+            const cleanSummary = cleanExecutiveSummary(resData.summary, data.fullContent || "");
             setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
           }
         } catch(err) {
@@ -3276,7 +3578,7 @@ Respond with valid JSON ONLY matching this structure:
         setIsAnalyzing(true);
         setGeneratingField('summary');
         try {
-          const entry = entries.find(e => e.id === id) || (editData && editData[id]);
+          const entry = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!entry) throw new Error("Note not found.");
           const questionText = entry.promptQuestion || '';
           const responseText = entry.fullContent || '';
@@ -3298,15 +3600,22 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
               responseMimeType: "application/json",
               responseSchema: {
                 type: "OBJECT",
-                properties: { summary: { type: "STRING" } }
-              }
+                properties: {
+                  summary: {
+                    type: "STRING",
+                    description: "Summary of response in 2 to 3 sentences."
+                  }
+                }
+              },
+              temperature: 0.2,
+              maxOutputTokens: 250
             }
           };
 
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.summary) {
-            const cleanSummary = resData.summary.trim();
+            const cleanSummary = cleanExecutiveSummary(resData.summary);
             setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
           }
         } catch (err) {
@@ -3322,12 +3631,28 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
         setIsAnalyzing(true);
         setGeneratingField('takeaways');
         try {
-          const data = entries.find(e => e.id === id) || (editData && editData[id]);
+          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
-          const prompt = `Analyze this note. Extract 3-5 descriptive, insightful key takeaways that provide substantive context and detail rather than brief phrases. Return strictly JSON: {"shortVersion": ["detailed takeaway 1", "detailed takeaway 2"]}.\nTitle: ${data.title}\nContent: ${data.fullContent || data.summary}`;
+          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
+            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
+                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+                : '');
+          const noteContent = (data.fullContent || chatContent || data.summary || '').trim();
+          if (!noteContent) throw new Error("No note content available to extract takeaways from.");
+          const isPrompt = isPromptEntry(data);
+          const promptContext = (isPrompt && data.promptQuestion)
+            ? `Theme Prompt Question: ${data.promptQuestion}\nUser's Written Response: ${noteContent}`
+            : `Title: ${data.title}\nContent: ${noteContent}`;
+          const prompt = `Analyze this note. Extract 3-5 descriptive, insightful key takeaways that provide substantive context and detail rather than brief phrases. Return strictly JSON: {"shortVersion": ["detailed takeaway 1", "detailed takeaway 2"]}.\n${promptContext}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } } }
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } },
+              temperature: 0.2,
+              maxOutputTokens: 350
+            }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
@@ -3348,7 +3673,7 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
         setIsAnalyzing(true);
         setGeneratingField('taxonomies');
         try {
-          const data = entries.find(e => e.id === id) || (editData && editData[id]);
+          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
           const prompt = `Analyze this note and return JSON matching: {"projects": ["proj"], "categories": ["cat"], "tags": ["tag1"]}.
           - Projects: Assign 0-1 from: ${JSON.stringify(Array.from(allProjects))}.
@@ -3358,7 +3683,12 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
           Title: ${data.title}\nContent: ${data.fullContent || data.summary}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { projects: { type: "ARRAY", items: { type: "STRING" } }, categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } } }
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: { type: "OBJECT", properties: { projects: { type: "ARRAY", items: { type: "STRING" } }, categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } },
+              temperature: 0.2,
+              maxOutputTokens: 200
+            }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
@@ -3699,7 +4029,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
 - Short, declarative sentences. One idea per sentence.
 - Use contractions. It keeps the tone natural.
 - Emojis in headings. Use them in headers to stay scannable, not the body.
-- Citations: Always cite referenced notes using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:${targetDocs[0]?.id || 'ID'}]]).
+- Citations: When cross-referencing OTHER notes, cite them using exact syntax [[kb-ref:ID]]. CRITICAL: Do NOT cite or tag the primary active document itself ([[kb-ref:${targetDocs[0]?.id || 'ID'}]]) since the user is already viewing it.
 - Format cleanly in Markdown.
 
 === PRIMARY ACTIVE DOCUMENT ===
@@ -5134,15 +5464,15 @@ Context:\n${contextText}`
                 {filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
                   <button 
                     onClick={generatePromptNote} 
-                    className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full p-3.5 rounded-md border-2 border-dashed border-[#10e567] text-[var(--text-main)] hover:bg-[#10e567]/10 hover:text-[var(--text-main)] transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
                     title={activeListScopeSummary ? `Generate prompt analyzing notes matching: ${activeListScopeSummary}` : "Generate prompt analyzing notes currently visible in the list view"}
                   >
-                    <i className="fa-solid fa-wand-magic-sparkles"></i> Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}
+                    <i className="fa-solid fa-wand-magic-sparkles text-[#10e567]"></i> <span className="text-[var(--text-main)]">Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}</span>
                   </button>
                 )}
                 {promptState.isGenerating && (
-                  <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--text-muted)] text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
-                    <i className="fa-solid fa-spinner fa-spin"></i> {activeListScopeSummary ? `Finding themes in ${activeListScopeSummary}...` : 'Finding themes and loose ends across visible notes...'}
+                  <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[#10e567]/60 text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
+                    <i className="fa-solid fa-spinner fa-spin text-[#10e567]"></i> {activeListScopeSummary ? `Finding themes in ${activeListScopeSummary}...` : 'Finding themes and loose ends across visible notes...'}
                   </div>
                 )}
                 {promptState.draft && (
@@ -5663,11 +5993,11 @@ Context:\n${contextText}`
                           type="button"
                           onClick={() => handleSuggestTitle(activeSingleEntry.id)}
                           disabled={isAnalyzing}
-                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'title') ? 'opacity-100' : ''}`}
+                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'title' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
                           title="Auto-generate title"
                           aria-label="Auto-generate title"
                         >
-                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'title') ? 'animate-spin' : ''}`}></i>
+                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'title' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
                         </button>
                       </div>
                     
@@ -5935,11 +6265,11 @@ Context:\n${contextText}`
                           type="button"
                           onClick={() => handleGenerateAnswerSummary(activeSingleEntry.id)}
                           disabled={isAnalyzing}
-                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${!activeSingleEntry.summary ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'summary') ? 'opacity-100' : ''}`}
+                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${!activeSingleEntry.summary ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'summary' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
                           title="Auto-generate answer summary"
                           aria-label="Auto-generate answer summary"
                         >
-                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'summary') ? 'animate-spin' : ''}`}></i>
+                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'summary' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
                         </button>
                       </div>
                     </div>
@@ -5984,11 +6314,11 @@ Context:\n${contextText}`
                           type="button"
                           onClick={() => handleGenerateTLDR(activeSingleEntry.id)}
                           disabled={isAnalyzing}
-                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${!activeSingleEntry.summary ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'summary') ? 'opacity-100' : ''}`}
+                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${!activeSingleEntry.summary ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'summary' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
                           title="Auto-generate TL;DR summary"
                           aria-label="Auto-generate TL;DR summary"
                         >
-                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'summary') ? 'animate-spin' : ''}`}></i>
+                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'summary' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
                         </button>
                       </div>
                     </>
@@ -6000,20 +6330,31 @@ Context:\n${contextText}`
                       <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
                         <i className="fa-solid fa-list-check text-[var(--accent)]"></i> Key Takeaways
                       </h3>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const targetId = activeSingleEntry.id;
-                          setEntries(prev => prev.map(e => {
-                            if (e.id !== targetId) return e;
-                            return { ...e, shortVersion: [...(e.shortVersion || []), 'New takeaway'], updatedAt: Date.now() };
-                          }));
-                        }}
-                        className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
-                        title="Add key takeaway"
-                      >
-                        <i className="fa-solid fa-plus text-[10px]"></i> add point
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
+                          disabled={isAnalyzing}
+                          className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                          title="Auto-generate key takeaways"
+                        >
+                          <i className={`fa-solid fa-rotate-right text-[10px] ${(isAnalyzing && generatingField === 'takeaways') ? 'animate-spin' : ''}`}></i> refresh
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const targetId = activeSingleEntry.id;
+                            setEntries(prev => prev.map(e => {
+                              if (e.id !== targetId) return e;
+                              return { ...e, shortVersion: [...(e.shortVersion || []), 'New takeaway'], updatedAt: Date.now() };
+                            }));
+                          }}
+                          className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                          title="Add key takeaway"
+                        >
+                          <i className="fa-solid fa-plus text-[10px]"></i> add point
+                        </button>
+                      </div>
                     </div>
                     {Array.isArray(activeSingleEntry.shortVersion) && activeSingleEntry.shortVersion.length > 0 ? (
                       <ul className="space-y-2">
@@ -6062,7 +6403,7 @@ Context:\n${contextText}`
                       </ul>
                     ) : (
                       <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
-                        No key takeaways yet. Click &quot;add point&quot; or click the refresh icon to extract key points.
+                        No key takeaways yet. Click &quot;add point&quot; or &quot;refresh&quot; to extract key points.
                       </p>
                     )}
                     <button
@@ -6152,6 +6493,11 @@ Context:\n${contextText}`
                             onKeyDown={handleContentKeyDown}
                             className="w-full p-4 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] border border-[var(--border)] rounded focus:border-[var(--accent)] outline-none resize-y min-h-[260px] cursor-text select-text"
                             placeholder="Write your note in Markdown..."
+                            onBlur={() => {
+                              if (activeSingleEntry?.id) {
+                                triggerAutoMetadataOnFirstBlur(activeSingleEntry.id);
+                              }
+                            }}
                           />
                         </div>
                       );
@@ -6520,6 +6866,11 @@ Context:\n${contextText}`
                   onKeyDown={handleContentKeyDown}
                   className="w-full flex-1 p-8 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] resize-none outline-none border-none cursor-text select-text"
                   placeholder="Write your note in Markdown..."
+                  onBlur={() => {
+                    if (activeSingleEntry?.id) {
+                      triggerAutoMetadataOnFirstBlur(activeSingleEntry.id);
+                    }
+                  }}
                 ></textarea>
               </div>
             </div>,
