@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ali Brain</title>
-  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <!-- Consolidated Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
@@ -374,7 +374,7 @@
 
     const ENTRY_TYPES = [
       { id: 'note', label: 'Notes', color: '#f59e0b', icon: 'fa-file-lines' },
-      { id: 'prompt', label: 'Prompts', color: '#f97316', icon: 'fa-brain' },
+      { id: 'prompt', label: 'Prompts', color: '#10e567', icon: 'fa-brain' },
       { id: 'media', label: 'Media', color: '#ff5252', icon: 'fa-play' },
       { id: 'web', label: 'Web', color: '#38bdf8', icon: 'fa-link' },
       { id: 'pdf', label: 'PDFs', color: '#ec4899', icon: 'fa-file-pdf' }
@@ -1089,23 +1089,40 @@
         }
       }, [assistantMessages, isAssistantThinking, isAssistantOpen]);
 
-      // Initialize workspace from IndexedDB handle
+      // Initialize workspace from IndexedDB handle (open most recent file on load, fallback to landing screen)
       useEffect(() => {
+        let isMounted = true;
         if (typeof idbKeyval !== 'undefined') {
-          idbKeyval.get('kb_file_handle').then(handle => {
-            if (handle) setSavedHandle(handle);
-            setAppState('landing');
+          idbKeyval.get('kb_file_handle').then(async handle => {
+            if (!isMounted) return;
+            if (handle) {
+              setSavedHandle(handle);
+              // Attempt to open the most recent file directly on startup
+              try {
+                const loaded = await loadWorkspaceData(handle);
+                if (!loaded && isMounted) {
+                  setAppState('landing');
+                }
+              } catch (openErr) {
+                console.warn("Auto-load of recent file failed, defaulting to switch file screen:", openErr);
+                if (isMounted) setAppState('landing');
+              }
+            } else {
+              setAppState('landing');
+            }
           }).catch(err => {
             console.error("IndexedDB error:", err);
-            setAppState('landing');
+            if (isMounted) setAppState('landing');
           });
+
           idbKeyval.get('kb_stored_prompts').then(p => {
-            if (Array.isArray(p) && p.length > 0) {
+            if (Array.isArray(p) && p.length > 0 && isMounted) {
               setStoredPrompts(p);
             }
           }).catch(() => {});
+
           idbKeyval.get('kb_available_models').then(m => {
-            if (Array.isArray(m) && m.length > 0) {
+            if (Array.isArray(m) && m.length > 0 && isMounted) {
               const latestOnly = m.filter(model => (model.id || '').toLowerCase().includes('latest'));
               if (latestOnly.length > 0) {
                 setAvailableModels(latestOnly);
@@ -1115,6 +1132,10 @@
         } else {
           setAppState('landing');
         }
+
+        return () => {
+          isMounted = false;
+        };
       }, []);
 
       // Robust Non-Destructive Auto-Save and Multi-Device Disk Sync
@@ -1765,7 +1786,10 @@
       const loadWorkspaceData = async (handle) => {
         try {
           const hasPerm = await verifyPermission(handle, true);
-          if (!hasPerm) return;
+          if (!hasPerm) {
+            setAppState('landing');
+            return false;
+          }
           const file = await handle.getFile();
           const text = await file.text();
           
@@ -1812,8 +1836,12 @@
             await idbKeyval.set('kb_file_handle', handle);
           }
           setAppState('workspace');
+          return true;
         } catch (err) {
+          console.error("Failed to open workspace:", err);
           setError(`Failed to open workspace: ${err.message}`);
+          setAppState('landing');
+          return false;
         }
       };
 
@@ -2398,34 +2426,59 @@
         }, 30);
       };
 
+      // Filtered entries (matching active type filters, taxonomies, and search query)
+      const filteredEntries = entries.filter(entry => {
+        if (!entry) return false;
+        const entryType = getEntryType(entry);
+        if (!activeTypeFilters.includes(entryType)) return false;
+        const matchesProject = activeProjects.length === 0 || (Array.isArray(entry.projects) && entry.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
+        const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
+        const matchesTag = activeTags.length === 0 || (Array.isArray(entry.tags) && entry.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch = !searchQuery ||
+          (entry.title && entry.title.toLowerCase().includes(searchLower)) ||
+          (entry.summary && entry.summary.toLowerCase().includes(searchLower)) ||
+          (entry.fullContent && entry.fullContent.toLowerCase().includes(searchLower)) ||
+          (entry.numericId != null && (`#${entry.numericId}`).includes(searchLower)) ||
+          (entry.numericId != null && String(entry.numericId).includes(searchLower));
+        return matchesProject && matchesCat && matchesTag && matchesSearch;
+      }).sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return (b.numericId || 0) - (a.numericId || 0);
+      });
+
+      const activeTaxonomyList = [
+        ...activeProjects,
+        ...activeCategories,
+        ...activeTags.map(t => `#${t}`)
+      ];
+      const activeTaxonomySummary = activeTaxonomyList.length > 0
+        ? (activeTaxonomyList.length <= 2 ? activeTaxonomyList.join(', ') : `${activeTaxonomyList.slice(0, 2).join(', ')} +${activeTaxonomyList.length - 2}`)
+        : '';
+
+      // Descriptive summary of active list view filters (taxonomies, search, and type filters)
+      const activeFilterParts = [
+        ...activeTaxonomyList,
+        searchQuery ? `"${searchQuery}"` : null,
+        (activeTypeFilters.length > 0 && activeTypeFilters.length < 5) ? activeTypeFilters.join('/') : null
+      ].filter(Boolean);
+      const activeListScopeSummary = activeFilterParts.length > 0
+        ? (activeFilterParts.length <= 2 ? activeFilterParts.join(', ') : `${activeFilterParts.slice(0, 2).join(', ')} +${activeFilterParts.length - 2}`)
+        : '';
+
       const generatePromptNote = async () => {
         setPromptState({ isGenerating: true, draft: null });
         try {
           const now = Date.now();
           const fourMonthsAgo = now - (120 * 24 * 60 * 60 * 1000);
           
-          const hasActiveTaxonomy = activeProjects.length > 0 || activeCategories.length > 0 || activeTags.length > 0;
-
-          // Scope entries strictly to active taxonomies if any are selected (excluding sample welcome note)
-          const candidateEntries = userEntries;
-          const scopedEntries = hasActiveTaxonomy
-            ? candidateEntries.filter(e => {
-                if (!e) return false;
-                const matchesProject = activeProjects.length === 0 || (Array.isArray(e.projects) && e.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
-                const matchesCat = activeCategories.length === 0 || (Array.isArray(e.categories) && e.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
-                const matchesTag = activeTags.length === 0 || (Array.isArray(e.tags) && e.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
-                return matchesProject && matchesCat && matchesTag;
-              })
-            : candidateEntries;
+          // Potential pool: whatever entries are currently shown in the entry list view (filtered by type, taxonomy, or search)
+          const scopedEntries = filteredEntries.filter(e => !isWelcomeEntry(e));
 
           if (scopedEntries.length < 2) {
-            if (hasActiveTaxonomy) {
-              const scopeDesc = [
-                ...activeProjects,
-                ...activeCategories,
-                ...activeTags.map(t => '#' + t)
-              ].join(', ');
-              throw new Error(`At least 2 notes are required to generate a theme prompt. Only ${scopedEntries.length} found matching filter(s) [${scopeDesc}].`);
+            if (activeListScopeSummary) {
+              throw new Error(`At least 2 notes visible in the list are required to generate a theme prompt. Only ${scopedEntries.length} found matching filter(s) [${activeListScopeSummary}].`);
             } else {
               throw new Error("At least 2 notes are required in the knowledge base to synthesize themes and loose ends.");
             }
@@ -2443,7 +2496,7 @@
 
           // 2. Classify by topic hierarchy:
           //    - Manual entries (yellow / 'note'): highest priority for topic selection
-          //    - Previous prompt responses (orange / 'prompt'): secondary priority
+          //    - Previous prompt responses (green / 'prompt'): secondary priority
           //    - Other colors (media, web, pdf): background context only
           const categorize = (list) => ({
             manual: list.filter(e => getEntryType(e) === 'note'),
@@ -2469,7 +2522,7 @@
           };
 
           // Higher weighting to last 4 months (~65%), while considering all time (~35%)
-          // Heavily prioritize manual notes (yellow), followed by prompt responses, with others as context
+          // Heavily prioritize manual notes (yellow), followed by prompt responses (green), with others as context
           // Recent pool (Last 4 months)
           addNotes(sample(recent.manual, 15));
           addNotes(sample(recent.prompt, 6));
@@ -2481,7 +2534,7 @@
           addNotes(sample(older.context, 2));
 
           // Top up if we haven't reached 35 notes, preserving priority: manual -> prompt -> context
-          // Strictly drawn from scopedEntries so notes outside selected taxonomies are never included
+          // Strictly drawn from scopedEntries so notes outside current list view are never included
           const remaining = scopedEntries.filter(e => !chosenIds.has(e.id));
           if (selectedNotes.length < 35 && remaining.length > 0) {
             const remManual = remaining.filter(e => getEntryType(e) === 'note');
@@ -2493,7 +2546,7 @@
           }
 
           if (selectedNotes.length === 0) {
-            throw new Error("No notes found in selected scope to analyze.");
+            throw new Error("No notes found in current list view to analyze.");
           }
 
           const contextText = selectedNotes.map(e => {
@@ -2506,7 +2559,7 @@
             if (type === 'note') {
               roleLabel = 'PRIMARY TOPIC SOURCE [Manual Note - Yellow]';
             } else if (type === 'prompt') {
-              roleLabel = 'SECONDARY TOPIC SOURCE [Previous Prompt Reflection - Orange]';
+              roleLabel = 'SECONDARY TOPIC SOURCE [Previous Prompt Reflection - Green]';
             } else {
               roleLabel = `BACKGROUND CONTEXT ONLY [External Source - ${type.toUpperCase()}]`;
             }
@@ -2524,18 +2577,20 @@
               storedPrompts.slice(-30).map((p, i) => `${i + 1}. [${p.title}]: ${p.content || p.question}`).join('\n')
             : "";
 
-          const taxonomyScopeParts = [
+          const filterScopeParts = [
             activeProjects.length > 0 ? `Projects: ${activeProjects.join(', ')}` : '',
             activeCategories.length > 0 ? `Categories: ${activeCategories.join(', ')}` : '',
-            activeTags.length > 0 ? `Tags: ${activeTags.map(t => '#' + t).join(', ')}` : ''
+            activeTags.length > 0 ? `Tags: ${activeTags.map(t => '#' + t).join(', ')}` : '',
+            searchQuery ? `Search query: "${searchQuery}"` : '',
+            (activeTypeFilters.length > 0 && activeTypeFilters.length < 5) ? `Types: ${activeTypeFilters.join(', ')}` : ''
           ].filter(Boolean);
 
-          const taxonomyFocusInstruction = hasActiveTaxonomy
-            ? `\n\nACTIVE TAXONOMY FOCUS:\nAll provided notes belong to the user's active taxonomy filter (${taxonomyScopeParts.join(' | ')}). Ground your reflection question exclusively in the context, themes, and goals of these active taxonomies.\n`
+          const filterFocusInstruction = filterScopeParts.length > 0
+            ? `\n\nACTIVE FILTER FOCUS:\nAll provided notes belong to the user's active list view filters (${filterScopeParts.join(' | ')}). Ground your reflection question exclusively in the context, themes, and goals of these filtered notes.\n`
             : '';
 
           const systemPrompt = `You are a perceptive thinking assistant inside the user's personal knowledge base.
-Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.${taxonomyFocusInstruction}
+Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.${filterFocusInstruction}
 
 PROMPT MODES - SELECT EITHER A OR B:
 A) CHECK IN ON AN UNRESOLVED THEME OR LOOSE END:
@@ -2549,7 +2604,7 @@ B) JUXTAPOSE OR CONNECT THEMES:
 WEIGHTING & TOPIC SELECTION GUIDELINES:
 1. TOPIC SELECTION PRIORITY:
    - HIGHEST WEIGHT (PRIMARY TOPICS): Choose topics, themes, or loose ends primarily from the user's MANUAL ENTRIES (marked [Manual Note - Yellow]). These reflect the user's direct, personal thoughts, creations, and active reflections.
-   - SECONDARY WEIGHT: Next consider PREVIOUS PROMPT RESPONSES (marked [Previous Prompt Reflection - Orange]). Check in on how the user's thinking has progressed or branched out since answering an earlier prompt.
+   - SECONDARY WEIGHT: Next consider PREVIOUS PROMPT RESPONSES (marked [Previous Prompt Reflection - Green]). Check in on how the user's thinking has progressed or branched out since answering an earlier prompt.
    - BACKGROUND CONTEXT ONLY: Other color entries (marked [External Source - Web/Media/PDF]) were gathered from external sources. Do NOT center the prompt on an external article or video; only reference them as supporting context, inspiration, or cross-references to illuminate the user's manual notes.
 
 2. TIME WEIGHTING (ALL TIME, EMPHASIZING RECENT):
@@ -3556,37 +3611,6 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
         }
       };
 
-      // Filtered entries
-      const filteredEntries = entries.filter(entry => {
-        if (!entry) return false;
-        const entryType = getEntryType(entry);
-        if (!activeTypeFilters.includes(entryType)) return false;
-        const matchesProject = activeProjects.length === 0 || (Array.isArray(entry.projects) && entry.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
-        const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
-        const matchesTag = activeTags.length === 0 || (Array.isArray(entry.tags) && entry.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
-        const searchLower = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery ||
-          (entry.title && entry.title.toLowerCase().includes(searchLower)) ||
-          (entry.summary && entry.summary.toLowerCase().includes(searchLower)) ||
-          (entry.fullContent && entry.fullContent.toLowerCase().includes(searchLower)) ||
-          (entry.numericId != null && (`#${entry.numericId}`).includes(searchLower)) ||
-          (entry.numericId != null && String(entry.numericId).includes(searchLower));
-        return matchesProject && matchesCat && matchesTag && matchesSearch;
-      }).sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1;
-        if (!a.pinned && b.pinned) return 1;
-        return (b.numericId || 0) - (a.numericId || 0);
-      });
-
-      const activeTaxonomyList = [
-        ...activeProjects,
-        ...activeCategories,
-        ...activeTags.map(t => `#${t}`)
-      ];
-      const activeTaxonomySummary = activeTaxonomyList.length > 0
-        ? (activeTaxonomyList.length <= 2 ? activeTaxonomyList.join(', ') : `${activeTaxonomyList.slice(0, 2).join(', ')} +${activeTaxonomyList.length - 2}`)
-        : '';
-
       const openSettings = () => {
         const currentKeys = [...apiKeys];
         setTempKeys(currentKeys);
@@ -4143,6 +4167,41 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             <i className="fa-solid fa-gear"></i>
           </button>
 
+          {/* 3b. Back/Forward Navigation Controls (Docked next to Settings with visual separation) */}
+          <div 
+            className="top-nav-group"
+            style={{ 
+              left: (isLeftSidebarOpen && isListSidebarOpen) 
+                ? 'calc(var(--left-sidebar-w) + var(--list-sidebar-w) + 54px)' 
+                : isLeftSidebarOpen 
+                  ? 'calc(var(--left-sidebar-w) + 88px)' 
+                  : isListSidebarOpen 
+                    ? 'calc(var(--list-sidebar-w) + 88px)' 
+                    : '122px' 
+            }}
+          >
+            <button 
+              type="button"
+              onClick={handleNavBack} 
+              disabled={!canGoBack} 
+              className="top-nav-btn" 
+              title="Back (Alt+Left)"
+              aria-label="Navigate Back"
+            >
+              <i className="fa-solid fa-arrow-left text-[10px]"></i>
+            </button>
+            <button 
+              type="button"
+              onClick={handleNavForward} 
+              disabled={!canGoForward} 
+              className="top-nav-btn" 
+              title="Forward (Alt+Right)"
+              aria-label="Navigate Forward"
+            >
+              <i className="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+
           {/* 4. Assistant View Toggle (Docked at Top Right with Magic Wand) */}
           <button 
             type="button"
@@ -4602,25 +4661,25 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Note Cards List: 30px margin between cards */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
                 
-                {/* PROMPT NOTE SECTION (Only visible when at least 2 actual notes exist) */}
-                {userEntries.length >= 2 && !promptState.draft && !promptState.isGenerating && (
+                {/* PROMPT NOTE SECTION (Only visible when at least 2 actual notes exist in visible list view) */}
+                {filteredEntries.filter(e => !isWelcomeEntry(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
                   <button 
                     onClick={generatePromptNote} 
                     className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
-                    title={activeTaxonomySummary ? `Generate prompt analyzing notes in ${activeTaxonomySummary}` : "Generate prompt analyzing notes across your knowledge base"}
+                    title={activeListScopeSummary ? `Generate prompt analyzing notes matching: ${activeListScopeSummary}` : "Generate prompt analyzing notes currently visible in the list view"}
                   >
-                    <i className="fa-solid fa-wand-magic-sparkles"></i> Generate Prompt{activeTaxonomySummary ? ` (${activeTaxonomySummary})` : ''}
+                    <i className="fa-solid fa-wand-magic-sparkles"></i> Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}
                   </button>
                 )}
                 {promptState.isGenerating && (
                   <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--text-muted)] text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
-                    <i className="fa-solid fa-spinner fa-spin"></i> {activeTaxonomySummary ? `Finding themes in ${activeTaxonomySummary}...` : 'Finding themes and loose ends across your notes...'}
+                    <i className="fa-solid fa-spinner fa-spin"></i> {activeListScopeSummary ? `Finding themes in ${activeListScopeSummary}...` : 'Finding themes and loose ends across visible notes...'}
                   </div>
                 )}
                 {promptState.draft && (
-                  <div className="group relative p-4 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 border-l-4 bg-[var(--card-bg)]" style={{ borderLeftColor: '#f97316', borderLeftWidth: '4px' }}>
+                  <div className="group relative p-4 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 border-l-4 bg-[var(--card-bg)]" style={{ borderLeftColor: '#10e567', borderLeftWidth: '4px' }}>
                     <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2 text-[#f97316] font-bold text-xs uppercase tracking-wider flex-wrap">
+                      <div className="flex items-center gap-2 text-[#10e567] font-bold text-xs uppercase tracking-wider flex-wrap">
                         <span className="flex items-center gap-1.5"><i className="fa-solid fa-brain"></i> Theme Prompt</span>
                         {promptState.draft.projects && promptState.draft.projects.length > 0 && (
                           <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
@@ -4641,7 +4700,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       <div className="flex items-center gap-2">
                         <button 
                           onClick={handleWriteFromPrompt} 
-                          className="text-xs bg-[#f97316] text-white px-3 py-1 rounded font-bold hover:bg-[#ea580c] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
+                          className="text-xs bg-[#10e567] text-neutral-900 px-3 py-1 rounded font-bold hover:bg-[#00c853] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
                           title="Open in Focus Mode to write your response"
                         >
                           <i className="fa-solid fa-pen-nib text-[10px]"></i> Write
@@ -4675,7 +4734,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   let typeColor = '#f59e0b'; // Note (Amber)
                   let typeIcon = 'fa-file-lines';
                   if (isPrompt) {
-                    typeColor = '#f97316'; // Prompt (Orange)
+                    typeColor = '#10e567'; // Prompt (Fluoro Green)
                     typeIcon = 'fa-brain';
                   } else if (isMedia) {
                     typeColor = '#ff5252'; // Media (Red)
@@ -4788,39 +4847,14 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           {/* MAIN DOCUMENT COLUMN (READER / EDITOR) */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0 bg-[var(--bg-main)]">
             
-            {/* Top Bar / Actions */}
-            <div className="px-[50px] pt-[50px] pb-4 flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-2 h-8">
-                {/* Back / Forward Controls */}
-                <div className="flex items-center gap-0.5 bg-[var(--bg-main)] p-0.5 rounded h-8 box-border">
-                  <button 
-                    onClick={handleNavBack} 
-                    disabled={!canGoBack} 
-                    className="btn-icon w-6 h-6 text-xs disabled:opacity-30 disabled:pointer-events-none" 
-                    title="Back (Alt+Left)"
-                  >
-                    <i className="fa-solid fa-arrow-left text-[10px]"></i>
-                  </button>
-                  <button 
-                    onClick={handleNavForward} 
-                    disabled={!canGoForward} 
-                    className="btn-icon w-6 h-6 text-xs disabled:opacity-30 disabled:pointer-events-none" 
-                    title="Forward (Alt+Right)"
-                  >
-                    <i className="fa-solid fa-arrow-right text-[10px]"></i>
-                  </button>
-                </div>
-
-                {selectedEntryIds.length > 1 && (
-                  <span className="badge h-8 px-2.5 text-xs">
-                    {selectedEntryIds.length} notes selected
-                  </span>
-                )}
+            {/* Top Bar / Actions (when multi-notes selected) */}
+            {selectedEntryIds.length > 1 && (
+              <div className="px-[50px] pt-[50px] pb-2 flex justify-between items-center shrink-0">
+                <span className="badge h-7 px-2.5 text-xs">
+                  {selectedEntryIds.length} notes selected
+                </span>
               </div>
-
-              <div className="flex items-center gap-2 h-8">
-              </div>
-            </div>
+            )}
 
             {/* Content Area: 50px view padding */}
             <div className="flex-1 overflow-y-auto min-h-0 bg-[var(--bg-main)]">
@@ -5113,9 +5147,9 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   {isPromptEntry(activeSingleEntry) ? (
                     <div className="prompt-split-layout">
                       {/* Left Column: Prompt Question */}
-                      <div className="prompt-split-card bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
+                      <div className="prompt-split-card bg-[var(--card-bg)] border-l-4 border-l-[#10e567] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
                         <div>
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#f97316] mb-1.5 flex items-center gap-1.5">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#10e567] mb-1.5 flex items-center gap-1.5">
                             <i className="fa-solid fa-brain"></i>
                             <span>Theme Prompt</span>
                           </div>
@@ -5165,8 +5199,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     <>
                       {/* Theme Prompt Display for non-prompt entries if promptQuestion exists */}
                       {activeSingleEntry.promptQuestion && (
-                        <div className="bg-[var(--card-bg)] border-l-4 border-l-[#f97316] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#f97316] mb-1 flex items-center gap-1.5">
+                        <div className="bg-[var(--card-bg)] border-l-4 border-l-[#10e567] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#10e567] mb-1 flex items-center gap-1.5">
                             <i className="fa-solid fa-brain"></i>
                             <span>Theme Prompt</span>
                           </div>
@@ -5788,7 +5822,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 {/* Prompt Question Display Above Text Area */}
                 {activeSingleEntry.promptQuestion && (
                   <div className="shrink-0 pt-6 px-8 pb-4 pr-14 border-b border-[var(--border)] bg-[var(--bg-pane)] select-text">
-                    <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#f97316] font-mono mb-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#10e567] font-mono mb-1.5">
                       <i className="fa-solid fa-brain"></i>
                       <span>Theme Prompt</span>
                     </div>

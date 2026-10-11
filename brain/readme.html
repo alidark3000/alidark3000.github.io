@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ali Brain - Documentation & Architecture</title>
-  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -14,8 +14,8 @@
       --bg-card: #202020;
       --text-main: #e3e3dc;
       --text-muted: #95968f;
-      --accent: #ff5252;
-      --accent-hover: #ff7b7b;
+      --accent: #e73624;
+      --accent-hover: #ff5644;
       --border: #2a2a2a;
       --code-bg: #181818;
     }
@@ -26,8 +26,8 @@
         --bg-card: #ffffff;
         --text-main: #111111;
         --text-muted: #555555;
-        --accent: #d32f2f;
-        --accent-hover: #b71c1c;
+        --accent: #e73624;
+        --accent-hover: #c42919;
         --border: #e5e5ea;
         --code-bg: #f0f0f3;
       }
@@ -133,8 +133,8 @@
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-microchip text-[var(--accent)] text-sm"></i> 1. Architecture & Local-First Design
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        Ali Brain is an entirely browser-based, serverless personal knowledge management system built with <strong>React 18</strong> and the <strong>File System Access API</strong>.
+      <p class="mb-3 text-[var(--text-main)]">
+        Ali Brain is an autonomous, serverless personal knowledge management system that runs entirely in your browser using standard web technologies. It stores your complete database directly on your local file system, providing instant load times, complete data ownership, and offline capability without relying on centralized databases or servers.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Single JSON Database File:</strong> All entries, generated prompt questions, prompt reflection answers, taxonomies, assistant chat histories, and deletion tombstones are stored in a single JSON file on your computer.</li>
@@ -148,8 +148,8 @@
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-arrows-rotate text-emerald-500 text-sm"></i> 2. Multi-Computer Non-Destructive Sync
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        When sharing a knowledge base JSON file across multiple devices via cloud sync services (Dropbox, OneDrive, Google Drive, iCloud, or Syncthing), Brain prevents stale overwrites through an entry-level sync engine:
+      <p class="mb-3 text-[var(--text-main)]">
+        The synchronization engine ensures safe, concurrent multi-device usage over folder-sync tools like Dropbox, Google Drive, iCloud, or Syncthing. Rather than blindly overwriting entire files, Brain analyzes granular note timestamps to perform non-destructive merges, preserve simultaneous edits, and prevent accidental data loss.
       </p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -157,7 +157,7 @@
             <i class="fa-solid fa-shield-halved text-emerald-400"></i> Dirty-State Guard
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Computers left open in the background never blind-save stale memory snapshots. If no local changes have been made on that device, auto-save timers will not touch or truncate the file on disk.
+            Computers left open in the background never blind-save stale memory snapshots. If no local changes have been made on that device, auto-save timers will not touch or overwrite the file on disk.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -186,7 +186,7 @@
         </div>
       </div>
       <p class="text-xs text-[var(--text-muted)]">
-        <strong>Live Focus & Background Pulling:</strong> Switching to the Brain tab (or while idle) automatically polls the disk file. When remote changes are detected, a pulsing <span class="text-emerald-400 font-semibold">"Synced"</span> badge appears and updates the view seamlessly.
+        <strong>Live Focus & Background Pulling:</strong> Switching to the Brain tab (or while idle) automatically polls the disk file. When remote changes are detected, the workspace reloads and updates the view seamlessly.
       </p>
     </section>
 
@@ -195,45 +195,45 @@
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-shapes text-amber-500 text-sm"></i> 3. Entry Types & Taxonomy Solo Filtering
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        Every document in Ali Brain is classified into one of five color-coded types:
+      <p class="mb-3 text-[var(--text-main)]">
+        The taxonomy and organization system categorizes your knowledge base into distinct functional entry types alongside multi-dimensional tags, categories, and projects. It provides instant filtering controls, drag-and-drop organization, and solo views to isolate specific subsets of notes rapidly.
       </p>
       <div class="flex flex-wrap gap-2 mb-4">
         <span class="badge" style="background-color: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b;">
-          <i class="fa-solid fa-file-lines"></i> Notes (Yellow / Amber) &bull; Manual User Thoughts
+          <i class="fa-solid fa-file-lines"></i> Notes &bull; Manual User Thoughts
         </span>
-        <span class="badge" style="background-color: #f9731620; color: #f97316; border: 1px solid #f97316;">
-          <i class="fa-solid fa-brain"></i> Prompts (Orange) &bull; AI Theme Reflection Notes
+        <span class="badge" style="background-color: #10e56720; color: #10e567; border: 1px solid #10e567;">
+          <i class="fa-solid fa-brain"></i> Prompts &bull; AI Theme Reflection Notes
         </span>
         <span class="badge" style="background-color: #ff525220; color: #ff5252; border: 1px solid #ff5252;">
-          <i class="fa-solid fa-play"></i> Media (Red) &bull; Videos & Audio (YouTube/Vimeo)
+          <i class="fa-solid fa-play"></i> Media &bull; Videos & Audio (YouTube/Vimeo)
         </span>
         <span class="badge" style="background-color: #38bdf820; color: #38bdf8; border: 1px solid #38bdf8;">
-          <i class="fa-solid fa-link"></i> Web (Sky) &bull; Scraped Web Pages & Articles
+          <i class="fa-solid fa-link"></i> Web &bull; Scraped Web Pages & Articles
         </span>
         <span class="badge" style="background-color: #ec489920; color: #ec4899; border: 1px solid #ec4899;">
-          <i class="fa-solid fa-file-pdf"></i> PDFs (Pink) &bull; PDF Documents
+          <i class="fa-solid fa-file-pdf"></i> PDFs &bull; PDF Documents
         </span>
       </div>
       <div class="p-3.5 rounded bg-[var(--bg-pane)] border border-[var(--border)] text-xs text-[var(--text-muted)] space-y-1.5">
-        <div><strong>Type Filtering Shortcuts:</strong></div>
-        <div>&bull; <strong>Click:</strong> Toggles that individual type on or off in the list.</div>
-        <div>&bull; <strong>Shift + Click:</strong> Solos that specific type &mdash; untoggling all other types in one click. Shift-clicking the active solo type again restores all types back to visible.</div>
-        <div>&bull; <strong>Taxonomies:</strong> Filter notes by Projects, Categories, and Tags. Drag notes onto taxonomy tags to assign them. Hover any project, category, or tag in the sidebar to reveal an &times; button in the left padding to delete it across all notes.</div>
-        <div>&bull; <strong>Pinned Note Card Styling:</strong> Note cards in the list sidebar display a left border coded to their entry type. Pinned notes are rendered with a prominent double-thickness (8px) left border compared to unpinned cards (4px), making pinned entries instantly identifiable.</div>
-        <div>&bull; <strong>Column & Card Background Contrast (v2.6.2, v2.7.2):</strong> In light mode, the middle note list view features a clean white background contrasting against the off-white backgrounds of the sidebars. Selected note cards adapt seamlessly across themes &mdash; setting into a refined shade darker than the background canvas in dark mode (<code>#101010</code> vs <code>#141414</code> / <code>#181818</code>) and crisp white in light mode (<code>#ffffff</code>) with a 1px colored line matching their entry type.</div>
-        <div>&bull; <strong>Search Clear / Cancel Action (v2.6.5):</strong> When text is entered into the note search bar, an inline cancel icon (<i class="fa-solid fa-xmark"></i>) dynamically appears on the right edge of the input. Clicking the icon (or pressing <kbd>Escape</kbd>) instantly clears search criteria and refocuses the input.</div>
-        <div>&bull; <strong>Taxonomy & Entry-Type Separation (v2.6.8):</strong> AI taxonomy generation and auto-tagging strictly forbid categories and tags that overlap with structural entry types or formats (e.g. <code>notes</code>, <code>video</code>/<code>media</code>, <code>web</code>, <code>prompts</code>, <code>pdf</code>), ensuring categories and tags remain focused exclusively on domain topics.</div>
+        <div><strong>Core Filtering & Taxonomy Capabilities:</strong></div>
+        <div>&bull; <strong>Type Toggle:</strong> Click any entry type badge to toggle that type on or off in the list.</div>
+        <div>&bull; <strong>Solo Filtering:</strong> Shift + Click any type to solo it &mdash; hiding all other types in a single click. Shift-clicking the active solo type again restores all types.</div>
+        <div>&bull; <strong>Multi-Dimensional Taxonomy:</strong> Filter notes by Projects, Categories, and Tags. Drag notes directly onto taxonomy items in the sidebar to assign them instantly.</div>
+        <div>&bull; <strong>Taxonomy Management:</strong> Hover over any project, category, or tag in the sidebar to reveal a delete button that removes the taxonomy across all notes in the database.</div>
+        <div>&bull; <strong>Pinning:</strong> Pin essential notes to keep them anchored at the top of the list for fast reference.</div>
+        <div>&bull; <strong>Fast Search & Clear:</strong> Real-time text search filters across titles and note contents. An inline clear button and <kbd>Escape</kbd> shortcut instantly reset your query.</div>
+        <div>&bull; <strong>Taxonomy & Entry-Type Separation:</strong> AI taxonomy generation and auto-tagging strictly separate structural document formats (notes, media, web, prompts, pdf) from domain topics to keep your taxonomy clean.</div>
       </div>
     </section>
 
     <!-- 4. Inline Editing & Margin Generators -->
     <section id="editing" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-pen-to-square text-amber-400 text-sm"></i> 4. Inline Editing & Margin Field Generators
+        <i class="fa-solid fa-pen-to-square text-amber-400 text-sm"></i> 4. Inline Editing & Field Generators
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        In <strong>v2.5.0</strong>, the rigid "Edit" button and full-entry edit form were replaced with a fluid, click-to-edit experience:
+      <p class="mb-3 text-[var(--text-main)]">
+        The document editor delivers a seamless, in-place writing and curation workflow. Every individual component of a note can be edited directly without opening separate modal forms, while dedicated AI action triggers allow you to selectively regenerate or refine specific fields on demand.
       </p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -241,15 +241,15 @@
             <i class="fa-solid fa-i-cursor text-sky-400"></i> Double-Click Inline Editing
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Double-click any field &mdash; Title, Executive Summary, Answer Summary, or individual Takeaway points &mdash; to edit it directly in place. Empty fields present subtle placeholders that open a clean editor upon double-clicking. Edits save on blur or Enter.
+            Double-click any field &mdash; Title, Executive Summary, Answer Summary, or Takeaways &mdash; to edit it directly in place. Edits commit automatically on blur or <kbd>Enter</kbd>.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
           <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
-            <i class="fa-solid fa-rotate-right text-emerald-400"></i> Margin Auto-Generate Buttons
+            <i class="fa-solid fa-rotate-right text-emerald-400"></i> Targeted Field Generators
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Round refresh icons hang neatly into the right margin beside generatable fields (Title, Taxonomies, Summary, and Takeaways). Clicking any icon prompts Gemini AI to re-extract or suggest content for only that specific section.
+            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Takeaways) without affecting the rest of the document.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -257,7 +257,7 @@
             <i class="fa-solid fa-tags text-purple-400"></i> In-Place Taxonomy Editor
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Clicking the taxonomy badges in the note header reveals an inline editor right in place. Remove tags with <code>&times;</code>, type and press <kbd class="px-1 py-0.5 rounded bg-[var(--code-bg)] border border-[var(--border)] text-[10px]">Enter</kbd> to add new ones, auto-tag via the margin refresh button, or click <strong>Done</strong> to save.
+            Clicking the taxonomy badges in the note header opens an inline manager to add new tags, remove existing tags, or trigger AI auto-tagging.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -265,21 +265,12 @@
             <i class="fa-solid fa-expand text-[var(--accent)]"></i> Distraction-Free Focus Mode
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Double-clicking the note body or clicking the <strong>Focus Mode</strong> button expands the Markdown content into a distraction-free full-screen editor with live auto-saving.
+            Double-clicking the note body or activating Focus Mode expands the Markdown editor into a full-screen writing view with live auto-saving and Theme Prompt context.
           </p>
         </div>
       </div>
       <p class="text-xs text-[var(--text-muted)]">
-        <strong>Floating View Toggles & Left Docking on Collapse (v2.6.3):</strong> View toggles for the Library (<i class="fa-solid fa-folder-tree"></i>) and Notes list (<i class="fa-solid fa-list"></i>) are absolutely positioned in the 50px top padding zone above each respective view. When either view is collapsed, its toggle smoothly glides to the left edge of the screen to allow effortless retoggling at any time. When sidebars are open, smooth 300ms transitions maintain layout stability and scroll state without cluttering the document reader top bar.
-      </p>
-      <p class="text-xs text-[var(--text-muted)] mt-2">
-        <strong>Persistent Top-Right Workspace Controls & Seamless Header (v2.6.6):</strong> The workspace status pill (showing current file and sync state), settings gear, and workspace options menu are positioned at the top-right corner of the workspace opposite the view toggles. This ensures workspace settings and backup actions are never buried when the taxonomy sidebar is collapsed. The Content View header has also had its solid background color removed for a clean, unified document canvas.
-      </p>
-      <p class="text-xs text-[var(--text-muted)] mt-2">
-        <strong>Responsive Prompt Layout (v2.5.3):</strong> For Theme Prompt entries, the Prompt Question and Answer Summary cards dynamically adapt to the note's actual available width via CSS container queries. When sidebars expand or the note width collapses below 580px, the cards smoothly transition from side-by-side to a vertical stack for optimal reading comfort.
-      </p>
-      <p class="text-xs text-[var(--text-muted)] mt-2">
-        <strong>Saved View Visibility & Layout Persistence (v2.5.4):</strong> The active visibility state of all views (Library, Notes list, and AI Assistant) is saved directly into the knowledge base file and restored automatically whenever the file is opened. Selecting or browsing notes now preserves your open views without resetting sidebar states.
+        <strong>Workspace State Persistence:</strong> The open/collapsed states of sidebars and panels are persisted into your workspace file and restored automatically across sessions.
       </p>
     </section>
 
@@ -288,13 +279,13 @@
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-cloud-arrow-down text-sky-400 text-sm"></i> 5. Content Ingestion & Media Scrubbing
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        Paste any URL, YouTube link, or raw text into the top ingestion bar:
+      <p class="mb-3 text-[var(--text-main)]">
+        The ingestion pipeline transforms raw web links, multimedia URLs, and pasted text into clean, structured knowledge entries. Ingested content is automatically sanitized, formatted into Markdown, and enriched with AI-generated metadata.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Web Articles:</strong> Uses CORS proxying and <code>turndown</code> to strip navbars, ads, scripts, and footers, extracting clean Markdown into the note content.</li>
-        <li><strong>Video & Audio:</strong> YouTube and Vimeo links embed an interactive player directly inside the note view.</li>
-        <li><strong>Automatic Metadata Extraction:</strong> If Gemini API key is configured, saving a new note automatically generates a concise title, executive summary, 3-5 bulleted key takeaways, and suggested categories/tags.</li>
+        <li><strong>Web Article Scraping:</strong> Strips navigation bars, advertisements, cookie notices, and scripts using <code>turndown</code> to capture clean article text and formatting.</li>
+        <li><strong>Media Embedding:</strong> Automatically recognizes YouTube and Vimeo links to embed a responsive media player alongside synchronized note-taking capabilities.</li>
+        <li><strong>Automatic Metadata Extraction:</strong> On save, Gemini AI extracts a concise title, an executive summary (TL;DR), 3&ndash;5 bulleted takeaways, and relevant domain categories/tags.</li>
       </ul>
     </section>
 
@@ -303,28 +294,25 @@
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-sm"></i> 6. Gemini AI Synthesis & Theme Prompt Generator
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        Clicking <strong>"Generate Prompt"</strong> above the note list synthesizes an exploratory reflection question designed to prompt immediate deep thought:
+      <p class="mb-3 text-[var(--text-main)]">
+        The Theme Prompt Generator acts as an autonomous intellectual sparring partner. By analyzing themes, contradictions, and loose ends across your knowledge base, it generates thought-provoking reflection questions that prompt you to write new notes and deepen your understanding.
       </p>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)] space-y-2.5 text-xs text-[var(--text-muted)]">
-        <div><strong>Topic Selection Weighting Hierarchy:</strong></div>
-        <div>1. <span class="text-amber-400 font-semibold">Primary Topics (Highest Weight):</span> Manual entries (Yellow Notes). The model grounds questions primarily in your own direct thoughts and reflections.</div>
-        <div>2. <span class="text-orange-400 font-semibold">Secondary Topics:</span> Previous prompt responses (Orange Notes). The model explores how your thinking has evolved since earlier reflections.</div>
-        <div>3. <span class="text-sky-400 font-semibold">Supporting Context Only:</span> Ingested external entries (Web/Media/PDF). These are never the central subject; they are used only to cross-reference or illuminate manual notes.</div>
+        <div><strong>Synthesis Hierarchy & Generation Logic:</strong></div>
+        <div>1. <strong>Primary Topics (Highest Weight):</strong> Manual notes receive the highest priority, grounding questions in your original ideas and personal reflections.</div>
+        <div>2. <strong>Secondary Topics:</strong> Previous prompt responses explore how your perspective has evolved over time.</div>
+        <div>3. <strong>Supporting Context:</strong> Ingested external materials (Web, Media, PDF) provide background references without becoming the sole subject of prompts.</div>
         <div class="pt-2 border-t border-[var(--border)]">
-          <strong>Time Span:</strong> Evaluates your <em>entire knowledge base across all time</em>, with ~65% weighting given to entries from the last 4 months.
+          <strong>Temporal Weighting:</strong> Evaluates your complete knowledge base across all time, giving ~65% priority to notes created or modified in the last 4 months.
         </div>
         <div>
-          <strong>Taxonomy Scope (v2.5.5):</strong> When any project, category, or tag filters are active in the sidebar, the prompt generator strictly isolates candidate notes to matching entries (for example, selecting project <code>music</code> feeds only music notes into the prompt generator). Notes written from the resulting prompt automatically inherit the active taxonomy.
+          <strong>Scoped Context:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. If filters are active, prompt generation isolates its synthesis strictly to those visible notes, and notes created from the prompt inherit active taxonomies.
         </div>
         <div>
-          <strong>Inline Note References (v2.7.3):</strong> When a generated prompt references ideas, loose ends, or themes from previous entries, it automatically embeds inline references using <code>[[kb-ref:ENTRY_ID]]</code> syntax. Hovering over a reference badge displays an instant summary card popover, and clicking it brings up the full note preview.
+          <strong>Inline Note References:</strong> Prompts automatically embed bi-directional references (<code>[[kb-ref:ENTRY_ID]]</code>) to source notes, allowing immediate preview and navigation.
         </div>
         <div>
-          <strong>Minimum Entry Threshold (v2.7.5):</strong> The "Generate Prompt" button is displayed only when the library contains at least 2 entries to ensure comparative synthesis across notes.
-        </div>
-        <div>
-          <strong>Non-Repetition:</strong> Remembers all previous prompts in <code>storedPrompts</code> to prevent repeating or closely retreading questions.
+          <strong>Non-Repetition:</strong> Retains a history of previously generated prompts in <code>storedPrompts</code> to prevent generating redundant or repetitive questions.
         </div>
       </div>
     </section>
@@ -332,15 +320,16 @@
     <!-- 7. Unified Assistant -->
     <section id="assistant" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-comments text-[var(--accent)] text-sm"></i> 7. Unified AI Assistant & Chat Context
+        <i class="fa-solid fa-comments text-[var(--accent)] text-sm"></i> 7. Unified AI Assistant & Chat Modes
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        The Assistant panel (toggle via <code>Cmd+J</code> / <code>Ctrl+J</code> or the dedicated top-right magic wand icon toggle button <code>fa-wand-magic-sparkles</code> matching the Library and Notes toggles) provides an interactive conversational copilot:
+      <p class="mb-3 text-[var(--text-main)]">
+        The integrated AI Assistant provides conversational intelligence directly alongside your notes. It can switch dynamically between deep inspection of your currently open document and multi-pass synthesis across your entire library of notes.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Current Entry Mode:</strong> Focuses exclusively on the active note to brainstorm, expand, critique, or extract specific concepts.</li>
-        <li><strong>Whole Brain Mode:</strong> Synthesizes across all documents in your library to spot cross-disciplinary patterns and unexpected connections.</li>
-        <li><strong>Insert Into Note:</strong> Click the insert action on any assistant reply to immediately append the text into your active note editor.</li>
+        <li><strong>Current Entry Mode:</strong> Focuses exclusively on the active document to brainstorm, outline, critique, elaborate, or summarize specific sections.</li>
+        <li><strong>Whole Brain Mode:</strong> Evaluates all notes and summaries across the entire knowledge base to identify cross-disciplinary connections, recurring themes, or knowledge gaps.</li>
+        <li><strong>Direct Content Insertion:</strong> One-click insertion allows you to transfer assistant answers or synthesized outlines straight into your active note editor.</li>
+        <li><strong>Keyboard Accessibility:</strong> Toggle the assistant drawer anytime with <kbd>Cmd+J</kbd> or <kbd>Ctrl+J</kbd>.</li>
       </ul>
     </section>
 
@@ -349,36 +338,35 @@
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-link text-[var(--accent)] text-sm"></i> 8. Backlinks & Decimal Numeric IDs
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        Ali Brain implements bi-directional knowledge graphs without database dependencies:
+      <p class="mb-3 text-[var(--text-main)]">
+        Ali Brain implements a lightweight, bi-directional referencing and linking network. You can connect ideas across different documents seamlessly without relying on proprietary database graph structures or fragile absolute paths.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Wiki-Style Shortcodes:</strong> Typing <code>[[kb-ref:ENTRY_ID]]</code> creates an interactive link to another note. Hovering displays an instantaneous preview modal; clicking selects the target note.</li>
-        <li><strong>Drag to Reference:</strong> Drag any note card from the list into the content editor to auto-insert a formatted backlink.</li>
-        <li><strong>Chronological Decimal IDs:</strong> Every note receives a numeric ID (e.g. <code>#1</code>, <code>#2</code>, <code>#2.1</code>) allowing historical insertions into time gaps while preserving clean numeric chronology.</li>
+        <li><strong>Wiki Shortcodes:</strong> Using <code>[[kb-ref:ENTRY_ID]]</code> establishes an interactive link. Hovering over the reference renders an instant summary popover, while clicking navigates directly to the referenced note.</li>
+        <li><strong>Drag to Reference:</strong> Drag any note card from the sidebar list and drop it into the Markdown editor to automatically insert a formatted reference link.</li>
+        <li><strong>Chronological Decimal IDs:</strong> Notes use stable decimal identifiers (e.g. <code>#1</code>, <code>#2</code>, <code>#2.1</code>), permitting chronological insertions into intermediate timeline gaps while maintaining stable referencing.</li>
       </ul>
     </section>
 
-    <!-- 9. Settings & Protocol -->
+    <!-- 9. Settings & Workspace -->
     <section id="settings" class="scroll-mt-6">
       <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-sliders text-[var(--accent)] text-sm"></i> 9. Settings & Workspace Management
       </h2>
-      <p class="mb-3 text-[var(--text-muted)]">
-        Settings are accessible via the gear view toggle docked directly above the Content view, while file name, sync status, and workspace options are neatly docked at the bottom of the Taxonomy view sidebar:
+      <p class="mb-3 text-[var(--text-main)]">
+        Workspace settings give you comprehensive control over AI configuration, model assignments, API key rotation, and multi-file merges. All settings are stored locally within your browser and knowledge base file.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Gemini API Keys:</strong> Configure one or more Gemini API keys (managed in rotation).</li>
-        <li><strong>Task-Specific AI Models (v2.6.0, v2.7.5):</strong> Assign specialized models tailored to each task category. Defaults across all tasks to <code>gemini-flash-lite-latest</code> for fast response and reduced token overhead:
+        <li><strong>API Key Management:</strong> Store and rotate multiple Google Gemini API keys to distribute usage across quotas.</li>
+        <li><strong>Task-Specific Model Assignment:</strong> Assign distinct Gemini models optimized for specific task categories:
           <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><em>Quick Metadata & Summaries:</em> High-speed models for scraping, TL;DR, key takeaways, and auto-tagging.</li>
-            <li><em>Theme Prompts:</em> Models for exploring loose ends and juxtaposing notes.</li>
-            <li><em>AI Assistant Copilot:</em> Interactive chat and whole-brain multi-pass knowledge graph synthesis.</li>
+            <li><em>Metadata & Summaries:</em> High-speed models (e.g. <code>gemini-flash-lite-latest</code>) for fast titles, takeaways, and auto-tagging.</li>
+            <li><em>Theme Prompts:</em> High-reasoning models for synthesizing loose ends and generating reflection questions.</li>
+            <li><em>AI Assistant Copilot:</em> Interactive models for contextual chatting and knowledge-base synthesis.</li>
           </ul>
         </li>
-        <li><strong>Live API Model Discovery (v2.6.4):</strong> Click "Fetch Models from API" to dynamically populate model pickers with 'latest' alias models (e.g. <code>gemini-flash-lite-latest</code>, <code>gemini-flash-latest</code>, <code>gemini-pro-latest</code>) currently active on your Google AI Studio account, filtering out deprecated snapshots and version clutter, while falling back resiliently to the default lite model (<code>gemini-flash-lite-latest</code>) when offline.</li>
-        <li><strong>External Library Merge:</strong> Manually merge secondary JSON files into your active workspace with live count reporting.</li>
-        <li><strong>Version Indicator:</strong> Displays current version number (<code>v2.7.7</code>) with direct access to this Readme manual documentation.</li>
+        <li><strong>Live Model Discovery:</strong> Dynamically fetch available models directly from Google AI Studio to select the latest versions and experimental releases.</li>
+        <li><strong>Workspace Merging:</strong> Merge secondary JSON knowledge bases into your active workspace with automatic duplicate handling and conflict resolution.</li>
       </ul>
     </section>
 
