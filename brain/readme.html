@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.7.8</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.14</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -209,21 +209,21 @@
           <i class="fa-solid fa-play"></i> Media &bull; Videos & Audio (YouTube/Vimeo)
         </span>
         <span class="badge" style="background-color: #38bdf820; color: #38bdf8; border: 1px solid #38bdf8;">
-          <i class="fa-solid fa-link"></i> Web &bull; Scraped Web Pages & Articles
+          <i class="fa-solid fa-link"></i> Web &bull; Scraped Web Pages, Articles & PDFs
         </span>
-        <span class="badge" style="background-color: #ec489920; color: #ec4899; border: 1px solid #ec4899;">
-          <i class="fa-solid fa-file-pdf"></i> PDFs &bull; PDF Documents
+        <span class="badge" style="background-color: #a855f720; color: #a855f7; border: 1px solid #a855f7;">
+          <i class="fa-solid fa-comment-dots"></i> AI Chat &bull; Archived AI Conversations
         </span>
       </div>
       <div class="p-3.5 rounded bg-[var(--bg-pane)] border border-[var(--border)] text-xs text-[var(--text-muted)] space-y-1.5">
         <div><strong>Core Filtering & Taxonomy Capabilities:</strong></div>
-        <div>&bull; <strong>Type Toggle:</strong> Click any entry type badge to toggle that type on or off in the list.</div>
-        <div>&bull; <strong>Solo Filtering:</strong> Shift + Click any type to solo it &mdash; hiding all other types in a single click. Shift-clicking the active solo type again restores all types.</div>
+        <div>&bull; <strong>Type Toggle:</strong> Click any entry type badge to toggle that type on or off in the list. Note that <em>AI Chat</em> is hidden by default to keep your note list uncluttered.</div>
+        <div>&bull; <strong>Solo Filtering:</strong> Shift + Click any type to solo it &mdash; hiding all other types in a single click. Shift-clicking the active solo type again restores all default types.</div>
         <div>&bull; <strong>Multi-Dimensional Taxonomy:</strong> Filter notes by Projects, Categories, and Tags. Drag notes directly onto taxonomy items in the sidebar to assign them instantly.</div>
         <div>&bull; <strong>Taxonomy Management:</strong> Hover over any project, category, or tag in the sidebar to reveal a delete button that removes the taxonomy across all notes in the database.</div>
         <div>&bull; <strong>Pinning:</strong> Pin essential notes to keep them anchored at the top of the list for fast reference.</div>
         <div>&bull; <strong>Fast Search & Clear:</strong> Real-time text search filters across titles and note contents. An inline clear button and <kbd>Escape</kbd> shortcut instantly reset your query.</div>
-        <div>&bull; <strong>Taxonomy & Entry-Type Separation:</strong> AI taxonomy generation and auto-tagging strictly separate structural document formats (notes, media, web, prompts, pdf) from domain topics to keep your taxonomy clean.</div>
+        <div>&bull; <strong>Taxonomy & Entry-Type Separation:</strong> AI taxonomy generation and auto-tagging strictly separate structural document formats (notes, media, web, prompts, ai chat) from domain topics to keep your taxonomy clean.</div>
       </div>
     </section>
 
@@ -244,12 +244,12 @@
             Double-click any field &mdash; Title, Executive Summary, Answer Summary, or Takeaways &mdash; to edit it directly in place. Edits commit automatically on blur or <kbd>Enter</kbd>.
           </p>
         </div>
-        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
           <div class="font-bold text-xs mb-1 text-[var(--text-main)] flex items-center gap-1.5">
-            <i class="fa-solid fa-rotate-right text-emerald-400"></i> Targeted Field Generators
+            <i class="fa-solid fa-rotate-right text-emerald-400"></i> Targeted Field Generators (On-Demand Only)
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Takeaways) without affecting the rest of the document.
+            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Takeaways) without affecting the rest of the document. To preserve API quota and avoid token inflation, saving notes does not run automatic AI calls; metadata is generated strictly on demand when requested.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -265,7 +265,7 @@
             <i class="fa-solid fa-expand text-[var(--accent)]"></i> Distraction-Free Focus Mode
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Double-clicking the note body or activating Focus Mode expands the Markdown editor into a full-screen writing view with live auto-saving and Theme Prompt context.
+            Double-clicking note content or clicking Edit opens an inline textarea editor with a visible Focus Mode link. Activating Focus Mode launches a centered distraction-free writing window. Exiting Focus Mode (via Esc, backdrop click, or close button) immediately finishes editing, saves all changes, and returns to the rendered Markdown reader view.
           </p>
         </div>
       </div>
@@ -285,7 +285,7 @@
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Web Article Scraping:</strong> Strips navigation bars, advertisements, cookie notices, and scripts using <code>turndown</code> to capture clean article text and formatting.</li>
         <li><strong>Media Embedding:</strong> Automatically recognizes YouTube and Vimeo links to embed a responsive media player alongside synchronized note-taking capabilities.</li>
-        <li><strong>Automatic Metadata Extraction:</strong> On save, Gemini AI extracts a concise title, an executive summary (TL;DR), 3&ndash;5 bulleted takeaways, and relevant domain categories/tags.</li>
+        <li><strong>Direct Substance Metadata Extraction:</strong> On ingestion or when explicitly requested via field generator buttons, Gemini AI extracts a concise title and a direct, substantive executive summary (2&ndash;3 informative sentences articulating context, core arguments, and takeaways) without throat-clearing preambles (e.g. "This note summarises..."), alongside 3&ndash;5 context-rich key takeaways and domain taxonomy tags. Metadata generation never runs automatically during routine note saves.</li>
       </ul>
     </section>
 
@@ -306,7 +306,7 @@
           <strong>Temporal Weighting:</strong> Evaluates your complete knowledge base across all time, giving ~65% priority to notes created or modified in the last 4 months.
         </div>
         <div>
-          <strong>Scoped Context:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. If filters are active, prompt generation isolates its synthesis strictly to those visible notes, and notes created from the prompt inherit active taxonomies.
+          <strong>Scoped Context:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. If filters are active, prompt generation isolates its synthesis strictly to those visible notes, and notes created from the prompt inherit active taxonomies. <em>AI Chat</em> archive entries are strictly excluded from the prompt candidate pool under all conditions. When only the default-hidden <em>AI Chat</em> type is deselected, the "Generate Prompt" button cleanly displays its standard label without listing type filters, treating all content types as active.
         </div>
         <div>
           <strong>Inline Note References:</strong> Prompts automatically embed bi-directional references (<code>[[kb-ref:ENTRY_ID]]</code>) to source notes, allowing immediate preview and navigation.
@@ -326,10 +326,18 @@
         The integrated AI Assistant provides conversational intelligence directly alongside your notes. It can switch dynamically between deep inspection of your currently open document and multi-pass synthesis across your entire library of notes.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Current Entry Mode:</strong> Focuses exclusively on the active document to brainstorm, outline, critique, elaborate, or summarize specific sections.</li>
-        <li><strong>Whole Brain Mode:</strong> Evaluates all notes and summaries across the entire knowledge base to identify cross-disciplinary connections, recurring themes, or knowledge gaps.</li>
-        <li><strong>Direct Content Insertion:</strong> One-click insertion allows you to transfer assistant answers or synthesized outlines straight into your active note editor.</li>
-        <li><strong>Keyboard Accessibility:</strong> Toggle the assistant drawer anytime with <kbd>Cmd+J</kbd> or <kbd>Ctrl+J</kbd>.</li>
+        <li><strong>Current Entry Mode:</strong> Focuses on the active document to brainstorm, outline, critique, elaborate, or summarize specific sections. To minimize token usage, background archive context is strictly scoped to the 10 most recent prior notes sharing the current note's category or project, rather than dumping the entire library. The conversation is hosted inside the right collapsible drawer, bound to the open document with quick prompt chips.</li>
+        <li><strong>Search Grounding Disabled:</strong> Google Search grounding tools are disabled across all assistant modes (single-note, workspace, and whole brain) to eliminate massive token retrieval overhead and keep conversations grounded exclusively in your notes.</li>
+        <li><strong>Full-Width Whole Brain AI View:</strong> When Whole Brain chat is selected (via the list header <em>+ Chat</em> button, the assistant drawer segmented switch, or an existing AI chat note), the main document view is fully replaced with an expansive, dedicated AI Chat interface featuring pinned message history, real-time citation synthesis, and a bottom input bar.</li>
+        <li><strong>Immediate Placeholder Creation:</strong> Starting a new Whole Brain chat immediately creates a dedicated <em>AI Chat</em> placeholder entry (purple) in the library so every conversation exists as its own persistent entity from the very first moment.</li>
+        <li><strong>Non-Destructive Archival & Natural Continuation:</strong> Every message exchange is stored non-destructively directly on the active AI Chat entry. When you select an archived AI chat from the notes list, its entire conversational transcript and message history are automatically repopulated into the full-width AI view, allowing you to continue the conversation naturally while preserving session integrity and auto-updating summaries.</li>
+        <li><strong>Initial Note Selection on Load:</strong> Because <em>AI Chat</em> entries have visibility turned off by default in the list view, opening the application automatically selects the most recent non-AI Chat note (or top visible entry according to active type filters) so you are immediately presented with an active, visible document.</li>
+        <li><strong>Direct Content Insertion:</strong> One-click insertion transfers assistant answers or synthesized outlines straight into your active note editor, syncing in-memory edit buffers so subsequent edits and auto-saving never overwrite or discard inserted content.</li>
+        <li><strong>Automatic Empty Placeholder Cleanup:</strong> When a new Whole Brain AI chat is created, if no messages are sent and you click off or navigate away to another note, the empty placeholder entry is automatically deleted and pruned from both the library list and navigation history so unstarted sessions never clutter your knowledge base.</li>
+        <li><strong>Strict Assistant Drawer Segregation:</strong> Whole Brain chat mode is completely isolated from Current Entry chat. When in Whole Brain chat, the top-right magic wand toggle button is cleanly removed from the DOM entirely, keyboard shortcuts (<kbd>Cmd+J</kbd> / <kbd>Cmd+L</kbd> / <kbd>Ctrl+J</kbd>) are ignored, and the assistant drawer is automatically collapsed so Current Entry chat can never be accessed during Whole Brain chat.</li>
+        <li><strong>Clean Borderless Message Bubbles & Layout:</strong> All message entries across both the full-width Whole Brain conversation and the Current Entry assistant drawer are designed without borders, floating with clean contrast and subtle card shadows against the canvas. In Whole Brain mode, dividing lines below the header and above the message input bar are eliminated for a seamless document flow.</li>
+        <li><strong>Concise & Conversational Response Rules:</strong> Across all assistant modes (Whole Brain and Current Entry), AI responses are governed by strict concise writing rules and a 50-word target limit unless longer answers are specifically requested or necessary, defaulting to short. Assistant models are calibrated with a focused temperature of 0.3. The assistant proceeds step-by-step, avoids spilling large amounts of text, uses the active voice, cuts unnecessary filler, prefers short words and plain English, keeps sentences declarative and focused (one idea per sentence), uses natural contractions, reserves emojis strictly for headers, and cites sources cleanly using <code>[[kb-ref:ID]]</code>.</li>
+        <li><strong>Keyboard Accessibility:</strong> Toggle the assistant drawer anytime with <kbd>Cmd+J</kbd> or <kbd>Ctrl+J</kbd> when viewing standard notes.</li>
       </ul>
     </section>
 
@@ -378,7 +386,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.7.8</strong></span>
+      <span>Version <strong>v2.8.14</strong></span>
       <a href="index.html">Back to Brain App</a>
     </div>
   </footer>

@@ -115,9 +115,140 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.7.8";
+    const APP_VERSION = "v2.8.14";
 
     const CHANGELOG = [
+      {
+        version: "v2.8.14",
+        date: "2026-10-12",
+        highlights: [
+          "Taxonomy-Scoped Single Note Chat Context: Scoped single-note chat background context strictly to up to 10 previous notes sharing the active note's category or project, eliminating library-wide prompt context dumps.",
+          "Search Grounding Disabled: Turned off Google Search grounding across single-note, workspace, and whole-brain AI chats to reduce input token overhead.",
+          "On-Demand Metadata Generation: Removed automatic background metadata generation on save; metadata (title, summary, takeaways, taxonomies) is generated strictly when requested by the user."
+        ]
+      },
+      {
+        version: "v2.8.13",
+        date: "2026-10-12",
+        highlights: [
+          "Clean Prompt Button Label: Suppressed taxonomy and type filter suffixes on the 'Generate Prompt' button when only the default-hidden AI Chat type is deselected, cleanly displaying 'Generate Prompt' as if all types were active."
+        ]
+      },
+      {
+        version: "v2.8.12",
+        date: "2026-10-12",
+        highlights: [
+          "Ultra-Concise 50-Word Target: Tightened the AI response limit to under 50 words unless requested or necessary, defaulting to punchy, conversational answers."
+        ]
+      },
+      {
+        version: "v2.8.11",
+        date: "2026-10-12",
+        highlights: [
+          "Strict 100-Word Response Ceiling: Enforced a 100-word maximum limit on all AI Assistant responses across Whole Brain and Current Entry modes unless longer answers are specifically requested.",
+          "Temperature Calibration to 0.3: Reduced temperature to 0.3 across all assistant and whole-brain chat payloads to ensure disciplined, concise, and deterministic responses."
+        ]
+      },
+      {
+        version: "v2.8.10",
+        date: "2026-10-11",
+        highlights: [
+          "Manual Focus Mode Activation: Content editing now opens in an inline textarea by default without automatically launching Focus Mode. The distraction-free Focus Mode is accessed exclusively via the visible Focus link above the content editor.",
+          "Auto-Save on Focus Exit: Exiting Focus Mode (via Esc, backdrop click, or close button) immediately finishes editing, saves all changes to disk and storage, and returns directly to the rendered Markdown reader view."
+        ]
+      },
+      {
+        version: "v2.8.9",
+        date: "2026-10-11",
+        highlights: [
+          "Concise & Conversational AI Responses: Updated system prompts across Whole Brain and Current Entry assistant modes to enforce concise, conversational, and direct responses that progress one step at a time without text dumps.",
+          "Strict Concise Writing Rules: Embedded concise writing rules (active voice, short declarative sentences, plain English, contractions, zero hyperbole, no filler preambles, and emojis in headings only) into assistant system instructions."
+        ]
+      },
+      {
+        version: "v2.8.8",
+        date: "2026-10-11",
+        highlights: [
+          "Direct Substance Summaries: Eliminated redundant preamble meta-openings (e.g. 'This note summarises...', 'This document explores...') across all AI generation pipelines (URL/PDF/Media ingestion, TL;DR generation, and auto-save metadata enrichment).",
+          "Automated Summary Preamble Sanitization: Added automatic post-generation filtering to strip throat-clearing meta-phrases and jump immediately into the core findings, substance, and takeaways."
+        ]
+      },
+      {
+        version: "v2.8.7",
+        date: "2026-10-11",
+        highlights: [
+          "AI View Toggle Removal in Whole Brain Mode: Cleanly removed the top-right AI Assistant toggle button from the interface entirely when in Whole Brain mode, keeping the top navigation area uncluttered without displaying disabled controls.",
+          "Seamless Whole Brain Chat Layout: Eliminated the hard dividing borders below the sticky chat header and above the bottom message input area, creating an open, unbordered conversational reading and typing flow."
+        ]
+      },
+      {
+        version: "v2.8.6",
+        date: "2026-10-11",
+        highlights: [
+          "Automatic Empty Chat Placeholder Cleanup: Clicking off or navigating away from an empty Whole Brain AI chat placeholder with no message history immediately deletes and cleans up the placeholder from both the notes library and navigation history.",
+          "Strict Assistant Drawer Segregation: When in Whole Brain chat, the top-right AI view toggle button is explicitly disabled (with dimmed opacity and disabled cursor), keyboard shortcuts (Cmd+J / Cmd+L / Ctrl+J) are ignored, and the assistant drawer is automatically collapsed to guarantee Current Entry chat is never accessible within Whole Brain mode.",
+          "Clean Borderless Chat Bubbles: Removed all borders from chat message cards across both Whole Brain full-width view and Current Entry assistant drawer, achieving a clean, modern aesthetic with subtle elevation shadows."
+        ]
+      },
+      {
+        version: "v2.8.5",
+        date: "2026-10-11",
+        highlights: [
+          "Full-Width Whole Brain AI View: When Whole Brain chat is selected, the center document view is fully replaced with an expansive, dedicated AI Chat interface featuring pinned message history, real-time citation synthesis, and a bottom input bar.",
+          "Immediate Placeholder Chat Creation: Initiating a Whole Brain chat immediately creates a dedicated AI Chat placeholder entry in the library so each discussion exists as its own persistent entity.",
+          "Seamless Archive Repopulation & Continuation: Selecting any archived AI Chat note from the library repopulates its entire conversational history into the full-width AI view, allowing users to continue the chat naturally while non-destructively updating message logs and summaries.",
+          "Dedicated Current-Entry Drawer: The right-hand AI Assistant drawer is retained exclusively for focused discussion with the active document when viewing standard notes."
+        ]
+      },
+      {
+        version: "v2.8.4",
+        date: "2026-10-11",
+        highlights: [
+          "Non-AI Chat Initial Note Selection on App Load: When the workspace loads, initial note selection automatically selects the most recent non-AI Chat note (or top visible entry according to active type filters), preventing the application from loading with an archived AI chat note selected when AI chat visibility is off."
+        ]
+      },
+      {
+        version: "v2.8.3",
+        date: "2026-10-11",
+        highlights: [
+          "Strict Exclusion of AI Chat Archives from Prompt Generation: Theme prompt synthesis, candidate pooling, and visible note thresholds now strictly exclude all AI Chat archive entries, ensuring generated reflection questions synthesize authentic user notes and external materials rather than prior conversational logs.",
+          "Editable & Generatable Summaries and Key Takeaways for AI Chats: Enabled double-click inline editing and Gemini auto-generation (refresh/add/delete) for executive summaries and key takeaways on AI Chat entries, while preserving the immutability of the underlying chat transcript content."
+        ]
+      },
+      {
+        version: "v2.8.2",
+        date: "2026-10-11",
+        highlights: [
+          "Dynamic Assistant 'New Chat' Visibility: The 'New Chat' button in Whole Brain mode is now conditionally rendered only when the conversation contains active messages, preventing empty session resets.",
+          "Immutable AI Chat Archives: AI Chat entry contents and transcripts are now strictly non-editable and read-only, disabling Focus Mode, double-click inline edits, backlink drops, and response insertions to protect session integrity.",
+          "Descriptive Summaries & Key Takeaways: Replaced artificial 15-word constraints across all Gemini AI ingestion, auto-save, TL;DR, and prompt synthesis pipelines with instructions to generate comprehensive, descriptive 2-3 sentence summaries and context-rich takeaways."
+        ]
+      },
+      {
+        version: "v2.8.1",
+        date: "2026-10-11",
+        highlights: [
+          "Fix Workspace Initialization & Loading Regression: Resolved ReferenceError where `migrated` was undefined during workspace initialization (`loadWorkspaceData`) and manual JSON import (`handleManualImport`) by correctly calling `migrateWorkspaceData(data)`."
+        ]
+      },
+      {
+        version: "v2.8.0",
+        date: "2026-10-11",
+        highlights: [
+          "AI Assistant Header & Streamlined Controls: Removed redundant close and archive icons; kept model name badge alongside the assistant title, and eliminated the colored square preceding the title.",
+          "Merged Web & PDF Entry Types: Unified 'PDF' and 'Web' into a single 'Web' entry type with sky blue accent color (#38bdf8), maintaining complete support for local and linked PDF document analysis.",
+          "Dedicated 'AI Chat' Entry Type: Created a new 'aiChat' entry type with distinctive purple styling (#a855f7) and speech bubble icon. Visually hidden by default in the list filter, allowing users to toggle or solo inspect conversational archives whenever desired.",
+          "Automatic Whole Brain Chat Archival on Startup: Active whole-brain assistant conversations are safely converted and archived into structured AI Chat entries upon application launch, resetting to a fresh session while preserving full markdown dialogues.",
+          "On-Demand Chat Archival & New Chat Flow: Starting a new chat in Whole Brain mode cleanly archives the active conversation into an AI Chat entry, seamlessly resetting the session. Current Entry discussions persist on their active document without disruptive archiving."
+        ]
+      },
+      {
+        version: "v2.7.9",
+        date: "2026-10-11",
+        highlights: [
+          "Preserve Inserted AI Summaries & Responses Across Note Edits: Fixed an issue where inserting an AI copilot synthesis into an open note was lost upon editing or auto-saving. Insertion now immediately updates both active entries and in-memory draft buffers (`editData` & `editDataRef`), and saving safely cleans up editing buffers while preserving note contents and summaries."
+        ]
+      },
       {
         version: "v2.7.8",
         date: "2026-10-11",
@@ -383,12 +514,17 @@
       return Boolean(entry.promptQuestion || (Array.isArray(entry.tags) && entry.tags.includes('prompt')) || (Array.isArray(entry.categories) && entry.categories.includes('prompt')));
     };
 
+    const isAiChatEntry = (entry) => {
+      if (!entry) return false;
+      return entry.type === 'aiChat' || (Array.isArray(entry.chatMessages) && entry.chatMessages.length > 0) || (Array.isArray(entry.tags) && entry.tags.includes('ai-chat')) || (Array.isArray(entry.categories) && entry.categories.includes('ai-chat'));
+    };
+
     const ENTRY_TYPES = [
       { id: 'note', label: 'Notes', color: '#f59e0b', icon: 'fa-file-lines' },
       { id: 'prompt', label: 'Prompts', color: '#10e567', icon: 'fa-brain' },
       { id: 'media', label: 'Media', color: '#ff5252', icon: 'fa-play' },
       { id: 'web', label: 'Web', color: '#38bdf8', icon: 'fa-link' },
-      { id: 'pdf', label: 'PDFs', color: '#ec4899', icon: 'fa-file-pdf' }
+      { id: 'aiChat', label: 'AI Chat', color: '#a855f7', icon: 'fa-comment-dots' }
     ];
 
     // Keywords and aliases corresponding to entry types that should not be used as categories or tags
@@ -397,7 +533,8 @@
       'prompt', 'prompts',
       'media', 'video', 'videos', 'audio', 'podcast', 'podcasts',
       'web', 'website', 'webpage', 'article', 'articles',
-      'pdf', 'pdfs', 'document', 'documents'
+      'pdf', 'pdfs', 'document', 'documents',
+      'aichat', 'ai-chat', 'chat', 'chats'
     ]);
 
     const isEntryTypeTaxonomy = (term) => {
@@ -408,11 +545,11 @@
 
     const getEntryType = (entry) => {
       if (!entry) return 'note';
+      if (isAiChatEntry(entry)) return 'aiChat';
       if (isPromptEntry(entry)) return 'prompt';
-      const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
-      if (isPdf) return 'pdf';
       if (isMediaSource(entry.sourceUrl)) return 'media';
-      if (entry.sourceUrl) return 'web';
+      const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
+      if (isPdf || entry.sourceUrl) return 'web';
       return 'note';
     };
 
@@ -440,6 +577,26 @@
         return marked.parseInline(content || '');
       }
       return content || '';
+    };
+
+    const cleanExecutiveSummary = (text) => {
+      if (!text || typeof text !== 'string') return '';
+      let cleaned = text.trim();
+      // Strip redundant meta-intros: "This note summarises...", "This document explores...", etc.
+      cleaned = cleaned.replace(/^(this\s+(note|document|article|text|video|piece|entry|chat|conversation|dialogue)\s+(summarises|summarizes|provides\s+a\s+summary\s+of|outlines|explores|discusses|details|examines|focuses\s+on|describes|presents|covers|highlights))\s*(that\s+|how\s+|the\s+|an\s+|a\s+|:\s*|\.\s*)?/i, (match, prefix, noun, verb, lead) => {
+        if (!lead) return '';
+        const trimmedLead = lead.trim();
+        if (trimmedLead === ':' || trimmedLead === '.') return '';
+        return trimmedLead + ' ';
+      });
+      cleaned = cleaned.replace(/^(in\s+this\s+(note|document|article|entry),\s*)/i, '');
+      cleaned = cleaned.replace(/^(this\s+(note|document|article|entry)\s+is\s+about\s+)/i, '');
+      cleaned = cleaned.replace(/^(summary|executive\s+summary|tl;?dr):\s*/i, '');
+      cleaned = cleaned.trim();
+      if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+      return cleaned;
     };
 
     const injectReferences = (text, allEntries) => {
@@ -612,16 +769,18 @@
       return JSON.parse(t);
     };
 
-    const EditableText = ({ text, onSave, className = '', tag = 'span', multiline = false, stripPrefix = '', renderView = null, placeholder = '' }) => {
+    const EditableText = ({ text, onSave, className = '', tag = 'span', multiline = false, stripPrefix = '', renderView = null, placeholder = '', disabled = false }) => {
       const [isEditing, setIsEditing] = useState(false);
       const elementRef = useRef(null);
 
       const handleDoubleClick = (e) => {
+        if (disabled) return;
         e.stopPropagation();
         setIsEditing(true);
       };
 
       const handleBlur = () => {
+        if (disabled) return;
         setIsEditing(false);
         if (elementRef.current) {
           let newText = elementRef.current.innerText;
@@ -643,6 +802,7 @@
       };
 
       const handleKeyDown = (e) => {
+        if (disabled) return;
         if (e.key === 'Enter' && !e.shiftKey && !multiline) {
           e.preventDefault();
           elementRef.current.blur();
@@ -662,7 +822,7 @@
       }, [text, isEditing, stripPrefix, renderView, placeholder]);
 
       useEffect(() => {
-        if (isEditing && elementRef.current) {
+        if (isEditing && !disabled && elementRef.current) {
           elementRef.current.innerText = (stripPrefix || '') + (text || '');
           elementRef.current.focus();
           const selection = window.getSelection();
@@ -671,22 +831,22 @@
           selection.removeAllRanges();
           selection.addRange(range);
         }
-      }, [isEditing]);
+      }, [isEditing, disabled]);
 
       const Tag = tag;
 
       return (
         <Tag
           ref={elementRef}
-          contentEditable={isEditing}
+          contentEditable={isEditing && !disabled}
           onDoubleClick={handleDoubleClick}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className={`${className} ${!text && placeholder ? 'italic opacity-60' : ''} ${isEditing ? 'outline-none rounded bg-[var(--card-bg)] text-[var(--text-main)] cursor-text p-2 font-mono whitespace-pre-wrap text-sm block not-italic opacity-100' : ''}`}
+          className={`${className} ${!text && placeholder ? 'italic opacity-60' : ''} ${isEditing && !disabled ? 'outline-none rounded bg-[var(--card-bg)] text-[var(--text-main)] cursor-text p-2 font-mono whitespace-pre-wrap text-sm block not-italic opacity-100' : ''}`}
           suppressContentEditableWarning={true}
-          title={!isEditing ? "Double-click to edit inline" : undefined}
+          title={!isEditing && !disabled ? "Double-click to edit inline" : undefined}
         >
-          {isEditing ? (stripPrefix || '') + (text || '') : (renderView ? renderView(text) : `${stripPrefix || ''}${text || placeholder}`)}
+          {isEditing && !disabled ? (stripPrefix || '') + (text || '') : (renderView ? renderView(text) : `${stripPrefix || ''}${text || placeholder}`)}
         </Tag>
       );
     };
@@ -741,6 +901,7 @@
             undoEntries();
           }
           if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'j' || e.key.toLowerCase() === 'l')) {
+            if (activeSingleEntryRef.current && isAiChatEntry(activeSingleEntryRef.current)) return;
             e.preventDefault();
             setIsAssistantOpen(prev => !prev);
           }
@@ -779,7 +940,7 @@
       const [activeProjects, setActiveProjects] = useState([]);
       const [activeCategories, setActiveCategories] = useState([]);
       const [activeTags, setActiveTags] = useState([]);
-      const [activeTypeFilters, setActiveTypeFilters] = useState(['note', 'prompt', 'media', 'web', 'pdf']);
+      const [activeTypeFilters, setActiveTypeFilters] = useState(['note', 'prompt', 'media', 'web']);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
       const [navHistory, setNavHistory] = useState([]);
@@ -824,6 +985,19 @@
             }
           }
         }
+
+        // Clean up empty AI chat placeholder if clicking off / navigating away
+        const curActive = activeSingleEntryRef.current;
+        if (curActive && isAiChatEntry(curActive)) {
+          const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
+          const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+          if (isEmpty && !ids.includes(curActive.id)) {
+            const emptyId = curActive.id;
+            setEntries(prev => prev.filter(e => e.id !== emptyId));
+            setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+          }
+        }
+
         setSelectedEntryIds(ids);
         if (!isHistoryAction && ids.length > 0) {
           setNavHistory(prev => {
@@ -847,18 +1021,38 @@
 
       const handleNavBack = () => {
         if (canGoBack) {
+          const curActive = activeSingleEntryRef.current;
           const newIdx = navIndex - 1;
-          setNavIndex(newIdx);
           const targetIds = navHistory[newIdx] || [];
+          if (curActive && isAiChatEntry(curActive)) {
+            const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
+            const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+            if (isEmpty && !targetIds.includes(curActive.id)) {
+              const emptyId = curActive.id;
+              setEntries(prev => prev.filter(e => e.id !== emptyId));
+              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+            }
+          }
+          setNavIndex(newIdx);
           setSelectedEntryIds(targetIds);
         }
       };
 
       const handleNavForward = () => {
         if (canGoForward) {
+          const curActive = activeSingleEntryRef.current;
           const newIdx = navIndex + 1;
-          setNavIndex(newIdx);
           const targetIds = navHistory[newIdx] || [];
+          if (curActive && isAiChatEntry(curActive)) {
+            const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
+            const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+            if (isEmpty && !targetIds.includes(curActive.id)) {
+              const emptyId = curActive.id;
+              setEntries(prev => prev.filter(e => e.id !== emptyId));
+              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+            }
+          }
+          setNavIndex(newIdx);
           setSelectedEntryIds(targetIds);
         }
       };
@@ -912,20 +1106,57 @@
 
       useEffect(() => { editingEntriesRef.current = editingEntries; }, [editingEntries]);
       useEffect(() => { editDataRef.current = editData; }, [editData]);
-      useEffect(() => { activeSingleEntryRef.current = activeSingleEntry; }, [activeSingleEntry]);
+      useEffect(() => { 
+        activeSingleEntryRef.current = activeSingleEntry; 
+        if (activeSingleEntry && isAiChatEntry(activeSingleEntry)) {
+          setIsAssistantOpen(false);
+        }
+      }, [activeSingleEntry]);
       useEffect(() => { isContentFocusedRef.current = isContentFocused; }, [isContentFocused]);
       useEffect(() => { entriesRef.current = entries; }, [entries]);
 
+      const prevSelectedEntryIdsRef = useRef(selectedEntryIds);
+      useEffect(() => {
+        const prevIds = prevSelectedEntryIdsRef.current;
+        prevSelectedEntryIdsRef.current = selectedEntryIds;
+
+        if (prevIds && prevIds.length === 1 && !selectedEntryIds.includes(prevIds[0])) {
+          const prevId = prevIds[0];
+          const prevEntry = (entriesRef.current || []).find(e => e.id === prevId);
+          if (prevEntry && isAiChatEntry(prevEntry)) {
+            const msgs = Array.isArray(prevEntry.chatMessages) ? prevEntry.chatMessages : [];
+            const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+            if (isEmpty) {
+              setEntries(prev => prev.filter(e => e.id !== prevId));
+              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== prevId)).filter(h => h.length > 0));
+            }
+          }
+        }
+      }, [selectedEntryIds]);
+
       const handleDefocus = () => {
+        const currentEntry = activeSingleEntryRef.current || activeSingleEntry;
         if (contentTextareaRef.current) {
+          const currentVal = contentTextareaRef.current.value;
+          if (currentEntry && currentEntry.id && currentVal !== undefined && currentVal !== null) {
+            if (editDataRef.current) {
+              editDataRef.current = {
+                ...editDataRef.current,
+                [currentEntry.id]: {
+                  ...(editDataRef.current[currentEntry.id] || currentEntry),
+                  fullContent: currentVal
+                }
+              };
+            }
+          }
           contentTextareaRef.current.blur();
         }
         setIsContentFocused(false);
-        const currentEntry = activeSingleEntryRef.current || activeSingleEntry;
         if (currentEntry && currentEntry.id) {
-          if (contentTextareaRef.current) {
-            const currentVal = contentTextareaRef.current.value;
-            setEntries(prev => prev.map(e => e.id === currentEntry.id ? { ...e, fullContent: currentVal, updatedAt: Date.now() } : e));
+          if (saveNoteRef.current) {
+            saveNoteRef.current(currentEntry.id);
+          } else {
+            saveNote(currentEntry.id);
           }
         }
       };
@@ -974,6 +1205,15 @@
                 fullContent: newVal
               }
             }));
+            if (editDataRef.current) {
+              editDataRef.current = {
+                ...editDataRef.current,
+                [activeSingleEntry.id]: {
+                  ...(editDataRef.current[activeSingleEntry.id] || activeSingleEntry),
+                  fullContent: newVal
+                }
+              };
+            }
             setTimeout(() => {
               if (contentTextareaRef.current) {
                 contentTextareaRef.current.selectionStart = contentTextareaRef.current.selectionEnd = start + 2;
@@ -1093,12 +1333,24 @@
         }
       };
 
-      // Auto-scroll assistant thread
+      // Auto-scroll assistant thread (Current Entry drawer)
       useEffect(() => {
         if (chatScrollRef.current) {
           chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
         }
       }, [assistantMessages, isAssistantThinking, isAssistantOpen]);
+
+      // Whole Brain Center View Chat State
+      const [wholeBrainInput, setWholeBrainInput] = useState('');
+      const [showChatSummary, setShowChatSummary] = useState(false);
+      const wholeBrainScrollRef = useRef(null);
+
+      // Auto-scroll Whole Brain center view thread
+      useEffect(() => {
+        if (wholeBrainScrollRef.current) {
+          wholeBrainScrollRef.current.scrollTop = wholeBrainScrollRef.current.scrollHeight;
+        }
+      }, [activeSingleEntry?.id, activeSingleEntry?.chatMessages?.length, isAssistantThinking]);
 
       // Initialize workspace from IndexedDB handle (open most recent file on load, fallback to landing screen)
       useEffect(() => {
@@ -1173,6 +1425,7 @@
         if (data.entries && Array.isArray(data.entries)) {
           migratedEntries = processLoadedEntries(data.entries).map(e => ({
             ...e,
+            summary: cleanExecutiveSummary(e.summary || ''),
             updatedAt: e.updatedAt || e.createdAt || Date.now()
           }));
         } else {
@@ -1594,6 +1847,16 @@
             console.warn("External pre-save check failed:", readErr);
           }
 
+          // Clean up any empty AI chat placeholders before saving to disk
+          currentEntries = currentEntries.filter(e => {
+            if (isAiChatEntry(e)) {
+              const msgs = Array.isArray(e.chatMessages) ? e.chatMessages : [];
+              const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+              if (isEmpty) return false;
+            }
+            return true;
+          });
+
           const dataToWrite = {
             entries: currentEntries,
             tombstones: currentTombstones,
@@ -1794,6 +2057,47 @@
         return () => clearTimeout(t);
       }, [syncNotification]);
 
+      const convertChatMessagesToEntry = (messages, existingEntries = entries) => {
+        if (!Array.isArray(messages) || messages.length === 0) return null;
+        const userMessages = messages.filter(m => m.role === 'user');
+        const firstUserMsg = userMessages[0];
+        const snippet = firstUserMsg ? firstUserMsg.text.replace(/[\r\n]+/g, ' ').trim() : 'AI Chat Session';
+        const chatTitle = snippet.length > 50 ? snippet.substring(0, 50) + '...' : snippet;
+        const markdownTranscript = messages.map(m => `**${m.role === 'user' ? 'User' : 'AI Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n');
+        const targetList = Array.isArray(existingEntries) && existingEntries.length > 0 ? existingEntries : (entries || []);
+        const nextNumericId = Math.floor(targetList.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
+        const newId = 'entry-' + Date.now();
+
+        const userQueries = userMessages.map(m => m.text.replace(/[\r\n]+/g, ' ').trim()).filter(Boolean);
+        const queryTopicsSummary = userQueries.slice(0, 3).map(q => `"${q.length > 55 ? q.substring(0, 55) + '...' : q}"`).join(', ');
+        const descriptiveSummary = userQueries.length > 0
+          ? `Archived Whole Brain AI dialogue synthesizing knowledge base notes around ${queryTopicsSummary}. Comprises ${messages.length} message exchanges between user and AI copilot.`
+          : `Archived Whole Brain AI conversation session containing ${messages.length} collaborative message exchanges across the knowledge base.`;
+
+        const descriptiveTakeaways = userQueries.length > 0
+          ? userQueries.slice(0, 5).map(q => `Inquiry topic: ${q.length > 110 ? q.substring(0, 110) + '...' : q}`)
+          : [`Archived conversational dialogue containing ${messages.length} message exchanges.`];
+
+        return {
+          id: newId,
+          type: 'aiChat',
+          title: chatTitle,
+          numericId: nextNumericId,
+          summary: descriptiveSummary,
+          shortVersion: descriptiveTakeaways,
+          fullContent: markdownTranscript,
+          chatMessages: messages.map(m => ({ ...m })),
+          categories: ['ai chat'],
+          tags: ['ai-chat'],
+          projects: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          sourceUrl: null,
+          references: [],
+          pinned: false
+        };
+      };
+
       const loadWorkspaceData = async (handle) => {
         try {
           const hasPerm = await verifyPermission(handle, true);
@@ -1808,9 +2112,30 @@
           if (text.trim()) data = JSON.parse(text);
           
           const migrated = migrateWorkspaceData(data);
-          
-          setHistoryState({ past: [], present: migrated.entries });
-          const initialIds = migrated.entries.length > 0 ? [migrated.entries[0].id] : [];
+          let activeEntries = migrated.entries;
+          let loadedChats = migrated.assistantChats || { workspace: [] };
+          let chatArchivedOnLoad = false;
+          const activeWholeBrainMsgs = loadedChats.workspace || [];
+          if (Array.isArray(activeWholeBrainMsgs) && activeWholeBrainMsgs.length > 0) {
+            const archivedChatEntry = convertChatMessagesToEntry(activeWholeBrainMsgs, activeEntries);
+            if (archivedChatEntry) {
+              activeEntries = [archivedChatEntry, ...activeEntries];
+              loadedChats = { ...loadedChats, workspace: [] };
+              chatArchivedOnLoad = true;
+            }
+          }
+
+          setHistoryState({ past: [], present: activeEntries });
+          // On app load, AI chat entries are not visible in list view by default; select the most recent note of other types
+          const visibleEntriesOnLoad = activeEntries
+            .filter(e => e && !isAiChatEntry(e))
+            .sort((a, b) => {
+              if (a.pinned && !b.pinned) return -1;
+              if (!a.pinned && b.pinned) return 1;
+              return (b.numericId || 0) - (a.numericId || 0);
+            });
+          const initialEntryCandidate = visibleEntriesOnLoad[0] || activeEntries[0];
+          const initialIds = initialEntryCandidate ? [initialEntryCandidate.id] : [];
           setSelectedEntryIds(initialIds);
           setNavHistory(initialIds.length > 0 ? [initialIds] : []);
           setNavIndex(initialIds.length > 0 ? 0 : -1);
@@ -1826,7 +2151,7 @@
             assistant: migrated.model || DEFAULT_MODEL
           });
           setTheme(migrated.theme);
-          setAssistantChats(migrated.assistantChats || { workspace: [] });
+          setAssistantChats(loadedChats);
           setArchivedAssistantChats(migrated.archivedAssistantChats || { workspace: [] });
           setExpandedArchivedChatIds([]);
           if (migrated.layout) {
@@ -1839,7 +2164,7 @@
           setFileName(file.name);
           setLastSyncTime(file.lastModified);
           lastSyncTimeRef.current = file.lastModified;
-          isDirtyRef.current = false;
+          isDirtyRef.current = chatArchivedOnLoad;
           isLoadedRef.current = false;
           setTimeout(() => { isLoadedRef.current = true; }, 1500);
           
@@ -1922,9 +2247,21 @@
           try {
             const data = JSON.parse(event.target.result);
             const migrated = migrateWorkspaceData(data);
+            let activeEntries = migrated.entries;
+            let loadedChats = migrated.assistantChats || { workspace: [] };
+            let chatArchivedOnLoad = false;
+            const activeWholeBrainMsgs = loadedChats.workspace || [];
+            if (Array.isArray(activeWholeBrainMsgs) && activeWholeBrainMsgs.length > 0) {
+              const archivedChatEntry = convertChatMessagesToEntry(activeWholeBrainMsgs, activeEntries);
+              if (archivedChatEntry) {
+                activeEntries = [archivedChatEntry, ...activeEntries];
+                loadedChats = { ...loadedChats, workspace: [] };
+                chatArchivedOnLoad = true;
+              }
+            }
 
-            setHistoryState({ past: [], present: migrated.entries });
-            const initialIds = migrated.entries.length > 0 ? [migrated.entries[0].id] : [];
+            setHistoryState({ past: [], present: activeEntries });
+            const initialIds = activeEntries.length > 0 ? [activeEntries[0].id] : [];
             setSelectedEntryIds(initialIds);
             setNavHistory(initialIds.length > 0 ? [initialIds] : []);
             setNavIndex(initialIds.length > 0 ? 0 : -1);
@@ -1939,7 +2276,7 @@
               assistant: migrated.model || DEFAULT_MODEL
             });
             setTheme(migrated.theme);
-            setAssistantChats(migrated.assistantChats || { workspace: [] });
+            setAssistantChats(loadedChats);
             setArchivedAssistantChats(migrated.archivedAssistantChats || { workspace: [] });
             setExpandedArchivedChatIds([]);
             if (migrated.layout) {
@@ -1952,7 +2289,7 @@
             setFileHandle(null);
             setLastSyncTime(Date.now());
             lastSyncTimeRef.current = Date.now();
-            isDirtyRef.current = false;
+            isDirtyRef.current = chatArchivedOnLoad;
             isLoadedRef.current = false;
             setTimeout(() => { isLoadedRef.current = true; }, 1500);
             setAppState('workspace');
@@ -2201,8 +2538,8 @@
             originalWebTitle = file.name;
             prompt = `Analyze this PDF document and return JSON:
             1. Title (Use the document title or "${file.name}").
-            2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words).
-            3. 3-5 key points in 'shortVersion'.
+            2. Comprehensive executive summary in 'summary' (2-3 informative sentences capturing core context and principal findings). CRITICAL: Jump straight into the substance. NEVER begin with redundant meta-openings like "This note summarises", "This note summarizes", "This document", or "This PDF".
+            3. 3-5 descriptive, insightful key takeaways in 'shortVersion' that provide substantive context and actionable depth rather than brief fragments.
             4. Detailed reconstructed fullContent in clean Markdown.
             ${taxonomyRules}`;
             payloadParts = [
@@ -2225,8 +2562,8 @@
               } catch(e) {}
               prompt = `Use Google Search to find the exact content, transcript, or summary for this YouTube video (URL: ${droppedData}, ID: ${videoId}). Return strictly JSON:
               1. Title.
-              2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words).
-              3. 3-5 key points in 'shortVersion'.
+              2. Comprehensive executive summary in 'summary' (2-3 informative sentences capturing core context and principal findings). CRITICAL: Jump straight into the substance. NEVER begin with redundant meta-openings like "This note summarises", "This video summarizes", or "This note".
+              3. 3-5 descriptive, insightful key takeaways in 'shortVersion' that provide substantive context and actionable depth rather than brief fragments.
               4. Detailed reconstructed fullContent in clean Markdown.
               ${taxonomyRules}`;
               payloadParts = [{ text: prompt }];
@@ -2237,20 +2574,20 @@
                 rawContent = scrapeResult.content;
                 prompt = `Analyze this web article and return strictly JSON:
                 1. Title.
-                2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words).
-                3. 3-5 key takeaways in 'shortVersion'.
+                2. Comprehensive executive summary in 'summary' (2-3 informative sentences capturing core context and principal findings). CRITICAL: Jump straight into the substance. NEVER begin with redundant meta-openings like "This note summarises", "This article summarizes", or "This document".
+                3. 3-5 descriptive, insightful key takeaways in 'shortVersion' that provide substantive context and actionable depth rather than brief fragments.
                 4. Reconstruct detailed fullContent in clean Markdown.
                 ${taxonomyRules}
                 Content:\n${rawContent.substring(0, 40000)}`;
               } catch (err) {
                 useSearchTool = true;
                 prompt = `Use Google Search to find content for this URL: ${droppedData}. Return strictly JSON:
-                1. Title. 2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words). 3. 3-5 key points in 'shortVersion'. 4. Reconstruct detailed fullContent in Markdown. ${taxonomyRules}`;
+                1. Title. 2. Comprehensive executive summary in 'summary' (2-3 informative sentences). CRITICAL: Jump straight into the substance; NEVER begin with "This note summarises", "This article", or redundant intros. 3. 3-5 descriptive, insightful key takeaways in 'shortVersion' providing substantive context. 4. Reconstruct detailed fullContent in Markdown. ${taxonomyRules}`;
               }
               payloadParts = [{ text: prompt }];
             } else {
               prompt = `Analyze this text and return strictly JSON:
-              1. Descriptive Title. 2. Ultra-concise TLDR summary (1 short sentence, strictly under 15 words). 3. 3-5 key takeaways in 'shortVersion'. 4. Format input text as clean Markdown in 'fullContent'. ${taxonomyRules}
+              1. Descriptive Title. 2. Comprehensive executive summary in 'summary' (2-3 informative sentences). CRITICAL: Jump straight into the substance; NEVER begin with redundant meta-openings like "This note summarises", "This note summarizes", or "This text". 3. 3-5 descriptive, insightful key takeaways in 'shortVersion' providing substantive context and actionable depth. 4. Format input text as clean Markdown in 'fullContent'. ${taxonomyRules}
               Content:\n${rawContent.substring(0, 40000)}`;
               payloadParts = [{ text: prompt }];
             }
@@ -2281,7 +2618,7 @@
             id: 'entry-' + Date.now(),
             numericId: nextNumericId,
             title: originalWebTitle || parsed.title || 'Untitled Note',
-            summary: parsed.summary || '',
+            summary: cleanExecutiveSummary(parsed.summary || ''),
             shortVersion: Array.isArray(parsed.shortVersion) ? parsed.shortVersion : [],
             fullContent: parsed.fullContent || '',
             categories: cleanedCategories,
@@ -2431,10 +2768,6 @@
         if (window.innerWidth < 1024 && typeof setIsListSidebarOpen === 'function') {
           setIsListSidebarOpen(false);
         }
-        setIsContentFocused(true);
-        setTimeout(() => {
-          setIsContentFocused(true);
-        }, 30);
       };
 
       // Filtered entries (matching active type filters, taxonomies, and search query)
@@ -2468,11 +2801,16 @@
         ? (activeTaxonomyList.length <= 2 ? activeTaxonomyList.join(', ') : `${activeTaxonomyList.slice(0, 2).join(', ')} +${activeTaxonomyList.length - 2}`)
         : '';
 
+      // Check if only aiChat is deselected among entry types (default state)
+      const standardNonChatTypes = ENTRY_TYPES.filter(t => t.id !== 'aiChat').map(t => t.id);
+      const isOnlyAiChatDeselected = standardNonChatTypes.every(tid => activeTypeFilters.includes(tid));
+      const hasCustomTypeFilter = !isOnlyAiChatDeselected && activeTypeFilters.length > 0 && activeTypeFilters.length < ENTRY_TYPES.length;
+
       // Descriptive summary of active list view filters (taxonomies, search, and type filters)
       const activeFilterParts = [
         ...activeTaxonomyList,
         searchQuery ? `"${searchQuery}"` : null,
-        (activeTypeFilters.length > 0 && activeTypeFilters.length < 5) ? activeTypeFilters.join('/') : null
+        hasCustomTypeFilter ? activeTypeFilters.join('/') : null
       ].filter(Boolean);
       const activeListScopeSummary = activeFilterParts.length > 0
         ? (activeFilterParts.length <= 2 ? activeFilterParts.join(', ') : `${activeFilterParts.slice(0, 2).join(', ')} +${activeFilterParts.length - 2}`)
@@ -2485,13 +2823,14 @@
           const fourMonthsAgo = now - (120 * 24 * 60 * 60 * 1000);
           
           // Potential pool: whatever entries are currently shown in the entry list view (filtered by type, taxonomy, or search)
-          const scopedEntries = filteredEntries.filter(e => !isWelcomeEntry(e));
+          // Strictly excludes the welcome starter note and all AI chat archives
+          const scopedEntries = filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e));
 
           if (scopedEntries.length < 2) {
             if (activeListScopeSummary) {
-              throw new Error(`At least 2 notes visible in the list are required to generate a theme prompt. Only ${scopedEntries.length} found matching filter(s) [${activeListScopeSummary}].`);
+              throw new Error(`At least 2 non-chat notes visible in the list are required to generate a theme prompt. Only ${scopedEntries.length} found matching filter(s) [${activeListScopeSummary}].`);
             } else {
-              throw new Error("At least 2 notes are required in the knowledge base to synthesize themes and loose ends.");
+              throw new Error("At least 2 notes (excluding AI chat archives) are required in the knowledge base to synthesize themes and loose ends.");
             }
           }
 
@@ -2508,11 +2847,11 @@
           // 2. Classify by topic hierarchy:
           //    - Manual entries (yellow / 'note'): highest priority for topic selection
           //    - Previous prompt responses (green / 'prompt'): secondary priority
-          //    - Other colors (media, web, pdf): background context only
+          //    - External reference materials (web, media): background context only (AI chat entries strictly excluded)
           const categorize = (list) => ({
             manual: list.filter(e => getEntryType(e) === 'note'),
             prompt: list.filter(e => getEntryType(e) === 'prompt'),
-            context: list.filter(e => getEntryType(e) !== 'note' && getEntryType(e) !== 'prompt')
+            context: list.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e))
           });
 
           const recent = categorize(recentEntries);
@@ -2550,7 +2889,7 @@
           if (selectedNotes.length < 35 && remaining.length > 0) {
             const remManual = remaining.filter(e => getEntryType(e) === 'note');
             const remPrompt = remaining.filter(e => getEntryType(e) === 'prompt');
-            const remContext = remaining.filter(e => getEntryType(e) !== 'note' && getEntryType(e) !== 'prompt');
+            const remContext = remaining.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e));
             addNotes(sample(remManual, 35 - selectedNotes.length));
             if (selectedNotes.length < 35) addNotes(sample(remPrompt, 35 - selectedNotes.length));
             if (selectedNotes.length < 35) addNotes(sample(remContext, 35 - selectedNotes.length));
@@ -2593,7 +2932,7 @@
             activeCategories.length > 0 ? `Categories: ${activeCategories.join(', ')}` : '',
             activeTags.length > 0 ? `Tags: ${activeTags.map(t => '#' + t).join(', ')}` : '',
             searchQuery ? `Search query: "${searchQuery}"` : '',
-            (activeTypeFilters.length > 0 && activeTypeFilters.length < 5) ? `Types: ${activeTypeFilters.join(', ')}` : ''
+            hasCustomTypeFilter ? `Types: ${activeTypeFilters.join(', ')}` : ''
           ].filter(Boolean);
 
           const filterFocusInstruction = filterScopeParts.length > 0
@@ -2616,7 +2955,7 @@ WEIGHTING & TOPIC SELECTION GUIDELINES:
 1. TOPIC SELECTION PRIORITY:
    - HIGHEST WEIGHT (PRIMARY TOPICS): Choose topics, themes, or loose ends primarily from the user's MANUAL ENTRIES (marked [Manual Note - Yellow]). These reflect the user's direct, personal thoughts, creations, and active reflections.
    - SECONDARY WEIGHT: Next consider PREVIOUS PROMPT RESPONSES (marked [Previous Prompt Reflection - Green]). Check in on how the user's thinking has progressed or branched out since answering an earlier prompt.
-   - BACKGROUND CONTEXT ONLY: Other color entries (marked [External Source - Web/Media/PDF]) were gathered from external sources. Do NOT center the prompt on an external article or video; only reference them as supporting context, inspiration, or cross-references to illuminate the user's manual notes.
+   - BACKGROUND CONTEXT ONLY: External materials (marked [External Source - Web/Media]) provide supporting context, inspiration, or cross-references to illuminate the user's manual notes. AI chat conversation archives are strictly excluded from prompt synthesis.
 
 2. TIME WEIGHTING (ALL TIME, EMPHASIZING RECENT):
    - Consider the user's entire knowledge base across ALL TIME (both recent and earlier history).
@@ -2705,6 +3044,7 @@ Respond with valid JSON ONLY matching this structure:
       };
 
       const startEditing = (entry) => {
+        if (!entry || isAiChatEntry(entry)) return;
         setEditData(prev => ({
           ...prev,
           [entry.id]: {
@@ -2712,9 +3052,11 @@ Respond with valid JSON ONLY matching this structure:
             summary: entry.summary || '',
             promptQuestion: entry.promptQuestion || '',
             fullContent: entry.fullContent || (
-              Array.isArray(entry.chatHistory) && entry.chatHistory.length > 0
-                ? entry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
-                : ''
+              Array.isArray(entry.chatMessages) && entry.chatMessages.length > 0
+                ? entry.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
+                : (Array.isArray(entry.chatHistory) && entry.chatHistory.length > 0
+                    ? entry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
+                    : '')
             ),
             shortVersion: (Array.isArray(entry.shortVersion) ? entry.shortVersion : []).join('\n'),
             categories: Array.isArray(entry.categories) ? [...entry.categories] : [],
@@ -2741,141 +3083,43 @@ Respond with valid JSON ONLY matching this structure:
             };
           }
         }
-        const data = editDataRef.current[id] || editData[id];
+        const existingEntry = entriesRef.current.find(e => e.id === id);
+        const data = editDataRef.current[id] || editData[id] || existingEntry;
         if (!data) return;
         if (savingIdsRef.current.has(id)) return;
         savingIdsRef.current.add(id);
 
         const rawShortVersion = typeof data.shortVersion === 'string'
           ? data.shortVersion.split('\n').map(s => s.trim()).filter(Boolean)
-          : (Array.isArray(data.shortVersion) ? data.shortVersion : []);
+          : (Array.isArray(data.shortVersion) ? data.shortVersion : (existingEntry?.shortVersion || []));
 
         const initialSavedEntry = {
-          title: data.title ? data.title.trim() : 'Untitled Note',
-          summary: data.summary ? data.summary.trim() : '',
-          promptQuestion: data.promptQuestion || entriesRef.current.find(e => e.id === id)?.promptQuestion || undefined,
-          fullContent: data.fullContent || '',
+          title: (data.title !== undefined && data.title !== null) ? data.title.trim() : (existingEntry?.title || 'Untitled Note'),
+          summary: (data.summary !== undefined && data.summary !== null) ? data.summary.trim() : (existingEntry?.summary || ''),
+          promptQuestion: data.promptQuestion || existingEntry?.promptQuestion || undefined,
+          fullContent: (data.fullContent !== undefined && data.fullContent !== null) ? data.fullContent : (existingEntry?.fullContent || ''),
           shortVersion: rawShortVersion,
-          sourceUrl: data.sourceUrl || null,
-          categories: (data.categories || []).map(c => String(c).toLowerCase().trim()).filter(Boolean),
-          tags: (data.tags || []).map(t => String(t).toLowerCase().trim()).filter(Boolean),
-          projects: (data.projects || []).map(p => String(p).toLowerCase().trim()).filter(Boolean),
-          references: data.references || [],
+          sourceUrl: data.sourceUrl !== undefined ? data.sourceUrl : (existingEntry?.sourceUrl || null),
+          categories: (data.categories || existingEntry?.categories || []).map(c => String(c).toLowerCase().trim()).filter(Boolean),
+          tags: (data.tags || existingEntry?.tags || []).map(t => String(t).toLowerCase().trim()).filter(Boolean),
+          projects: (data.projects || existingEntry?.projects || []).map(p => String(p).toLowerCase().trim()).filter(Boolean),
+          references: data.references || existingEntry?.references || [],
           updatedAt: Date.now()
         };
 
         setEntries(prev => prev.map(e => e.id === id ? { ...e, ...initialSavedEntry } : e));
         setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
-
-        const isPrompt = isPromptEntry(initialSavedEntry);
-        const cleanTitle = (initialSavedEntry.title || '').trim();
-        const isUntitled = !cleanTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(cleanTitle) || cleanTitle.toLowerCase() === 'theme reflection';
-        const needsTitle = isUntitled;
-        const needsSummary = !initialSavedEntry.summary;
-        const needsTakeaways = initialSavedEntry.shortVersion.length === 0;
-        const needsTags = !initialSavedEntry.tags || initialSavedEntry.tags.length === 0;
-        const needsCategories = !initialSavedEntry.categories || initialSavedEntry.categories.length === 0;
-        const needsProjects = !initialSavedEntry.projects || initialSavedEntry.projects.length === 0;
-        const needsTaxonomies = needsTags || needsCategories;
-
-        const contentToAnalyze = (initialSavedEntry.fullContent || initialSavedEntry.summary || '').trim();
-
-        try {
-          if ((needsTitle || needsSummary || needsTakeaways || needsTaxonomies) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
-            const instructions = [];
-            if (needsTitle) {
-              if (isPrompt) {
-                instructions.push("1. Suggest a punchy, reflective title (max 6 words) based on the user's answer in 'title'.");
-              } else {
-                instructions.push("1. Suggest a punchy, descriptive title (max 6 words) in 'title'.");
-              }
-            }
-            if (needsSummary) {
-              if (isPrompt && initialSavedEntry.promptQuestion) {
-                instructions.push("2. Provide an ultra-concise 1-sentence summary (strictly under 20 words) in 'summary' that directly synthesizes and summarizes the user's answer/response to the prompt question.");
-              } else {
-                instructions.push("2. Provide an ultra-concise TL;DR summary in 1 sentence (strictly under 15 words) in 'summary'.");
-              }
-            }
-            if (needsTakeaways) instructions.push("3. Extract 3-5 crucial key takeaways in 'shortVersion'.");
-            if (needsTaxonomies) {
-              const taxRules = [];
-              if (needsProjects) taxRules.push(`- Projects: Assign 0-1 from: ${JSON.stringify(Array.from(allProjects))}.`);
-              if (needsCategories) taxRules.push(`- Categories: Assign 1-2 domain/topic categories from: ${JSON.stringify(Array.from(allCategories))}.`);
-              if (needsTags) taxRules.push(`- Tags: Assign 2-4 specific concept keywords. Reuse: ${JSON.stringify(Array.from(allTags))}.`);
-              taxRules.push('- IMPORTANT: Categories and tags MUST describe the subject matter. NEVER use words denoting entry types or document formats (e.g. "notes", "note", "video", "videos", "media", "audio", "web", "website", "prompt", "pdf", "document").');
-              instructions.push(`4. Classify taxonomy metadata in lowercase:\n${taxRules.join('\n')}`);
-            }
-
-            const titleContext = isUntitled ? '' : `Title: ${initialSavedEntry.title}\n`;
-            const promptContext = (isPrompt && initialSavedEntry.promptQuestion)
-              ? `Prompt Question:\n${initialSavedEntry.promptQuestion}\n\nUser's Answer/Response:\n`
-              : 'Content:\n';
-            const prompt = `Analyze this note and generate the requested missing metadata:\n${instructions.join('\n')}\n\n${titleContext}${promptContext}${contentToAnalyze.substring(0, 30000)}`;
-
-            const schemaProps = {};
-            if (needsTitle) schemaProps.title = { type: "STRING" };
-            if (needsSummary) schemaProps.summary = { type: "STRING" };
-            if (needsTakeaways) schemaProps.shortVersion = { type: "ARRAY", items: { type: "STRING" } };
-            if (needsTaxonomies) {
-              if (needsProjects) schemaProps.projects = { type: "ARRAY", items: { type: "STRING" } };
-              if (needsCategories) schemaProps.categories = { type: "ARRAY", items: { type: "STRING" } };
-              if (needsTags) schemaProps.tags = { type: "ARRAY", items: { type: "STRING" } };
-            }
-
-            const payload = {
-              contents: [{ role: 'user', parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: "OBJECT",
-                  properties: schemaProps
-                }
-              }
-            };
-
-            const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-            const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
-
-            setEntries(prev => prev.map(e => {
-              if (e.id === id) {
-                return {
-                  ...e,
-                  title: needsTitle && parsed.title && typeof parsed.title === 'string' && parsed.title.trim()
-                    ? parsed.title.trim()
-                    : e.title,
-                  summary: needsSummary && parsed.summary && typeof parsed.summary === 'string' && parsed.summary.trim()
-                    ? parsed.summary.trim()
-                    : e.summary,
-                  shortVersion: needsTakeaways && Array.isArray(parsed.shortVersion) && parsed.shortVersion.length > 0
-                    ? parsed.shortVersion.map(s => String(s).trim()).filter(Boolean)
-                    : e.shortVersion,
-                  projects: needsProjects && Array.isArray(parsed.projects) && parsed.projects.length > 0
-                    ? [...new Set([...(e.projects || []), ...parsed.projects.map(p => String(p).toLowerCase().trim()).filter(Boolean)])]
-                    : e.projects,
-                  categories: needsCategories && Array.isArray(parsed.categories) && parsed.categories.length > 0
-                    ? [...new Set([...(e.categories || []), ...parsed.categories.map(c => String(c).toLowerCase().trim()).filter(c => c && !isEntryTypeTaxonomy(c))])]
-                    : e.categories,
-                  tags: needsTags && Array.isArray(parsed.tags) && parsed.tags.length > 0
-                    ? [...new Set([...(e.tags || []), ...parsed.tags.map(t => String(t).toLowerCase().trim()).filter(t => t && !isEntryTypeTaxonomy(t))])]
-                    : e.tags,
-                  updatedAt: Date.now()
-                };
-              }
-              return e;
-            }));
-          }
-        } catch (err) {
-          console.warn("Auto-generation of missing note metadata on save failed:", err);
-        } finally {
-          savingIdsRef.current.delete(id);
-        }
+        setEditData(prev => { const n = { ...prev }; delete n[id]; return n; });
+        if (editDataRef.current) { delete editDataRef.current[id]; }
+        savingIdsRef.current.delete(id);
       };
       saveNoteRef.current = saveNote;
 
       const cancelEdit = (id) => {
         setIsContentFocused(false);
         setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
+        setEditData(prev => { const n = { ...prev }; delete n[id]; return n; });
+        if (editDataRef.current) { delete editDataRef.current[id]; }
       };
 
       // Edit field helpers
@@ -3007,8 +3251,8 @@ Respond with valid JSON ONLY matching this structure:
           if (!data) throw new Error("Note not found.");
           const isPrompt = isPromptEntry(data);
           const prompt = (isPrompt && data.promptQuestion)
-            ? `Write an ultra-concise 1-sentence summary (strictly under 20 words) that directly synthesizes and summarizes the user's answer/response to the prompt question. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${data.fullContent || ''}`
-            : `Write an ultra-concise executive summary (TL;DR) of this note capturing only the single core takeaway. Limit strictly to 1 short sentence (under 15 words). Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent || ''}`;
+            ? `Write a descriptive, thoughtful executive summary (2-3 sentences) synthesizing the user's answer/response to the prompt question. CRITICAL: Jump straight into the substance. NEVER begin with "This note summarises", "This note summarizes", "This response", or redundant meta-intros. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${data.fullContent || ''}`
+            : `Write a descriptive, substantive executive summary (2-3 informative sentences) capturing essential context, arguments, and conclusions. CRITICAL: Jump straight into the substance. NEVER begin with "This note summarises", "This note summarizes", "This document", or redundant meta-intros. Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent || ''}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { summary: { type: "STRING" } } } }
@@ -3016,7 +3260,7 @@ Respond with valid JSON ONLY matching this structure:
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const resData = parseAIJson(result.candidates[0].content.parts[0].text);
           if (resData.summary) {
-            const cleanSummary = resData.summary.trim();
+            const cleanSummary = cleanExecutiveSummary(resData.summary);
             setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
           }
         } catch(err) {
@@ -3046,7 +3290,7 @@ User's Written Response:
 ${responseText.substring(0, 30000)}
 
 Instructions:
-Write an ultra-concise 1-sentence summary (strictly under 20 words) that directly synthesizes and summarizes the user's answer/response to the prompt question. Return strictly JSON: {"summary": "text"}.`;
+Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroughly synthesizes the user's answer/response to the prompt question. Return strictly JSON: {"summary": "text"}.`;
 
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -3080,7 +3324,7 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
         try {
           const data = entries.find(e => e.id === id) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
-          const prompt = `Analyze this note. Extract exactly 3-5 crucial key takeaways. Return strictly JSON: {"shortVersion": ["point 1", "point 2"]}.\nTitle: ${data.title}\nContent: ${data.fullContent || data.summary}`;
+          const prompt = `Analyze this note. Extract 3-5 descriptive, insightful key takeaways that provide substantive context and detail rather than brief phrases. Return strictly JSON: {"shortVersion": ["detailed takeaway 1", "detailed takeaway 2"]}.\nTitle: ${data.title}\nContent: ${data.fullContent || data.summary}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } } }
@@ -3289,6 +3533,7 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
       };
 
       const handleContentDrop = (e, targetEntry) => {
+        if (!targetEntry || isAiChatEntry(targetEntry)) return;
         const draggedId = e.dataTransfer.getData('kb-ref-id');
         if (draggedId && draggedId !== targetEntry.id) {
           e.preventDefault();
@@ -3381,10 +3626,47 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
               return block;
             }).join('\n\n');
 
-            const otherEntries = entries.filter(e => !targetDocs.some(se => se.id === e.id));
+            const primaryDoc = targetDocs[0];
+            const primaryProjects = (Array.isArray(primaryDoc?.projects) ? primaryDoc.projects : []).map(p => String(p).toLowerCase().trim()).filter(Boolean);
+            const primaryCategories = (Array.isArray(primaryDoc?.categories) ? primaryDoc.categories : []).map(c => String(c).toLowerCase().trim()).filter(Boolean);
+
+            let relatedEntries = [];
+            if (primaryProjects.length > 0 || primaryCategories.length > 0) {
+              const matchedEntries = entries.filter(e => {
+                if (!e || targetDocs.some(se => se.id === e.id)) return false;
+                if (isAiChatEntry(e)) return false;
+                if (typeof isWelcomeEntry === 'function' && isWelcomeEntry(e)) return false;
+                const matchesProj = primaryProjects.length > 0 && Array.isArray(e.projects) && e.projects.some(p => primaryProjects.includes(String(p).toLowerCase().trim()));
+                const matchesCat = primaryCategories.length > 0 && Array.isArray(e.categories) && e.categories.some(c => primaryCategories.includes(String(c).toLowerCase().trim()));
+                return matchesProj || matchesCat;
+              });
+
+              const primNum = Number(primaryDoc?.numericId) || 0;
+              const primTime = Number(primaryDoc?.createdAt) || Number(primaryDoc?.updatedAt) || Date.now();
+
+              const priorMatches = matchedEntries.filter(e => {
+                const eNum = Number(e.numericId) || 0;
+                if (primNum && eNum) return eNum < primNum;
+                const eTime = Number(e.createdAt) || Number(e.updatedAt) || 0;
+                return eTime ? eTime <= primTime : true;
+              });
+
+              const candidatePool = priorMatches.length > 0 ? priorMatches : matchedEntries;
+              candidatePool.sort((a, b) => {
+                const aNum = Number(a.numericId) || 0;
+                const bNum = Number(b.numericId) || 0;
+                if (aNum && bNum) return bNum - aNum;
+                const aTime = Number(a.createdAt) || Number(a.updatedAt) || 0;
+                const bTime = Number(b.createdAt) || Number(b.updatedAt) || 0;
+                return bTime - aTime;
+              });
+
+              relatedEntries = candidatePool.slice(0, 10);
+            }
+
             let archiveContextText = "";
-            if (otherEntries.length > 0) {
-              archiveContextText = otherEntries.map(e => {
+            if (relatedEntries.length > 0) {
+              archiveContextText = relatedEntries.map(e => {
                 let line = `• [[kb-ref:${e.id}]] "${e.title || 'Untitled'}"`;
                 if (e.summary) line += `\n  Executive Summary: ${e.summary}`;
                 if (Array.isArray(e.shortVersion) && e.shortVersion.length > 0) line += `\n  Key Takeaways: ${e.shortVersion.join(' | ')}`;
@@ -3397,27 +3679,36 @@ Write an ultra-concise 1-sentence summary (strictly under 20 words) that directl
                 ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
                 { role: 'user', parts: [{ text: queryText }] }
               ],
+              generationConfig: { temperature: 0.3 },
               systemInstruction: {
                 parts: [{
                   text: `You are a helpful AI Assistant for the user's personal knowledge base.
-Answer comprehensively based primarily on the active document: "${targetDocs[0]?.title || 'Selected Note'}", using the wider archive of personal notes for context, cross-references, and thematic connections.
+Focus primarily on the active document: "${targetDocs[0]?.title || 'Selected Note'}", using relevant notes in the same project or category for context and cross-references.
 
-CRITICAL RULES:
-- Primary focus is on the Selected Active Document.
-- You ALSO have access to Executive Summaries and Takeaways of ALL other notes below. Cross-reference other notes using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:${targetDocs[0]?.id || 'ID'}]]).
-- Format responses cleanly in Markdown with headings, bullet points, and concise language.
+CONVERSATIONAL & CONCISE WRITING RULES:
+- Length: Under 50 words unless requested or necessary. Default to short.
+- Be concise, conversational, and direct. Go a step at a time.
+- Avoid spilling large amounts of text unless specifically requested.
+- Delete unnecessary words. Cut everything that doesn't add value.
+- Prefer short words. Use simple language over complex terms.
+- Stick to the active voice. It’s direct and impactful.
+- Avoid tired phrases. No clichés, similes, or metaphors.
+- Use plain English. Swap jargon and technical terms for everyday words.
+- Zero hyperbole. Stay honest. Avoid exaggeration.
+- No filler or prefaces. Skip "basically," "so," and introductory fluff.
+- Short, declarative sentences. One idea per sentence.
+- Use contractions. It keeps the tone natural.
+- Emojis in headings. Use them in headers to stay scannable, not the body.
+- Citations: Always cite referenced notes using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:${targetDocs[0]?.id || 'ID'}]]).
+- Format cleanly in Markdown.
 
 === PRIMARY ACTIVE DOCUMENT ===
 ${contextText}
 
-${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAWAYS OF ALL OTHER NOTES) ===\n${archiveContextText}` : ''}`
+${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CATEGORY / PROJECT) ===\n${archiveContextText}` : ''}`
                 }]
               }
             };
-
-            if (targetDocs.some(e => e.sourceUrl)) {
-              payload.tools = [{ google_search: {} }];
-            }
 
             const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
             const result = await handleGeminiCall(payload, activeAssistantModel);
@@ -3463,18 +3754,31 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                 ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
                 { role: 'user', parts: [{ text: queryText }] }
               ],
+              generationConfig: { temperature: 0.3 },
               systemInstruction: {
                 parts: [{
                   text: `You are an overarching Knowledge Base Assistant synthesizing information across the user's entire notes archive.
-                  CRITICAL RULES:
-                  - Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
-                  - Be concise, structured, factual, and direct.
-                  - Format in clean Markdown.
-                  
-                  Context:\n${contextText}`
+
+CONVERSATIONAL & CONCISE WRITING RULES:
+- Length: Under 50 words unless requested or necessary. Default to short.
+- Be concise, conversational, and direct. Go a step at a time.
+- Avoid spilling large amounts of text unless specifically requested.
+- Delete unnecessary words. Cut everything that doesn't add value.
+- Prefer short words. Use simple language over complex terms.
+- Stick to the active voice. It’s direct and impactful.
+- Avoid tired phrases. No clichés, similes, or metaphors.
+- Use plain English. Swap jargon and technical terms for everyday words.
+- Zero hyperbole. Stay honest. Avoid exaggeration.
+- No filler or prefaces. Skip "basically," "so," and introductory fluff.
+- Short, declarative sentences. One idea per sentence.
+- Use contractions. It keeps the tone natural.
+- Emojis in headings. Use them in headers to stay scannable, not the body.
+- Citations: Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
+- Format cleanly in Markdown.
+
+Context:\n${contextText}`
                 }]
-              },
-              tools: [{ google_search: {} }]
+              }
             };
 
             const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
@@ -3514,107 +3818,244 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           setError("Select a single note in the list first to insert this response.");
           return;
         }
+        if (isAiChatEntry(activeSingleEntry)) {
+          setError("AI Chat conversation logs are read-only and cannot be modified.");
+          return;
+        }
         const addition = `\n\n---\n### 💡 AI Synthesis (${new Date().toLocaleDateString()})\n\n${text}\n`;
+        const updatedContent = (activeSingleEntry.fullContent || '') + addition;
+        
+        // Synchronize in-memory edit draft buffers so edits and auto-save do not overwrite or lose the insertion
+        setEditData(prev => {
+          const currentDraft = prev[activeSingleEntry.id] || activeSingleEntry;
+          return {
+            ...prev,
+            [activeSingleEntry.id]: {
+              ...currentDraft,
+              fullContent: (currentDraft.fullContent || activeSingleEntry.fullContent || '') + addition
+            }
+          };
+        });
+        if (editDataRef.current) {
+          const currentDraftRef = editDataRef.current[activeSingleEntry.id] || activeSingleEntry;
+          editDataRef.current = {
+            ...editDataRef.current,
+            [activeSingleEntry.id]: {
+              ...currentDraftRef,
+              fullContent: (currentDraftRef.fullContent || activeSingleEntry.fullContent || '') + addition
+            }
+          };
+        }
+
         setEntries(prev => prev.map(ent =>
           ent.id === activeSingleEntry.id
-            ? { ...ent, fullContent: (ent.fullContent || '') + addition, updatedAt: Date.now() }
+            ? { ...ent, fullContent: updatedContent, updatedAt: Date.now() }
             : ent
         ));
         setActionFeedback({ msgId, type: 'insert' });
         setTimeout(() => setActionFeedback(null), 1500);
       };
 
-      const handleStartNewChat = () => {
-        if (assistantMessages.length > 0) {
-          const firstUserMsg = assistantMessages.find(m => m.role === 'user');
-          const snippet = firstUserMsg ? firstUserMsg.text.replace(/[\r\n]+/g, ' ').trim() : 'Conversation';
-          const chatTitle = snippet.length > 42 ? snippet.substring(0, 42) + '...' : snippet;
-          
-          const newArchive = {
-            id: 'arch-' + Date.now(),
-            title: chatTitle,
-            timestamp: Date.now(),
-            messages: [...assistantMessages]
-          };
-
-          setArchivedAssistantChats(prev => ({
-            ...prev,
-            [activeChatKey]: [newArchive, ...(prev[activeChatKey] || [])]
-          }));
-
-          setAssistantChats(prev => ({
-            ...prev,
-            [activeChatKey]: []
-          }));
+      // Full-Width Whole Brain AI Chat Functions
+      const startWholeBrainChat = (targetChatId = null) => {
+        if (targetChatId) {
+          setActiveTypeFilters(prev => prev.includes('aiChat') ? prev : [...prev, 'aiChat']);
+          selectEntryWithHistory([targetChatId]);
+          setIsAssistantOpen(false);
+          return;
         }
+
+        // If current note is already an empty AI Chat, simply remain on it
+        if (activeSingleEntry && isAiChatEntry(activeSingleEntry)) {
+          const msgs = activeSingleEntry.chatMessages || [];
+          if (msgs.length === 0) {
+            setIsAssistantOpen(false);
+            return;
+          }
+        }
+
+        // Create new placeholder AI Chat entry so it exists immediately as its own entity
+        const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
+        const newId = 'entry-' + Date.now();
+        const placeholderEntry = {
+          id: newId,
+          type: 'aiChat',
+          title: 'New AI Chat',
+          numericId: nextNumericId,
+          summary: 'Whole Brain AI conversation session.',
+          shortVersion: [],
+          fullContent: '',
+          chatMessages: [],
+          categories: ['ai chat'],
+          tags: ['ai-chat'],
+          projects: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          sourceUrl: null,
+          references: [],
+          pinned: false
+        };
+
+        // Enable aiChat in type filters so the placeholder is visible in the list
+        setActiveTypeFilters(prev => prev.includes('aiChat') ? prev : [...prev, 'aiChat']);
+        setEntries(prev => [placeholderEntry, ...prev]);
+        selectEntryWithHistory([newId]);
+        setIsAssistantOpen(false);
       };
 
-      const handleArchiveCurrentChat = () => {
-        if (assistantMessages.length === 0) return;
-        handleStartNewChat();
-      };
+      const handleSendWholeBrainMessage = async (overrideText = null) => {
+        const queryText = (overrideText || wholeBrainInput).trim();
+        if (!queryText) return;
+        if (!apiKeys || apiKeys.length === 0) {
+          setShowKeyModal(true);
+          return setError("Please configure your Gemini API key in Settings first.");
+        }
+        if (!activeSingleEntry) return;
 
-      const restoreArchivedChat = (archivedChat) => {
-        if (assistantMessages.length > 0) {
-          const firstUserMsg = assistantMessages.find(m => m.role === 'user');
-          const snippet = firstUserMsg ? firstUserMsg.text.replace(/[\r\n]+/g, ' ').trim() : 'Conversation';
-          const currentTitle = snippet.length > 42 ? snippet.substring(0, 42) + '...' : snippet;
-          
-          const currentArchive = {
-            id: 'arch-' + Date.now(),
-            title: currentTitle,
-            timestamp: Date.now(),
-            messages: [...assistantMessages]
-          };
+        setWholeBrainInput('');
+        setIsAssistantThinking(true);
+        setError(null);
 
-          setArchivedAssistantChats(prev => {
-            const list = (prev[activeChatKey] || []).filter(c => c.id !== archivedChat.id);
-            return {
-              ...prev,
-              [activeChatKey]: [currentArchive, ...list]
+        const targetId = activeSingleEntry.id;
+        const existingMsgs = Array.isArray(activeSingleEntry.chatMessages) ? activeSingleEntry.chatMessages : [];
+        
+        const userMsg = {
+          id: 'msg-' + Date.now(),
+          role: 'user',
+          text: queryText,
+          timestamp: Date.now()
+        };
+
+        const updatedMsgs = [...existingMsgs, userMsg];
+
+        // Auto-name title if title is default
+        const curTitle = activeSingleEntry.title || '';
+        const isDefault = !curTitle || curTitle === 'New AI Chat' || curTitle === 'Untitled Note' || curTitle === 'AI Chat Session';
+        const newTitle = isDefault ? (queryText.length > 50 ? queryText.substring(0, 50) + '...' : queryText) : curTitle;
+
+        setEntries(prev => prev.map(e => e.id === targetId ? {
+          ...e,
+          title: newTitle,
+          chatMessages: updatedMsgs,
+          updatedAt: Date.now()
+        } : e));
+
+        try {
+          const candidateNotes = entries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e));
+          const candidateSummaries = candidateNotes.map(e => `[kb-ref:${e.id}] (Title: ${e.title}) - ${e.summary || e.fullContent?.substring(0, 150) || ''}`).join('\n');
+
+          const activeAssistantModel = taskModels.assistant || model || DEFAULT_MODEL;
+
+          let neededIds = [];
+          if (candidateNotes.length > 0) {
+            const pass1Payload = {
+              contents: [{ role: 'user', parts: [{ text: `User query: "${queryText}"\n\nIdentify up to 5 note IDs that are most relevant to answering this query comprehensively. Return ONLY a JSON array of strings (e.g. ["${candidateNotes[0]?.id || 'entry-1'}"]). If none apply, return [].\n\nAvailable Notes:\n${candidateSummaries}` }] }],
+              generationConfig: { temperature: 0.1 }
             };
-          });
-        } else {
-          setArchivedAssistantChats(prev => ({
-            ...prev,
-            [activeChatKey]: (prev[activeChatKey] || []).filter(c => c.id !== archivedChat.id)
-          }));
-        }
+            try {
+              const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
+              neededIds = parseAIJson(pass1Res.candidates[0].content.parts[0].text);
+              if (!Array.isArray(neededIds)) neededIds = [];
+            } catch (p1Err) {
+              console.warn("Pass 1 routing fallback:", p1Err);
+            }
+          }
 
-        setAssistantChats(prev => ({
-          ...prev,
-          [activeChatKey]: [...archivedChat.messages]
-        }));
+          const fullContextEntries = candidateNotes.filter(e => neededIds.includes(e.id));
+          let contextText = `Primary Relevant Notes:\n\n`;
+          if (fullContextEntries.length > 0) {
+            contextText += fullContextEntries.map(e => `--- [kb-ref:${e.id}] Title: ${e.title} ---\n${e.fullContent || e.summary}`).join('\n\n');
+          } else {
+            contextText += candidateNotes.slice(0, 15).map(e => `--- [kb-ref:${e.id}] Title: ${e.title} ---\n${e.summary || e.fullContent?.substring(0, 300) || ''}`).join('\n\n');
+          }
+
+          const pass2Payload = {
+            contents: [
+              ...updatedMsgs.slice(-8).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+              { role: 'user', parts: [{ text: queryText }] }
+            ],
+            generationConfig: { temperature: 0.3 },
+            systemInstruction: {
+              parts: [{
+                text: `You are an overarching Knowledge Base Assistant synthesizing information across the user's entire notes archive.
+
+CONVERSATIONAL & CONCISE WRITING RULES:
+- Length: Under 50 words unless requested or necessary. Default to short.
+- Be concise, conversational, and direct. Go a step at a time.
+- Avoid spilling large amounts of text unless specifically requested.
+- Delete unnecessary words. Cut everything that doesn't add value.
+- Prefer short words. Use simple language over complex terms.
+- Stick to the active voice. It’s direct and impactful.
+- Avoid tired phrases. No clichés, similes, or metaphors.
+- Use plain English. Swap jargon and technical terms for everyday words.
+- Zero hyperbole. Stay honest. Avoid exaggeration.
+- No filler or prefaces. Skip "basically," "so," and introductory fluff.
+- Short, declarative sentences. One idea per sentence.
+- Use contractions. It keeps the tone natural.
+- Emojis in headings. Use them in headers to stay scannable, not the body.
+- Citations: Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
+- Format cleanly in Markdown.
+
+Context:\n${contextText}`
+              }]
+            }
+          };
+
+          const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
+          const candidate = result.candidates?.[0];
+          const parts = candidate?.content?.parts || [];
+          const replyText = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
+
+          const modelMsg = {
+            id: 'msg-' + (Date.now() + 1),
+            role: 'model',
+            text: replyText,
+            timestamp: Date.now(),
+            model: activeAssistantModel
+          };
+
+          const finalMessages = [...updatedMsgs, modelMsg];
+          const markdownTranscript = finalMessages.map(m => `**${m.role === 'user' ? 'User' : 'AI Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n');
+
+          const userQueries = finalMessages.filter(m => m.role === 'user').map(m => m.text.replace(/[\r\n]+/g, ' ').trim()).filter(Boolean);
+          const queryTopics = userQueries.slice(0, 3).map(q => `"${q.length > 55 ? q.substring(0, 55) + '...' : q}"`).join(', ');
+          const autoSummary = userQueries.length > 0
+            ? `Archived Whole Brain AI dialogue synthesizing knowledge base notes around ${queryTopics}. Comprises ${finalMessages.length} message exchanges.`
+            : `Archived Whole Brain AI conversation session containing ${finalMessages.length} message exchanges.`;
+          const autoTakeaways = userQueries.slice(0, 5).map(q => `Inquiry: ${q.length > 100 ? q.substring(0, 100) + '...' : q}`);
+
+          setEntries(prev => prev.map(e => e.id === targetId ? {
+            ...e,
+            title: newTitle,
+            chatMessages: finalMessages,
+            fullContent: markdownTranscript,
+            summary: e.summary || autoSummary,
+            shortVersion: (Array.isArray(e.shortVersion) && e.shortVersion.length > 0) ? e.shortVersion : autoTakeaways,
+            updatedAt: Date.now()
+          } : e));
+        } catch (err) {
+          const errMsg = {
+            id: 'msg-' + (Date.now() + 1),
+            role: 'model',
+            text: `⚠️ Error: ${err.message}`,
+            timestamp: Date.now()
+          };
+          setEntries(prev => prev.map(e => e.id === targetId ? {
+            ...e,
+            chatMessages: [...updatedMsgs, errMsg],
+            updatedAt: Date.now()
+          } : e));
+        } finally {
+          setIsAssistantThinking(false);
+        }
       };
 
-      const deleteArchivedChat = (chatId) => {
-        if (window.confirm("Delete this previous chat?")) {
-          setArchivedAssistantChats(prev => ({
-            ...prev,
-            [activeChatKey]: (prev[activeChatKey] || []).filter(c => c.id !== chatId)
-          }));
-          setExpandedArchivedChatIds(prev => prev.filter(id => id !== chatId));
-        }
-      };
-
-      const handleClearAllArchivedChats = () => {
-        if (window.confirm("Clear all previous chats for this conversation?")) {
-          setArchivedAssistantChats(prev => ({
-            ...prev,
-            [activeChatKey]: []
-          }));
-          setExpandedArchivedChatIds([]);
-        }
-      };
-
-      const toggleExpandArchivedChat = (chatId) => {
-        setExpandedArchivedChatIds(prev => 
-          prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]
-        );
+      const handleStartNewChat = () => {
+        startWholeBrainChat();
       };
 
       const clearAssistantHistory = () => {
-        if (window.confirm("Clear current active chat history? (Archived chats will remain saved)")) {
+        if (window.confirm("Clear current active chat history?")) {
           setAssistantChats(prev => ({
             ...prev,
             [activeChatKey]: []
@@ -4213,17 +4654,19 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             </button>
           </div>
 
-          {/* 4. Assistant View Toggle (Docked at Top Right with Magic Wand) */}
-          <button 
-            type="button"
-            onClick={() => setIsAssistantOpen(!isAssistantOpen)}
-            className={`view-toggle-btn ${isAssistantOpen ? 'is-active' : 'is-collapsed'}`}
-            style={{ right: '14px' }}
-            title={isAssistantOpen ? "Collapse AI Assistant (Cmd+J)" : "Expand AI Assistant (Cmd+J)"}
-            aria-label="Toggle AI Assistant"
-          >
-            <i className="fa-solid fa-wand-magic-sparkles"></i>
-          </button>
+          {/* 4. Assistant View Toggle (Docked at Top Right with Magic Wand - hidden in Whole Brain mode) */}
+          {!(activeSingleEntry && isAiChatEntry(activeSingleEntry)) && (
+            <button 
+              type="button"
+              onClick={() => setIsAssistantOpen(!isAssistantOpen)}
+              className={`view-toggle-btn ${isAssistantOpen ? 'is-active' : 'is-collapsed'}`}
+              style={{ right: '14px' }}
+              title={isAssistantOpen ? "Collapse AI Assistant (Cmd+J)" : "Expand AI Assistant (Cmd+J)"}
+              aria-label="Toggle AI Assistant"
+            >
+              <i className="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+          )}
 
           {/* LEFT SIDEBAR: TAXONOMY & WORKSPACE */}
           <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
@@ -4518,7 +4961,14 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                           </button>
                           <button 
                             onClick={() => {
-                              const dataStr = JSON.stringify({ entries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
+                              const exportEntries = entries.filter(e => {
+                                if (isAiChatEntry(e)) {
+                                  const msgs = Array.isArray(e.chatMessages) ? e.chatMessages : [];
+                                  return msgs.length > 0 && msgs.some(m => m.text && m.text.trim());
+                                }
+                                return true;
+                              });
+                              const dataStr = JSON.stringify({ entries: exportEntries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
                               const blob = new Blob([dataStr], { type: "application/json" });
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement('a');
@@ -4619,6 +5069,14 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                   >
                     <i className="fa-solid fa-plus text-xs"></i> Note
                   </button>
+                  <button 
+                    type="button"
+                    onClick={() => startWholeBrainChat()} 
+                    className="h-8 px-2.5 text-xs rounded border border-[#a855f7]/40 bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7] hover:text-white transition-colors flex items-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0" 
+                    title="Start new Whole Brain AI Chat"
+                  >
+                    <i className="fa-solid fa-comment-dots text-xs"></i> Chat
+                  </button>
                 </div>
 
                 {/* Quick Add URL/Text */}
@@ -4672,8 +5130,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Note Cards List: 30px margin between cards */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
                 
-                {/* PROMPT NOTE SECTION (Only visible when at least 2 actual notes exist in visible list view) */}
-                {filteredEntries.filter(e => !isWelcomeEntry(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
+                {/* PROMPT NOTE SECTION (Only visible when at least 2 actual notes exist in visible list view, excluding welcome & aiChat entries) */}
+                {filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
                   <button 
                     onClick={generatePromptNote} 
                     className="w-full p-3.5 rounded-md border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
@@ -4712,7 +5170,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         <button 
                           onClick={handleWriteFromPrompt} 
                           className="text-xs bg-[#10e567] text-neutral-900 px-3 py-1 rounded font-bold hover:bg-[#00c853] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
-                          title="Open in Focus Mode to write your response"
+                          title="Write response to this prompt"
                         >
                           <i className="fa-solid fa-pen-nib text-[10px]"></i> Write
                         </button>
@@ -4738,24 +5196,25 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                 {filteredEntries.map(entry => {
                   const isSelected = selectedEntryIds.includes(entry.id);
-                  const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
-                  const isMedia = !isPdf && isMediaSource(entry.sourceUrl);
-                  const isPrompt = isPromptEntry(entry);
+                  const isAiChat = isAiChatEntry(entry);
+                  const isPrompt = !isAiChat && isPromptEntry(entry);
+                  const isPdf = !isAiChat && !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
+                  const isMedia = !isAiChat && !isPdf && isMediaSource(entry.sourceUrl);
                   
                   let typeColor = '#f59e0b'; // Note (Amber)
                   let typeIcon = 'fa-file-lines';
-                  if (isPrompt) {
+                  if (isAiChat) {
+                    typeColor = '#a855f7'; // AI Chat (Purple)
+                    typeIcon = 'fa-comment-dots';
+                  } else if (isPrompt) {
                     typeColor = '#10e567'; // Prompt (Fluoro Green)
                     typeIcon = 'fa-brain';
                   } else if (isMedia) {
                     typeColor = '#ff5252'; // Media (Red)
                     typeIcon = 'fa-play';
-                  } else if (entry.sourceUrl) {
+                  } else if (entry.sourceUrl || isPdf) {
                     typeColor = '#38bdf8'; // Web (Sky)
-                    typeIcon = 'fa-link';
-                  } else if (isPdf) {
-                    typeColor = '#ec4899'; // PDF (Rose)
-                    typeIcon = 'fa-file-pdf';
+                    typeIcon = isPdf ? 'fa-file-pdf' : 'fa-link';
                   }
 
                   return (
@@ -4817,8 +5276,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                         )}
                       </div>
 
-                      {/* For prompt entries, show answer summary if present, else fullContent preview */}
-                      {isPrompt ? (
+                      {/* For prompt or aiChat entries, show summary or fullContent preview */}
+                      {(isPrompt || isAiChat) ? (
                         (entry.summary || entry.fullContent) && (
                           <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
                             {entry.summary || entry.fullContent}
@@ -4868,7 +5327,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
             )}
 
             {/* Content Area: 50px view padding */}
-            <div className="flex-1 overflow-y-auto min-h-0 bg-[var(--bg-main)]">
+            <div className={`flex-1 min-h-0 bg-[var(--bg-main)] ${activeSingleEntry && isAiChatEntry(activeSingleEntry) ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
               {!activeSingleEntry && selectedEntries.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-[50px] text-center font-mono">
                   <div className="w-16 h-16 rounded-lg bg-[var(--card-bg)] flex items-center justify-center mb-4 text-2xl text-[var(--text-muted)]">
@@ -4899,40 +5358,318 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     ))}
                   </div>
                 </div>
-              ) : activeSingleEntry ? (
-                /* Note Reading Mode: 50px view padding */
-                <div 
-                  className="note-reader-container max-w-3xl mx-auto p-[50px] space-y-6 pb-32"
-                  onClick={handleContentClick}
-                  onMouseOver={handleContentMouseOver}
-                  onMouseOut={handleContentMouseOut}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleContentDrop(e, activeSingleEntry)}
-                >
-                  {/* Note Header */}
-                  <div>
-                    <div className="relative group mb-3">
-                      <EditableText 
-                        key={`title-${activeSingleEntry.id}`}
-                        tag="h1"
-                        className="text-2xl lg:text-3xl font-mono font-bold text-[var(--text-main)] tracking-tight leading-[1.3]" 
-                        text={activeSingleEntry.title || 'Untitled Note'} 
-                        onSave={(newText) => {
-                          const targetId = activeSingleEntry.id;
-                          setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText.trim() || 'Untitled Note', updatedAt: Date.now() } : e));
-                        }} 
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSuggestTitle(activeSingleEntry.id)}
-                        disabled={isAnalyzing}
-                        className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'title') ? 'opacity-100' : ''}`}
-                        title="Auto-generate title"
-                        aria-label="Auto-generate title"
+              ) : activeSingleEntry ? (() => {
+                const isAiChat = isAiChatEntry(activeSingleEntry);
+                if (isAiChat) {
+                  const currentChatMessages = Array.isArray(activeSingleEntry.chatMessages) && activeSingleEntry.chatMessages.length > 0
+                    ? activeSingleEntry.chatMessages
+                    : (Array.isArray(activeSingleEntry.chatHistory) && activeSingleEntry.chatHistory.length > 0
+                        ? activeSingleEntry.chatHistory
+                        : []);
+
+                  const createdVal = activeSingleEntry.createdAt || activeSingleEntry.updatedAt || Date.now();
+                  const createdDateStr = new Date(createdVal).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+                  return (
+                    /* Whole Brain AI Chat View (Replaces document view fully) */
+                    <div className="h-full flex flex-col min-h-0 bg-[var(--bg-main)]">
+                      {/* Sticky Chat Header */}
+                      <div className="px-[50px] pt-[50px] pb-3 shrink-0 bg-[var(--bg-main)] space-y-2">
+                        <div className="flex justify-between items-center gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span className="w-8 h-8 rounded bg-[#a855f7]/15 text-[#a855f7] flex items-center justify-center font-bold text-sm shrink-0">
+                              <i className="fa-solid fa-brain"></i>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <EditableText 
+                                key={`title-${activeSingleEntry.id}`}
+                                tag="h1"
+                                className="text-xl lg:text-2xl font-mono font-bold text-[var(--text-main)] tracking-tight leading-tight truncate cursor-text" 
+                                text={activeSingleEntry.title || 'Whole Brain AI Chat'} 
+                                onSave={(newText) => {
+                                  const targetId = activeSingleEntry.id;
+                                  setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText.trim() || 'Whole Brain AI Chat', updatedAt: Date.now() } : e));
+                                }} 
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Header Actions */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setShowChatSummary(prev => !prev)}
+                              className={`h-7 px-2.5 rounded text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer border ${showChatSummary ? 'bg-[var(--accent)] text-white border-[var(--accent)]' : 'bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-main)]'}`}
+                              title="Toggle Session Summary & Takeaways"
+                            >
+                              <i className="fa-solid fa-circle-info text-[11px]"></i>
+                              <span>Summary</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={startWholeBrainChat}
+                              className="btn-primary h-7 px-3 text-xs flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
+                              title="Start fresh Whole Brain chat"
+                            >
+                              <i className="fa-solid fa-plus text-[10px]"></i>
+                              <span>New Chat</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => deleteEntry(activeSingleEntry.id)}
+                              className="h-7 w-7 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors cursor-pointer border border-transparent hover:border-[var(--danger)]/30"
+                              title="Delete this chat session"
+                            >
+                              <i className="fa-regular fa-trash-can text-xs"></i>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Metadata Subtitle */}
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-[var(--text-muted)]">
+                          <span className="font-semibold text-[#a855f7]">#{activeSingleEntry.numericId}</span>
+                          <span>•</span>
+                          <span className="badge text-[10px] bg-[#a855f7]/10 text-[#a855f7] border-[#a855f7]/30">Whole Brain</span>
+                          <span>•</span>
+                          <span>Created {createdDateStr}</span>
+                          <span>•</span>
+                          <span>{currentChatMessages.length} message{currentChatMessages.length === 1 ? '' : 's'}</span>
+                          <span>•</span>
+                          <span className="badge text-[10px]">
+                            {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
+                          </span>
+                        </div>
+
+                        {/* Expandable Session Summary & Key Takeaways Panel */}
+                        {showChatSummary && (
+                          <div className="p-3.5 rounded bg-[var(--card-bg)] border border-[var(--border)] space-y-3 font-mono shadow-xs mt-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] flex items-center gap-1">
+                                <i className="fa-solid fa-lightbulb"></i> Executive Summary
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleGenerateTLDR(activeSingleEntry.id)}
+                                disabled={isAnalyzing}
+                                className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                                title="Auto-generate summary from chat transcript"
+                              >
+                                <i className={`fa-solid fa-rotate-right ${isAnalyzing && generatingField === 'summary' ? 'animate-spin' : ''}`}></i>
+                                Generate
+                              </button>
+                            </div>
+                            <EditableText 
+                              key={`chat-summary-${activeSingleEntry.id}`}
+                              tag="p"
+                              multiline={true}
+                              className="text-xs leading-relaxed text-[var(--text-main)] cursor-text"
+                              text={activeSingleEntry.summary || ''} 
+                              placeholder="Double-click to write summary of this chat session..."
+                              onSave={(newText) => {
+                                const targetId = activeSingleEntry.id;
+                                setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
+                              }} 
+                            />
+                            <div className="pt-2 border-t border-[var(--border)]/40 flex justify-between items-center">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1">
+                                <i className="fa-solid fa-list-check text-[var(--accent)]"></i> Key Takeaways
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
+                                disabled={isAnalyzing}
+                                className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                                title="Auto-extract takeaways from chat transcript"
+                              >
+                                <i className={`fa-solid fa-rotate-right ${isAnalyzing && generatingField === 'takeaways' ? 'animate-spin' : ''}`}></i>
+                                Extract Points
+                              </button>
+                            </div>
+                            {Array.isArray(activeSingleEntry.shortVersion) && activeSingleEntry.shortVersion.length > 0 ? (
+                              <ul className="space-y-1 text-xs text-[var(--text-main)]">
+                                {activeSingleEntry.shortVersion.map((pt, idx) => (
+                                  <li key={idx} className="flex items-start gap-1.5">
+                                    <span className="text-[var(--accent)] font-bold">•</span>
+                                    <span>{pt}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-[11px] text-[var(--text-muted)] italic">No takeaways recorded yet.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Scrollable Message Thread */}
+                      <div 
+                        ref={wholeBrainScrollRef} 
+                        className="flex-1 overflow-y-auto px-[50px] py-4 space-y-4 min-h-0 font-mono text-xs"
+                        onClick={handleContentClick}
+                        onMouseOver={handleContentMouseOver}
+                        onMouseOut={handleContentMouseOut}
                       >
-                        <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'title') ? 'animate-spin' : ''}`}></i>
-                      </button>
+                        {currentChatMessages.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-center text-[var(--text-muted)] py-12 px-4 space-y-4 max-w-lg mx-auto">
+                            <div className="w-14 h-14 rounded-full bg-[#a855f7]/15 text-[#a855f7] flex items-center justify-center text-2xl shadow-sm">
+                              <i className="fa-solid fa-brain"></i>
+                            </div>
+                            <div>
+                              <h3 className="text-base font-bold text-[var(--text-main)]">Whole Brain AI Chat</h3>
+                              <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">
+                                This chat synthesizes ideas across your entire knowledge base. Ask questions, compare themes, uncover contradictions, or request cross-cutting outlines.
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full pt-2">
+                              <button 
+                                type="button" 
+                                onClick={() => handleSendWholeBrainMessage("Synthesize the key recurring themes and ideas across all my notes.")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                              >
+                                ⚡ <span className="font-semibold">Synthesize key themes</span>
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => handleSendWholeBrainMessage("What are the most interesting open questions or gaps across my notes?")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                              >
+                                🔍 <span className="font-semibold">Find open questions</span>
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => handleSendWholeBrainMessage("Recommend surprising connections or parallels between my recent notes.")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                              >
+                                🔗 <span className="font-semibold">Discover connections</span>
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => handleSendWholeBrainMessage("Give me a comprehensive index of the main topics in this knowledge base.")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                              >
+                                📚 <span className="font-semibold">Index main topics</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4 max-w-3xl mx-auto w-full">
+                            {currentChatMessages.map((msg, mIdx) => (
+                              <div key={msg.id || mIdx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] rounded p-4 shadow-[var(--track-card-shadow)] leading-relaxed ${
+                                  msg.role === 'user'
+                                    ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)]'
+                                    : 'bg-[var(--card-bg)] text-[var(--text-main)]'
+                                }`}>
+                                  {msg.role === 'user' ? (
+                                    <div className="whitespace-pre-wrap text-xs font-mono">{msg.text}</div>
+                                  ) : (
+                                    <div>
+                                      <div 
+                                        className="prose prose-player text-xs max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1 font-mono select-text"
+                                        dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(msg.text), entries) }}
+                                      />
+                                      <div className="flex items-center gap-2.5 mt-2.5 pt-2 text-[10px] text-[var(--text-muted)]">
+                                        <button 
+                                          type="button" 
+                                          onClick={() => copyMessage(msg.id || mIdx, msg.text)} 
+                                          className="hover:text-[var(--accent)] flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <i className="fa-regular fa-copy"></i>
+                                          <span>{actionFeedback?.msgId === (msg.id || mIdx) && actionFeedback.type === 'copy' ? 'Copied!' : 'Copy'}</span>
+                                        </button>
+                                        {msg.timestamp && (
+                                          <span className="opacity-60">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+
+                            {isAssistantThinking && (
+                              <div className="flex justify-start">
+                                <div className="bg-[var(--card-bg)] text-[var(--text-muted)] rounded p-3 text-xs flex items-center gap-2 shadow-xs font-mono">
+                                  <i className="fa-solid fa-spinner fa-spin text-[#a855f7]"></i>
+                                  <span>Synthesizing across whole knowledge base...</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sticky Bottom Input Bar */}
+                      <div className="px-[50px] pb-[50px] pt-3 shrink-0 bg-[var(--bg-main)]">
+                        <div className="max-w-3xl mx-auto w-full">
+                          <form 
+                            onSubmit={(e) => { e.preventDefault(); handleSendWholeBrainMessage(); }} 
+                            className="relative flex items-center"
+                          >
+                            <textarea 
+                              value={wholeBrainInput} 
+                              onChange={e => setWholeBrainInput(e.target.value)} 
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleSendWholeBrainMessage();
+                                }
+                              }} 
+                              rows="2" 
+                              placeholder="Ask across your whole knowledge base... (Enter to send, Shift+Enter for newline)" 
+                              className="w-full pl-4 pr-12 py-3 text-xs bg-[var(--card-bg)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded border border-[var(--border)] focus:border-[#a855f7] outline-none resize-none font-mono shadow-xs" 
+                              disabled={isAssistantThinking}
+                            />
+                            <button 
+                              type="submit" 
+                              disabled={isAssistantThinking || !wholeBrainInput.trim()} 
+                              className="absolute right-3.5 bottom-3.5 text-[#a855f7] hover:text-[#9333ea] disabled:opacity-30 p-1 transition-colors cursor-pointer"
+                              title="Send message"
+                            >
+                              <i className="fa-solid fa-paper-plane text-sm"></i>
+                            </button>
+                          </form>
+                        </div>
+                      </div>
                     </div>
+                  );
+                }
+                return (
+                  /* Note Reading Mode: 50px view padding */
+                  <div 
+                    className="note-reader-container max-w-3xl mx-auto p-[50px] space-y-6 pb-32"
+                    onClick={handleContentClick}
+                    onMouseOver={handleContentMouseOver}
+                    onMouseOut={handleContentMouseOut}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleContentDrop(e, activeSingleEntry)}
+                  >
+                    {/* Note Header */}
+                    <div>
+                      <div className="relative group mb-3">
+                        <EditableText 
+                          key={`title-${activeSingleEntry.id}`}
+                          tag="h1"
+                          className="text-2xl lg:text-3xl font-mono font-bold text-[var(--text-main)] tracking-tight leading-[1.3] cursor-text" 
+                          text={activeSingleEntry.title || 'Untitled Note'} 
+                          onSave={(newText) => {
+                            const targetId = activeSingleEntry.id;
+                            setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText.trim() || 'Untitled Note', updatedAt: Date.now() } : e));
+                          }} 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSuggestTitle(activeSingleEntry.id)}
+                          disabled={isAnalyzing}
+                          className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'title') ? 'opacity-100' : ''}`}
+                          title="Auto-generate title"
+                          aria-label="Auto-generate title"
+                        >
+                          <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'title') ? 'animate-spin' : ''}`}></i>
+                        </button>
+                      </div>
                     
                     {(() => {
                       const createdVal = activeSingleEntry.createdAt || activeSingleEntry.updatedAt || Date.now();
@@ -5325,7 +6062,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       </ul>
                     ) : (
                       <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
-                        No key takeaways yet. Click "add point" or click the refresh icon to extract key points.
+                        No key takeaways yet. Click &quot;add point&quot; or click the refresh icon to extract key points.
                       </p>
                     )}
                     <button
@@ -5349,46 +6086,134 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                   {/* Markdown Body */}
                   {(() => {
+                    const isEditingContent = !isAiChat && Boolean(editingEntries[activeSingleEntry.id]);
                     const noteMarkdown = activeSingleEntry.fullContent || (
-                      Array.isArray(activeSingleEntry.chatHistory) && activeSingleEntry.chatHistory.length > 0
-                        ? activeSingleEntry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
-                        : ''
+                      Array.isArray(activeSingleEntry.chatMessages) && activeSingleEntry.chatMessages.length > 0
+                        ? activeSingleEntry.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
+                        : (Array.isArray(activeSingleEntry.chatHistory) && activeSingleEntry.chatHistory.length > 0
+                            ? activeSingleEntry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:**\n\n${m.text}`).join('\n\n---\n\n')
+                            : '')
                     );
+
+                    if (isEditingContent) {
+                      return (
+                        <div ref={editFormRef} className="relative space-y-2">
+                          <div className="flex justify-between items-center mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Content</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-semibold">
+                                Editing
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  setIsContentFocused(true);
+                                }} 
+                                className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1.5 cursor-pointer"
+                                title="Open distraction-free Focus Mode"
+                              >
+                                <i className="fa-solid fa-expand text-xs"></i> Focus Mode
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => saveNote(activeSingleEntry.id)}
+                                className="btn-primary h-6 px-3 text-[11px] font-semibold"
+                                title="Save note and finish editing"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                          <textarea 
+                            ref={!isContentFocused ? contentTextareaRef : null}
+                            autoFocus
+                            value={editData[activeSingleEntry.id]?.fullContent ?? activeSingleEntry.fullContent ?? ''}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setEditData(prev => ({
+                                ...prev,
+                                [activeSingleEntry.id]: {
+                                  ...(prev[activeSingleEntry.id] || activeSingleEntry),
+                                  fullContent: val
+                                }
+                              }));
+                              if (editDataRef.current) {
+                                editDataRef.current = {
+                                  ...editDataRef.current,
+                                  [activeSingleEntry.id]: {
+                                    ...(editDataRef.current[activeSingleEntry.id] || activeSingleEntry),
+                                    fullContent: val
+                                  }
+                                };
+                              }
+                            }} 
+                            onKeyDown={handleContentKeyDown}
+                            className="w-full p-4 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] border border-[var(--border)] rounded focus:border-[var(--accent)] outline-none resize-y min-h-[260px] cursor-text select-text"
+                            placeholder="Write your note in Markdown..."
+                          />
+                        </div>
+                      );
+                    }
+
                     return (
                       <div className="relative group">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Content</span>
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              setIsContentFocused(true);
-                            }} 
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
-                            title="Open distraction-free Focus Mode (or double-click content)"
-                          >
-                            <i className="fa-solid fa-expand text-xs"></i> Focus Mode
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Content</span>
+                            {isAiChat && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#a855f7]/15 text-[#a855f7] border border-[#a855f7]/30 flex items-center gap-1 font-semibold">
+                                <i className="fa-solid fa-lock text-[9px]"></i> Read-Only Chat Transcript
+                              </span>
+                            )}
+                          </div>
+                          {!isAiChat && (
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  startEditing(activeSingleEntry);
+                                }} 
+                                className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:underline flex items-center gap-1 cursor-pointer"
+                                title="Edit note content"
+                              >
+                                <i className="fa-regular fa-pen-to-square text-xs"></i> Edit
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  startEditing(activeSingleEntry);
+                                  setIsContentFocused(true);
+                                }} 
+                                className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                                title="Open distraction-free Focus Mode"
+                              >
+                                <i className="fa-solid fa-expand text-xs"></i> Focus Mode
+                              </button>
+                            </div>
+                          )}
                         </div>
                         {noteMarkdown ? (
                           <div 
                             onDoubleClick={(e) => {
                               e.stopPropagation();
-                              setIsContentFocused(true);
+                              if (!isAiChat) startEditing(activeSingleEntry);
                             }}
-                            className="prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono cursor-text min-h-[60px]"
-                            title="Double-click to edit content in Focus Mode"
+                            className={`prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono min-h-[60px] ${isAiChat ? 'select-text cursor-default' : 'cursor-text'}`}
+                            title={isAiChat ? undefined : "Double-click to edit content"}
                             dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(noteMarkdown), entries) }} 
                           />
                         ) : (
                           <div 
                             onDoubleClick={(e) => {
                               e.stopPropagation();
-                              setIsContentFocused(true);
+                              if (!isAiChat) startEditing(activeSingleEntry);
                             }}
-                            className="text-[var(--text-muted)] italic leading-relaxed font-mono cursor-text min-h-[60px] py-4 border border-dashed border-[var(--border)] rounded px-4 text-center"
-                            title="Double-click to write note content in Focus Mode"
+                            className={`text-[var(--text-muted)] italic leading-relaxed font-mono min-h-[60px] py-4 border border-dashed border-[var(--border)] rounded px-4 text-center ${isAiChat ? 'cursor-default' : 'cursor-text'}`}
+                            title={isAiChat ? undefined : "Double-click to write note content..."}
                           >
-                            Double-click to write note content in Focus Mode...
+                            {isAiChat ? 'No chat messages recorded in this session.' : 'Double-click to write note content...'}
                           </div>
                         )}
                       </div>
@@ -5423,13 +6248,14 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     </div>
                   )}
                 </div>
-              ) : null}
+              );
+            })() : null}
             </div>
           </div>
 
           {/* RIGHT COLUMN: UNIFIED AI ASSISTANT SIDEBAR */}
           <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
-            isAssistantOpen 
+            isAssistantOpen && !(activeSingleEntry && isAiChatEntry(activeSingleEntry))
               ? 'w-96 lg:w-[440px] opacity-100 visible' 
               : 'w-0 min-w-0 opacity-0 invisible pointer-events-none'
           }`}>
@@ -5438,61 +6264,21 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
               {/* Assistant Header */}
               <div className="px-[50px] pt-[50px] pb-4 shrink-0 space-y-3">
                 <div className="flex justify-between items-center h-8">
-                  <div className="flex items-center gap-2 h-8">
-                    <div className="w-7 h-7 rounded bg-[var(--accent)] text-white flex items-center justify-center text-xs shadow-sm">
-                      <i className="fa-solid fa-sparkles"></i>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xs font-bold text-[var(--text-main)] font-mono">AI Assistant</h3>
-                      <span className="badge text-[10px] font-mono" title={`Model: ${taskModels.assistant || DEFAULT_MODEL}`}>
-                        {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 h-8">
-                    {assistantMessages.length > 0 && (
-                      <button 
-                        onClick={handleArchiveCurrentChat} 
-                        className="btn-icon" 
-                        title="Archive current chat session"
-                      >
-                        <i className="fa-solid fa-box-archive text-xs"></i>
-                      </button>
-                    )}
-                    {assistantMessages.length > 0 && (
-                      <button onClick={clearAssistantHistory} className="btn-icon" title="Clear active chat">
-                        <i className="fa-regular fa-trash-can text-xs"></i>
-                      </button>
-                    )}
-                    <button onClick={() => setIsAssistantOpen(false)} className="btn-icon" title="Close assistant">
-                      <i className="fa-solid fa-xmark text-sm"></i>
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-[var(--text-main)] font-mono">AI Assistant</h3>
+                    <span className="badge text-[10px] font-mono" title={`Model: ${taskModels.assistant || DEFAULT_MODEL}`}>
+                      {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
+                    </span>
                   </div>
                 </div>
-
-                {/* New Chat Button (Prominent Colored Button on its own line) */}
-                <button 
-                  type="button"
-                  onClick={handleStartNewChat} 
-                  className="btn-primary w-full py-2 px-3 text-xs font-semibold shadow-xs" 
-                  title="Start new chat (archives current conversation)"
-                >
-                  <i className="fa-solid fa-plus text-xs"></i>
-                  <span>New Chat</span>
-                </button>
 
                 {/* Scope Segmented Control */}
                 <div className="grid grid-cols-2 p-0.5 bg-[var(--bg-main)] rounded text-[11px] font-medium font-mono">
                   <button 
                     type="button"
-                    onClick={() => setAssistantScope('workspace')} 
-                    className={`py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1.5 ${
-                      assistantScope === 'workspace' 
-                        ? 'bg-[var(--card-bg)] text-[var(--accent)] font-semibold shadow-xs' 
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`}
-                    title="Search and chat across whole knowledge base"
+                    onClick={() => startWholeBrainChat()} 
+                    className="py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1.5 text-[var(--text-muted)] hover:text-[#a855f7] hover:bg-[var(--card-bg)] cursor-pointer"
+                    title="Open full-width Whole Brain Chat in main view"
                   >
                     <i className="fa-solid fa-brain text-[10px]"></i>
                     <span>Whole Brain</span>
@@ -5500,17 +6286,8 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                   <button 
                     type="button"
-                    onClick={() => {
-                      if (!activeSingleEntry && entries.length > 0) {
-                        setSelectedEntryIds([entries[0].id]);
-                      }
-                      setAssistantScope('selected');
-                    }} 
-                    className={`py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1.5 ${
-                      assistantScope === 'selected' 
-                        ? 'bg-[var(--card-bg)] text-[var(--accent)] font-semibold shadow-xs' 
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`}
+                    onClick={() => setAssistantScope('selected')} 
+                    className="py-1.5 px-2 rounded bg-[var(--card-bg)] text-[var(--accent)] font-semibold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                     title={activeSingleEntry ? `Focus on "${activeSingleEntry.title}" with archive context` : 'Focus on current entry'}
                   >
                     <i className="fa-solid fa-file-lines text-[10px]"></i>
@@ -5555,7 +6332,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                       <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[90%] rounded px-3.5 py-2.5 shadow-[var(--track-card-shadow)] leading-relaxed ${
                           msg.role === 'user' 
-                            ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)] border border-[var(--chat-user-border)]' 
+                            ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)]' 
                             : 'bg-[var(--card-bg)] text-[var(--text-main)]'
                         }`}>
                           {msg.role === 'user' ? (
@@ -5575,10 +6352,10 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                                   <i className="fa-regular fa-copy"></i>
                                   {actionFeedback?.msgId === msg.id && actionFeedback.type === 'copy' ? 'Copied!' : 'Copy'}
                                 </button>
-                                {activeSingleEntry && (
+                                {activeSingleEntry && !isAiChatEntry(activeSingleEntry) && (
                                   <button 
                                     onClick={() => insertMessageIntoNote(msg.id, msg.text)} 
-                                    className="text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center gap-1"
+                                    className="text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center gap-1 cursor-pointer"
                                     title="Insert into currently open note"
                                   >
                                     <i className="fa-solid fa-file-import"></i>
@@ -5601,137 +6378,13 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
                     )}
                   </div>
                 )}
-
-                {/* PREVIOUS CHATS SECTION */}
-                {activeArchivedChats.length > 0 && (
-                  <div className="pt-6 mt-4 border-t border-[var(--bg-main)] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-                        <i className="fa-solid fa-clock-rotate-left text-[var(--accent)]"></i>
-                        Previous Chats ({activeArchivedChats.length})
-                      </h4>
-                      <button 
-                        onClick={handleClearAllArchivedChats}
-                        className="text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors"
-                        title="Clear all previous chats for this conversation"
-                      >
-                        Clear Archive
-                      </button>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      {activeArchivedChats.map((archivedChat, idx) => {
-                        const isExpanded = expandedArchivedChatIds.includes(archivedChat.id);
-                        const firstUserText = (archivedChat.messages || []).find(m => m.role === 'user')?.text || '';
-                        const msgCount = (archivedChat.messages || []).length;
-                        const formattedTime = new Date(archivedChat.timestamp || Date.now()).toLocaleDateString(undefined, { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        });
-
-                        return (
-                          <div 
-                            key={archivedChat.id || idx} 
-                            className="bg-[var(--card-bg)] rounded overflow-hidden shadow-[var(--track-card-shadow)] transition-all"
-                          >
-                            {/* Previous Chat Card Header */}
-                            <div 
-                              onClick={() => toggleExpandArchivedChat(archivedChat.id)}
-                              className="p-3 cursor-pointer hover:bg-[var(--bg-hover)] flex items-start justify-between gap-2 select-none"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  <i className={`fa-solid ${isExpanded ? 'fa-chevron-down' : 'fa-chevron-right'} text-[10px] text-[var(--text-muted)]`}></i>
-                                  <span className="font-bold text-xs text-[var(--text-main)] truncate">
-                                    {archivedChat.title || firstUserText.substring(0, 40) || 'Archived Session'}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] pl-4">
-                                  <span>{formattedTime}</span>
-                                  <span>•</span>
-                                  <span>{msgCount} message{msgCount === 1 ? '' : 's'}</span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                                <button 
-                                  onClick={() => restoreArchivedChat(archivedChat)}
-                                  className="btn-icon text-xs hover:text-[var(--accent)]" 
-                                  title="Restore / Resume as active chat"
-                                >
-                                  <i className="fa-solid fa-arrow-rotate-left"></i>
-                                </button>
-                                <button 
-                                  onClick={() => deleteArchivedChat(archivedChat.id)}
-                                  className="btn-icon text-xs hover:text-[var(--danger)]" 
-                                  title="Delete this previous chat"
-                                >
-                                  <i className="fa-solid fa-trash-can"></i>
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Previous Chat Messages */}
-                            {isExpanded && (
-                              <div className="p-3 pt-1 space-y-2.5 bg-[var(--bg-pane)] border-t border-[var(--bg-main)]">
-                                {(archivedChat.messages || []).map((msg, mIdx) => (
-                                  <div key={msg.id || mIdx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mt-2`}>
-                                    <div className={`max-w-[92%] rounded px-3 py-2 leading-relaxed text-xs ${
-                                      msg.role === 'user' 
-                                        ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)] border border-[var(--chat-user-border)]' 
-                                        : 'bg-[var(--card-bg)] text-[var(--text-main)] shadow-xs'
-                                    }`}>
-                                      {msg.role === 'user' ? (
-                                        <div className="whitespace-pre-wrap">{msg.text}</div>
-                                      ) : (
-                                        <div>
-                                          <div 
-                                            className="prose prose-player text-xs max-w-none prose-p:my-1 prose-headings:my-1 prose-ul:my-1" 
-                                            dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(msg.text), entries) }}
-                                            onClick={handleContentClick}
-                                          />
-                                          <div className="flex items-center gap-2 mt-2 pt-1 text-[10px]">
-                                            <button 
-                                              onClick={() => copyMessage(msg.id, msg.text)} 
-                                              className="text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center gap-1"
-                                            >
-                                              <i className="fa-regular fa-copy"></i>
-                                              {actionFeedback?.msgId === msg.id && actionFeedback.type === 'copy' ? 'Copied!' : 'Copy'}
-                                            </button>
-                                            {activeSingleEntry && (
-                                              <button 
-                                                onClick={() => insertMessageIntoNote(msg.id, msg.text)} 
-                                                className="text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center gap-1"
-                                                title="Insert into currently open note"
-                                              >
-                                                <i className="fa-solid fa-file-import"></i>
-                                                {actionFeedback?.msgId === msg.id && actionFeedback.type === 'insert' ? 'Inserted!' : 'Insert'}
-                                              </button>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Quick Prompt Chips (Current Entry Only) */}
               {assistantScope === 'selected' && (
                 <div className="px-[50px] py-3 flex flex-wrap gap-1.5 bg-[var(--bg-main)]">
                   <button 
-                    onClick={() => sendAssistantMessage("Summarize the key points in 3 concise paragraphs.")} 
+                    onClick={() => sendAssistantMessage("Summarize the key points concisely under 50 words.")} 
                     className="btn-secondary text-[11px] px-2.5 py-1"
                   >
                     ⚡ Summarize
@@ -5805,7 +6458,7 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
           })()}
 
           {/* DISTRACTION-FREE FOCUS MODE (PORTAL OVER ENTIRE APP) */}
-          {isContentFocused && activeSingleEntry && ReactDOM.createPortal(
+          {isContentFocused && activeSingleEntry && !isAiChatEntry(activeSingleEntry) && ReactDOM.createPortal(
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
               {/* Opaque backdrop fading in */}
               <div 
@@ -5849,9 +6502,21 @@ ${archiveContextText ? `=== WIDER PERSONAL CONTEXT (EXECUTIVE SUMMARIES & TAKEAW
 
                 {/* Textarea */}
                 <textarea 
-                  ref={contentTextareaRef}
+                  ref={isContentFocused ? contentTextareaRef : null}
                   value={editData[activeSingleEntry.id]?.fullContent ?? activeSingleEntry.fullContent ?? ''}
-                  onChange={e => setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...(prev[activeSingleEntry.id] || activeSingleEntry), fullContent: e.target.value } }))} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setEditData(prev => ({ ...prev, [activeSingleEntry.id]: { ...(prev[activeSingleEntry.id] || activeSingleEntry), fullContent: val } }));
+                    if (editDataRef.current) {
+                      editDataRef.current = {
+                        ...editDataRef.current,
+                        [activeSingleEntry.id]: {
+                          ...(editDataRef.current[activeSingleEntry.id] || activeSingleEntry),
+                          fullContent: val
+                        }
+                      };
+                    }
+                  }} 
                   onKeyDown={handleContentKeyDown}
                   className="w-full flex-1 p-8 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] resize-none outline-none border-none cursor-text select-text"
                   placeholder="Write your note in Markdown..."
