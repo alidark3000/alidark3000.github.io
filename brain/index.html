@@ -115,9 +115,20 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.7.7";
+    const APP_VERSION = "v2.7.8";
 
     const CHANGELOG = [
+      {
+        version: "v2.7.8",
+        date: "2026-10-11",
+        highlights: [
+          "Automatic Most Recent File Loading on Startup: The application now automatically accesses and resumes the most recently opened knowledge base file from IndexedDB on startup, falling back seamlessly to the file switch/selection landing screen if not found or unavailable.",
+          "Dynamic Prompt Candidate Pool Derived from List View: Theme prompt synthesis now pulls candidate notes directly from whatever entries are visible in the note list view (accounting for active entry type filters, taxonomies, and search queries) rather than the global library.",
+          "Updated Prompt Note Card Accents & Styling: Prompt theme entries, badges, and card borders updated to fluoro green (#10e567).",
+          "Main Accent Color Refresh: Updated brand button and accent color to energetic red-orange (#e73624), paired with matching SVG brain favicon.",
+          "Top Navigation Layout Refinement: Moved document Back and Forward history buttons into the top padding zone adjacent to the Settings gear toggle."
+        ]
+      },
       {
         version: "v2.7.7",
         date: "2026-10-10",
