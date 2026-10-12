@@ -115,9 +115,24 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.23";
+    const APP_VERSION = "v2.8.25";
 
     const CHANGELOG = [
+      {
+        version: "v2.8.25",
+        date: "2026-10-12",
+        highlights: [
+          "Automatic Cleanup of Empty Manual Notes: Creating a blank note and clicking off or navigating away without writing any content now automatically deletes and prunes the empty note from the library, preventing abandoned blank entries.",
+          "Auto-Focus on Whole Brain AI Chat Input: Creating a new AI Chat session or switching to an AI Chat entry automatically focuses the chat input field so you can begin typing immediately."
+        ]
+      },
+      {
+        version: "v2.8.24",
+        date: "2026-10-12",
+        highlights: [
+          "Smooth Creation Fade-In (200ms): Newly created notes and AI chat sessions now smoothly fade into view over 200ms (.animate-entry-fade) when gaining focus in the main editor/chat view."
+        ]
+      },
       {
         version: "v2.8.23",
         date: "2026-10-12",
@@ -1170,15 +1185,34 @@
           }
         }
 
-        // Clean up empty AI chat placeholder if clicking off / navigating away
+        // Clean up empty AI chat or empty manual note if clicking off / navigating away
         const curActive = activeSingleEntryRef.current;
-        if (curActive && isAiChatEntry(curActive)) {
-          const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
-          const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
-          if (isEmpty && !ids.includes(curActive.id)) {
-            const emptyId = curActive.id;
-            setEntries(prev => prev.filter(e => e.id !== emptyId));
-            setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+        if (curActive && !ids.includes(curActive.id)) {
+          if (isAiChatEntry(curActive)) {
+            const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
+            const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+            if (isEmpty) {
+              const emptyId = curActive.id;
+              setEntries(prev => prev.filter(e => e.id !== emptyId));
+              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+            }
+          } else {
+            // Check if manual entry was created and left completely empty
+            const staged = (editDataRef.current && editDataRef.current[curActive.id]) || {};
+            const liveText = contentTextareaRef.current?.value;
+            const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (curActive.fullContent || ''))).trim();
+            const title = (staged.title !== undefined ? staged.title : (curActive.title || '')).trim();
+            const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+            const isContentEmpty = !content;
+            const isSourceEmpty = !curActive.sourceUrl;
+            if (isContentEmpty && isTitleEmptyOrDefault && isSourceEmpty) {
+              const emptyId = curActive.id;
+              setEntries(prev => prev.filter(e => e.id !== emptyId));
+              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+              setEditingEntries(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
+              setEditData(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
+              if (editDataRef.current) delete editDataRef.current[emptyId];
+            }
           }
         }
 
@@ -1208,13 +1242,29 @@
           const curActive = activeSingleEntryRef.current;
           const newIdx = navIndex - 1;
           const targetIds = navHistory[newIdx] || [];
-          if (curActive && isAiChatEntry(curActive)) {
-            const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
-            const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
-            if (isEmpty && !targetIds.includes(curActive.id)) {
-              const emptyId = curActive.id;
-              setEntries(prev => prev.filter(e => e.id !== emptyId));
-              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+          if (curActive && !targetIds.includes(curActive.id)) {
+            if (isAiChatEntry(curActive)) {
+              const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
+              const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+              if (isEmpty) {
+                const emptyId = curActive.id;
+                setEntries(prev => prev.filter(e => e.id !== emptyId));
+                setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+              }
+            } else {
+              const staged = (editDataRef.current && editDataRef.current[curActive.id]) || {};
+              const liveText = contentTextareaRef.current?.value;
+              const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (curActive.fullContent || ''))).trim();
+              const title = (staged.title !== undefined ? staged.title : (curActive.title || '')).trim();
+              const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+              if (!content && isTitleEmptyOrDefault && !curActive.sourceUrl) {
+                const emptyId = curActive.id;
+                setEntries(prev => prev.filter(e => e.id !== emptyId));
+                setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+                setEditingEntries(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
+                setEditData(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
+                if (editDataRef.current) delete editDataRef.current[emptyId];
+              }
             }
           }
           setNavIndex(newIdx);
@@ -1227,13 +1277,29 @@
           const curActive = activeSingleEntryRef.current;
           const newIdx = navIndex + 1;
           const targetIds = navHistory[newIdx] || [];
-          if (curActive && isAiChatEntry(curActive)) {
-            const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
-            const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
-            if (isEmpty && !targetIds.includes(curActive.id)) {
-              const emptyId = curActive.id;
-              setEntries(prev => prev.filter(e => e.id !== emptyId));
-              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+          if (curActive && !targetIds.includes(curActive.id)) {
+            if (isAiChatEntry(curActive)) {
+              const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
+              const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+              if (isEmpty) {
+                const emptyId = curActive.id;
+                setEntries(prev => prev.filter(e => e.id !== emptyId));
+                setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+              }
+            } else {
+              const staged = (editDataRef.current && editDataRef.current[curActive.id]) || {};
+              const liveText = contentTextareaRef.current?.value;
+              const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (curActive.fullContent || ''))).trim();
+              const title = (staged.title !== undefined ? staged.title : (curActive.title || '')).trim();
+              const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+              if (!content && isTitleEmptyOrDefault && !curActive.sourceUrl) {
+                const emptyId = curActive.id;
+                setEntries(prev => prev.filter(e => e.id !== emptyId));
+                setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
+                setEditingEntries(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
+                setEditData(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
+                if (editDataRef.current) delete editDataRef.current[emptyId];
+              }
             }
           }
           setNavIndex(newIdx);
@@ -1270,6 +1336,7 @@
       const [editTagInput, setEditTagInput] = useState({});
       const [editProjectInput, setEditProjectInput] = useState({});
       const [isContentFocused, setIsContentFocused] = useState(false);
+      const [newlyCreatedEntryId, setNewlyCreatedEntryId] = useState(null);
       const [isEditingTaxonomy, setIsEditingTaxonomy] = useState(false);
       const [taxProjectInput, setTaxProjectInput] = useState('');
       const [taxCatInput, setTaxCatInput] = useState('');
@@ -1307,12 +1374,27 @@
         if (prevIds && prevIds.length === 1 && !selectedEntryIds.includes(prevIds[0])) {
           const prevId = prevIds[0];
           const prevEntry = (entriesRef.current || []).find(e => e.id === prevId);
-          if (prevEntry && isAiChatEntry(prevEntry)) {
-            const msgs = Array.isArray(prevEntry.chatMessages) ? prevEntry.chatMessages : [];
-            const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
-            if (isEmpty) {
-              setEntries(prev => prev.filter(e => e.id !== prevId));
-              setNavHistory(prev => prev.map(hist => hist.filter(id => id !== prevId)).filter(h => h.length > 0));
+          if (prevEntry) {
+            if (isAiChatEntry(prevEntry)) {
+              const msgs = Array.isArray(prevEntry.chatMessages) ? prevEntry.chatMessages : [];
+              const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
+              if (isEmpty) {
+                setEntries(prev => prev.filter(e => e.id !== prevId));
+                setNavHistory(prev => prev.map(hist => hist.filter(id => id !== prevId)).filter(h => h.length > 0));
+              }
+            } else {
+              const staged = (editDataRef.current && editDataRef.current[prevId]) || {};
+              const liveText = contentTextareaRef.current?.value;
+              const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (prevEntry.fullContent || ''))).trim();
+              const title = (staged.title !== undefined ? staged.title : (prevEntry.title || '')).trim();
+              const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+              if (!content && isTitleEmptyOrDefault && !prevEntry.sourceUrl) {
+                setEntries(prev => prev.filter(e => e.id !== prevId));
+                setNavHistory(prev => prev.map(hist => hist.filter(id => id !== prevId)).filter(h => h.length > 0));
+                setEditingEntries(prev => { const n = { ...prev }; delete n[prevId]; return n; });
+                setEditData(prev => { const n = { ...prev }; delete n[prevId]; return n; });
+                if (editDataRef.current) delete editDataRef.current[prevId];
+              }
             }
           }
         }
@@ -1528,11 +1610,19 @@
       const [wholeBrainInput, setWholeBrainInput] = useState('');
       const [showChatSummary, setShowChatSummary] = useState(false);
       const wholeBrainScrollRef = useRef(null);
+      const wholeBrainInputRef = useRef(null);
 
-      // Auto-scroll Whole Brain center view thread
+      // Auto-scroll Whole Brain center view thread and auto-focus chat input field
       useEffect(() => {
         if (wholeBrainScrollRef.current) {
           wholeBrainScrollRef.current.scrollTop = wholeBrainScrollRef.current.scrollHeight;
+        }
+        if (activeSingleEntry && isAiChatEntry(activeSingleEntry)) {
+          setTimeout(() => {
+            if (wholeBrainInputRef.current) {
+              wholeBrainInputRef.current.focus();
+            }
+          }, 30);
         }
       }, [activeSingleEntry?.id, activeSingleEntry?.chatMessages?.length, isAssistantThinking]);
 
@@ -2888,6 +2978,7 @@
           pinned: false
         };
         setEntries(prev => [newEntry, ...prev]);
+        setNewlyCreatedEntryId(newId);
         selectEntryWithHistory([newId]);
         setEditData(prev => ({
           ...prev,
@@ -3271,6 +3362,22 @@ Respond with valid JSON ONLY matching this structure:
         const existingEntry = entriesRef.current.find(e => e.id === id);
         const data = editDataRef.current[id] || editData[id] || existingEntry;
         if (!data) return;
+
+        // If manual note is untitled and content is empty, delete it on save/defocus
+        const checkContent = (data.fullContent !== undefined && data.fullContent !== null ? data.fullContent : (existingEntry?.fullContent || '')).trim();
+        const checkTitle = (data.title !== undefined && data.title !== null ? data.title : (existingEntry?.title || '')).trim();
+        const isDefaultTitle = !checkTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(checkTitle);
+        const isNotAiChat = !isAiChatEntry(existingEntry || data);
+        if (isNotAiChat && !checkContent && isDefaultTitle && !(existingEntry || data).sourceUrl) {
+          setEntries(prev => prev.filter(e => e.id !== id));
+          setNavHistory(prev => prev.map(hist => hist.filter(i => i !== id)).filter(h => h.length > 0));
+          setSelectedEntryIds(prev => prev.filter(i => i !== id));
+          setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
+          setEditData(prev => { const n = { ...prev }; delete n[id]; return n; });
+          if (editDataRef.current) { delete editDataRef.current[id]; }
+          savingIdsRef.current.delete(id);
+          return;
+        }
         if (savingIdsRef.current.has(id)) return;
         savingIdsRef.current.add(id);
 
@@ -4229,6 +4336,7 @@ Context:\n${contextText}`
         // Enable aiChat in type filters so the placeholder is visible in the list
         setActiveTypeFilters(prev => prev.includes('aiChat') ? prev : [...prev, 'aiChat']);
         setEntries(prev => [placeholderEntry, ...prev]);
+        setNewlyCreatedEntryId(newId);
         selectEntryWithHistory([newId]);
         setIsAssistantOpen(false);
       };
@@ -5702,7 +5810,8 @@ Context:\n${contextText}`
 
                   return (
                     /* Whole Brain AI Chat View (Replaces document view fully) */
-                    <div className="h-full flex flex-col min-h-0 bg-[var(--bg-main)]">
+                    <div key={`chat-view-${activeSingleEntry.id}`} className={`h-full flex flex-col min-h-0 bg-[var(--bg-main)] ${newlyCreatedEntryId === activeSingleEntry.id ? "animate-entry-fade" : ""}`}
+                      onAnimationEnd={() => setNewlyCreatedEntryId(null)}>
                       {/* Sticky Chat Header */}
                       <div className="px-[50px] pt-[50px] pb-3 shrink-0 bg-[var(--bg-main)] space-y-2">
                         <div className="flex justify-between items-center gap-3">
@@ -5939,6 +6048,8 @@ Context:\n${contextText}`
                             className="relative flex items-center"
                           >
                             <textarea 
+                              ref={wholeBrainInputRef}
+                              autoFocus
                               value={wholeBrainInput} 
                               onChange={e => setWholeBrainInput(e.target.value)} 
                               onKeyDown={e => {
@@ -5969,7 +6080,9 @@ Context:\n${contextText}`
                 return (
                   /* Note Reading Mode: 50px view padding */
                   <div 
-                    className="note-reader-container max-w-3xl mx-auto p-[50px] space-y-6 pb-32"
+                    key={`note-view-${activeSingleEntry.id}`} 
+                    className={`note-reader-container max-w-3xl mx-auto p-[50px] space-y-6 pb-32 ${newlyCreatedEntryId === activeSingleEntry.id ? "animate-entry-fade" : ""}`} 
+                    onAnimationEnd={() => setNewlyCreatedEntryId(null)}
                     onClick={handleContentClick}
                     onMouseOver={handleContentMouseOver}
                     onMouseOut={handleContentMouseOut}

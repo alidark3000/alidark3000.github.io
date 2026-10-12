@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.23</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.25</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -345,7 +345,8 @@
         <li><strong>Non-Destructive Archival & Natural Continuation:</strong> Every message exchange is stored non-destructively directly on the active AI Chat entry. When you select an archived AI chat from the notes list, its entire conversational transcript and message history are automatically repopulated into the full-width AI view, allowing you to continue the conversation naturally while preserving session integrity and auto-updating summaries.</li>
         <li><strong>Initial Note Selection on Load:</strong> Because <em>AI Chat</em> entries have visibility turned off by default in the list view, opening the application automatically selects the most recent non-AI Chat note (or top visible entry according to active type filters) so you are immediately presented with an active, visible document.</li>
         <li><strong>Direct Content Insertion:</strong> One-click insertion transfers assistant answers or synthesized outlines straight into your active note editor, syncing in-memory edit buffers so subsequent edits and auto-saving never overwrite or discard inserted content.</li>
-        <li><strong>Automatic Empty Placeholder Cleanup:</strong> When a new Whole Brain AI chat is created, if no messages are sent and you click off or navigate away to another note, the empty placeholder entry is automatically deleted and pruned from both the library list and navigation history so unstarted sessions never clutter your knowledge base.</li>
+        <li><strong>Automatic Empty Placeholder & Manual Note Cleanup:</strong> If a user creates a new blank manual note or a new Whole Brain AI chat and navigates away or clicks off without writing any content, the empty entry is automatically deleted and pruned from the library and navigation history to prevent abandoned blank records.</li>
+        <li><strong>Auto-Focus on AI Chat Creation:</strong> Creating a new Whole Brain AI chat session or navigating to an AI chat entry automatically focuses the chat input field so you can begin typing immediately.</li>
         <li><strong>Strict Assistant Drawer Segregation:</strong> Whole Brain chat mode is completely isolated from Current Entry chat. When in Whole Brain chat, the top-right magic wand toggle button is cleanly removed from the DOM entirely, keyboard shortcuts (<kbd>Cmd+J</kbd> / <kbd>Cmd+L</kbd> / <kbd>Ctrl+J</kbd>) are ignored, and the assistant drawer is automatically collapsed so Current Entry chat can never be accessed during Whole Brain chat.</li>
         <li><strong>Clean Borderless Message Bubbles & Layout:</strong> All message entries across both the full-width Whole Brain conversation and the Current Entry assistant drawer are designed without borders, floating with clean contrast and subtle card shadows against the canvas. In Whole Brain mode, dividing lines below the header and above the message input bar are eliminated for a seamless document flow.</li>
         <li><strong>Concise & Conversational Response Rules:</strong> Across all assistant modes (Whole Brain and Current Entry), AI responses are governed by strict concise writing rules and a 50-word target limit unless longer answers are specifically requested or necessary, defaulting to short. Assistant models are calibrated with a focused temperature of 0.3. The assistant proceeds step-by-step, avoids spilling large amounts of text, uses the active voice, cuts unnecessary filler, prefers short words and plain English, keeps sentences declarative and focused (one idea per sentence), uses natural contractions, reserves emojis strictly for headers, and cites sources cleanly using <code>[[kb-ref:ID]]</code>.</li>
@@ -398,7 +399,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.23</strong></span>
+      <span>Version <strong>v2.8.25</strong></span>
       <a href="index.html">Back to Brain App</a>
     </div>
   </footer>
