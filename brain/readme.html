@@ -85,7 +85,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.25</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.28</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -305,12 +305,22 @@
         <div class="pt-2 border-t border-[var(--border)]">
           <strong>Temporal Weighting:</strong> Evaluates your complete knowledge base across all time, giving ~65% priority to notes created or modified in the last 4 months.
         </div>
-        <div>
-          <strong>Scoped Context & Candidate Limits:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. The synthesis payload selects up to a hard ceiling of <strong>35 entries</strong> from the visible pool to stay safely within token and reasoning limits:
+        <div class="pt-2 border-t border-[var(--border)]">
+          <strong>Prompt Generation Settings & Customization:</strong> Located directly beside the "Generate Prompt" button, a gear icon opens configurable parameters for synthesis:
           <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><em>Recent Window (Last 4 Months, ~65% weight):</em> Up to 15 manual notes, 6 prompt responses, and 4 external context notes.</li>
-            <li><em>All-Time / Earlier History (~35% weight):</em> Up to 8 manual notes, 4 prompt responses, and 2 external context notes.</li>
-            <li><em>Priority Fill:</em> If fewer than 35 notes are selected, remaining slots are topped up preserving priority (manual &rarr; prompt &rarr; external context).</li>
+            <li><strong>Creativity Level (Temperature):</strong> A slider ranging from <code>0.0</code> (precise and factual) to <code>1.0</code> (creative and exploratory), defaulting to <code>0.7</code>.</li>
+            <li><strong>Gemini Model Assignment:</strong> A dropdown allowing you to override the model used for synthesis or inherit the workspace default (<code>taskModels.prompts || gemini-flash-lite-latest</code>).</li>
+            <li><strong>Notes to Involve:</strong> A slider adjusting the number of notes analyzed from <code>5</code> to <code>60</code> (default: <code>35</code>). Note sampling scales proportionally across recent and older notes while prioritizing manual notes.</li>
+            <li><strong>Verbal Instructions (System Prompt):</strong> An editable textarea exposing the full verbal guidance and system instructions sent to Gemini. Active filter context, past prompt history, and JSON output formatting are automatically preserved. Includes an individual "Reset Instructions" button.</li>
+            <li><strong>Reset to Defaults:</strong> A one-click master button restoring creativity to 0.7, inheriting the workspace prompt model, setting note limit to 35, and resetting verbal instructions back to standard thinking assistant guidelines.</li>
+          </ul>
+        </div>
+        <div>
+          <strong>Scoped Context & Candidate Limits:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. The synthesis payload selects up to the configured limit (default: <strong>35 entries</strong>) from the visible pool to stay safely within token and reasoning limits:
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li><em>Recent Window (Last 4 Months, ~65% weight):</em> Scaled quota prioritizing manual notes, prompt responses, and external context notes.</li>
+            <li><em>All-Time / Earlier History (~35% weight):</em> Scaled quota connecting historical themes to recent thoughts.</li>
+            <li><em>Priority Fill:</em> If fewer notes are selected, remaining slots are topped up preserving priority (manual &rarr; prompt &rarr; external context).</li>
           </ul>
           If list filters are active, prompt synthesis isolates itself strictly to those visible notes, and notes created from the prompt inherit active taxonomies. <em>AI Chat</em> archive entries and the starter welcome note are strictly excluded from the prompt candidate pool under all conditions. When only the default-hidden <em>AI Chat</em> type is deselected, the "Generate Prompt" button cleanly displays its standard label without listing type filters, treating all content types as active.
         </div>

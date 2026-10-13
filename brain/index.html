@@ -115,9 +115,33 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.25";
+    const APP_VERSION = "v2.8.28";
 
     const CHANGELOG = [
+      {
+        version: "v2.8.28",
+        date: "2026-10-13",
+        highlights: [
+          "Robust Manual Summary (TL;DR) Generation: Resolved 'Cannot read properties of null (reading summary)' error by adding null-safe response parsing, multi-part candidate extraction (handling thinking tokens seamlessly), syncing live textarea/chat content, increasing output token limits to 800, and requiring the summary key in the API schema."
+        ]
+      },
+      {
+        version: "v2.8.27",
+        date: "2026-10-13",
+        highlights: [
+          "Editable Verbal Prompt Instructions: Exposed the system prompt and verbal instructions sent to Gemini during theme prompt generation inside the Prompt Settings popover. Users can customize, experiment with, or fine-tune prompt guidance while preserving dynamic filter context and citation schemas.",
+          "Verbal Prompt Default Reset: Added a one-click action to reset the verbal instructions to the default thinking assistant prompt, as well as inclusion in the master 'Reset to Defaults' action."
+        ]
+      },
+      {
+        version: "v2.8.26",
+        date: "2026-10-13",
+        highlights: [
+          "Configurable Prompt Generation Settings: Added a settings gear button beside the 'Generate Prompt' button allowing users to customize creativity level (temperature slider 0.0–1.0), Gemini model dropdown, and note sampling count (slider 5–60 notes).",
+          "Reset to Defaults: Included a one-click 'Reset to Defaults' action restoring creativity to 0.7, inheriting the workspace prompt model, and note quota to 35.",
+          "Persistent Prompt Preferences: Automatically saves prompt settings to workspace data and browser storage across sessions."
+        ]
+      },
       {
         version: "v2.8.25",
         date: "2026-10-12",
@@ -901,11 +925,38 @@
       return result;
     };
 
-    const parseAIJson = (text) => {
+    const getCandidateText = (cand) => {
+      if (!cand) return '';
+      if (typeof cand === 'string') return cand;
+      const parts = cand.content?.parts || cand.parts;
+      if (Array.isArray(parts)) {
+        const textParts = parts.filter(p => p && typeof p.text === 'string').map(p => p.text);
+        if (textParts.length > 0) return textParts.join('');
+        const first = parts[0];
+        if (first && typeof first.text === 'string') return first.text;
+      }
+      return '';
+    };
+
+    const parseAIJson = (textOrCandidate) => {
+      if (!textOrCandidate) return null;
+      if (typeof textOrCandidate === 'object' && !textOrCandidate.content && !textOrCandidate.parts && (textOrCandidate.summary || textOrCandidate.title || textOrCandidate.shortVersion || textOrCandidate.projects)) {
+        return textOrCandidate;
+      }
+      const text = typeof textOrCandidate === 'string' ? textOrCandidate : getCandidateText(textOrCandidate);
       if (!text || typeof text !== 'string') return null;
       let t = text.trim();
-      const match = t.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-      if (match) t = match[1].trim();
+      const fenceMatch = t.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      if (fenceMatch) {
+        t = fenceMatch[1].trim();
+      }
+      if (!t.startsWith('{') && !t.startsWith('[')) {
+        const firstBrace = t.indexOf('{');
+        const lastBrace = t.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          t = t.substring(firstBrace, lastBrace + 1).trim();
+        }
+      }
       try {
         return JSON.parse(t);
       } catch (e) {
@@ -924,8 +975,14 @@
           const extracted = {};
           const titleMatch = t.match(/"title"\s*:\s*"([^"]+)/i);
           if (titleMatch) extracted.title = titleMatch[1];
-          const summaryMatch = t.match(/"summary"\s*:\s*"([^"]+)/i);
+          const summaryMatch = t.match(/"summary"\s*:\s*"([\s\S]*?)(?:"|\Z)/i);
           if (summaryMatch) extracted.summary = summaryMatch[1];
+          const shortVersionMatch = t.match(/"shortVersion"\s*:\s*\[([\s\S]*?)\]/i);
+          if (shortVersionMatch) {
+            try {
+              extracted.shortVersion = JSON.parse(`[${shortVersionMatch[1]}]`);
+            } catch (svErr) {}
+          }
           if (Object.keys(extracted).length > 0) return extracted;
           console.warn('Failed to parse AI JSON:', t, e);
           return null;
@@ -1032,6 +1089,80 @@
       const entries = historyState.present;
 
       const [storedPrompts, setStoredPrompts] = useState([]);
+      const DEFAULT_PROMPT_INSTRUCTIONS = `You are a perceptive thinking assistant inside the user's personal knowledge base.
+Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.
+
+PROMPT MODES - SELECT EITHER A OR B:
+A) CHECK IN ON AN UNRESOLVED THEME OR LOOSE END:
+   - Identify an unresolved question, lingering curiosity, half-finished idea, or open thread from a note (or recurring across notes).
+   - Check in directly: ask where that stands now, what has developed, or what needs answering.
+B) JUXTAPOSE OR CONNECT THEMES:
+   - Identify 2 concrete ideas, perspectives, or themes across notes.
+   - Connect or contrast them simply: show how one idea impacts, complicates, or illuminates the other.
+(Note: You do NOT always have to juxtapose—spotting an unresolved theme or loose end and checking in is equally valuable.)
+
+WEIGHTING & TOPIC SELECTION GUIDELINES:
+1. TOPIC SELECTION PRIORITY:
+   - HIGHEST WEIGHT (PRIMARY TOPICS): Choose topics, themes, or loose ends primarily from the user's MANUAL ENTRIES (marked [Manual Note - Yellow]). These reflect the user's direct, personal thoughts, creations, and active reflections.
+   - SECONDARY WEIGHT: Next consider PREVIOUS PROMPT RESPONSES (marked [Previous Prompt Reflection - Green]). Check in on how the user's thinking has progressed or branched out since answering an earlier prompt.
+   - BACKGROUND CONTEXT ONLY: External materials (marked [External Source - Web/Media]) provide supporting context, inspiration, or cross-references to illuminate the user's manual notes. AI chat conversation archives are strictly excluded from prompt synthesis.
+
+2. TIME WEIGHTING (ALL TIME, EMPHASIZING RECENT):
+   - Consider the user's entire knowledge base across ALL TIME (both recent and earlier history).
+   - Give higher weighting to entries from the last 4 months, connecting them to enduring interests or earlier thoughts from across their history when relevant.
+
+3. CLEAR & DIRECT:
+   - Use plain, conversational language. Absolutely avoid academic jargon, flowery rhetoric, or convoluted phrasing.
+   - State the context or thread simply in one sentence, then ask one focused question.
+   - Avoid run-on sentences, nested clauses, or multi-part questions.
+
+4. CONCISE & PERTINENT:
+   - Keep the entire prompt brief (around 30–60 words).
+   - Get straight to the point without any introductory throat-clearing, filler, or fluff.
+
+5. CITE REFERENCED NOTES WITH INLINE [[kb-ref:ID]]:
+   - Whenever your prompt question or context mentions or refers to ideas, themes, or loose ends from specific previous entries, ALWAYS include the exact inline reference tag [[kb-ref:ID]] for that entry (e.g. "In [[kb-ref:entry-1234567890]] you were exploring...").
+   - Use the exact IDs provided in the archive headers above (e.g. [[kb-ref:entry-...]]). This enables the user to hover or click the reference badge to bring up the pop-up summary.
+
+6. NO REPETITION:
+   - Do NOT repeat or retread questions from previous prompts.
+
+OUTPUT FORMAT:
+Respond with valid JSON ONLY matching this structure:
+{
+  "title": "A short 3-5 word direct title",
+  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes, with inline [[kb-ref:ID]] tags for any referenced entries."
+}`;
+
+      const DEFAULT_PROMPT_CONFIG = {
+        temperature: 0.7,
+        model: '',
+        maxNotes: 35,
+        instructions: DEFAULT_PROMPT_INSTRUCTIONS
+      };
+      const [promptConfig, setPromptConfig] = useState(() => {
+        try {
+          const saved = localStorage.getItem('kb_prompt_config');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            return {
+              temperature: typeof parsed.temperature === 'number' ? parsed.temperature : DEFAULT_PROMPT_CONFIG.temperature,
+              model: typeof parsed.model === 'string' ? parsed.model : DEFAULT_PROMPT_CONFIG.model,
+              maxNotes: typeof parsed.maxNotes === 'number' ? parsed.maxNotes : DEFAULT_PROMPT_CONFIG.maxNotes,
+              instructions: typeof parsed.instructions === 'string' ? parsed.instructions : DEFAULT_PROMPT_CONFIG.instructions
+            };
+          }
+        } catch (e) {}
+        return DEFAULT_PROMPT_CONFIG;
+      });
+      const [isPromptConfigOpen, setIsPromptConfigOpen] = useState(false);
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('kb_prompt_config', JSON.stringify(promptConfig));
+        } catch (e) {}
+      }, [promptConfig]);
+
       const [promptState, setPromptState] = useState({
         isGenerating: false,
         draft: null
@@ -1785,10 +1916,19 @@
           };
         }
 
+        let loadedPromptConfig = { ...DEFAULT_PROMPT_CONFIG };
+        if (data && data.promptConfig && typeof data.promptConfig === 'object') {
+          if (typeof data.promptConfig.temperature === 'number') loadedPromptConfig.temperature = data.promptConfig.temperature;
+          if (typeof data.promptConfig.model === 'string') loadedPromptConfig.model = data.promptConfig.model;
+          if (typeof data.promptConfig.maxNotes === 'number') loadedPromptConfig.maxNotes = data.promptConfig.maxNotes;
+          if (typeof data.promptConfig.instructions === 'string') loadedPromptConfig.instructions = data.promptConfig.instructions;
+        }
+
         return {
           entries: migratedEntries,
           tombstones: loadedTombstones,
           storedPrompts: loadedStoredPrompts,
+          promptConfig: loadedPromptConfig,
           apiKeys: parsedKeys,
           model: data.model || loadedTaskModels.assistant || DEFAULT_MODEL,
           taskModels: loadedTaskModels,
@@ -1808,6 +1948,7 @@
         entries,
         tombstones,
         storedPrompts,
+        promptConfig,
         apiKeys,
         model,
         taskModels,
@@ -1828,6 +1969,7 @@
           entries,
           tombstones,
           storedPrompts,
+          promptConfig,
           apiKeys,
           model,
           taskModels,
@@ -1842,7 +1984,7 @@
           isListSidebarOpen,
           isAssistantOpen
         };
-      }, [entries, tombstones, storedPrompts, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
+      }, [entries, tombstones, storedPrompts, promptConfig, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
 
       // Non-Destructive Entry-Level 3-Way Merge Algorithm
       const mergeDatabases = (localState, incomingRawData) => {
@@ -2021,6 +2163,7 @@
           assistantChats: updatedChats,
           archivedAssistantChats: updatedArchived,
           storedPrompts: mergedPrompts,
+          promptConfig: localState.promptConfig || incoming.promptConfig || DEFAULT_PROMPT_CONFIG,
           apiKeys: (localState.apiKeys && localState.apiKeys.length > 0) ? localState.apiKeys : incoming.apiKeys,
           model: localState.model || incoming.model || DEFAULT_MODEL,
           taskModels: localState.taskModels || incoming.taskModels || {
@@ -2078,6 +2221,7 @@
                     assistantChats: currentChats,
                     archivedAssistantChats: currentArchived,
                     storedPrompts: currentPrompts,
+                    promptConfig: current.promptConfig,
                     apiKeys: currentKeys,
                     model: currentModel,
                     taskModels: currentTaskModels,
@@ -2107,6 +2251,7 @@
                 setAssistantChats(currentChats);
                 setArchivedAssistantChats(currentArchived);
                 setStoredPrompts(currentPrompts);
+                if (merged.promptConfig) setPromptConfig(merged.promptConfig);
                 setTaskModels(currentTaskModels);
                 setModel(currentModel);
 
@@ -2136,6 +2281,7 @@
             entries: currentEntries,
             tombstones: currentTombstones,
             storedPrompts: currentPrompts,
+            promptConfig: current.promptConfig || DEFAULT_PROMPT_CONFIG,
             apiKeys: currentKeys,
             model: currentModel,
             taskModels: currentTaskModels,
@@ -2229,6 +2375,7 @@
             setAssistantChats(merged.assistantChats);
             setArchivedAssistantChats(merged.archivedAssistantChats);
             setStoredPrompts(merged.storedPrompts);
+            if (merged.promptConfig) setPromptConfig(merged.promptConfig);
             if (merged.taskModels) setTaskModels(merged.taskModels);
             if (merged.model) setModel(merged.model);
             if (!isDirtyRef.current && merged.layout) {
@@ -2418,6 +2565,7 @@
           setTombstones(migrated.tombstones || {});
           tombstonesRef.current = migrated.tombstones || {};
           setStoredPrompts(migrated.storedPrompts || []);
+          if (migrated.promptConfig) setPromptConfig(migrated.promptConfig);
           setApiKeys(migrated.apiKeys);
           setModel(migrated.model);
           setTaskModels(migrated.taskModels || {
@@ -2543,6 +2691,7 @@
             setTombstones(migrated.tombstones || {});
             tombstonesRef.current = migrated.tombstones || {};
             setStoredPrompts(migrated.storedPrompts || []);
+            if (migrated.promptConfig) setPromptConfig(migrated.promptConfig);
             setApiKeys(migrated.apiKeys);
             setModel(migrated.model);
             setTaskModels(migrated.taskModels || {
@@ -2617,6 +2766,7 @@
           setAssistantChats(merged.assistantChats);
           setArchivedAssistantChats(merged.archivedAssistantChats);
           setStoredPrompts(merged.storedPrompts);
+          if (merged.promptConfig) setPromptConfig(merged.promptConfig);
           if (merged.taskModels) setTaskModels(merged.taskModels);
           if (merged.model) setModel(merged.model);
           isDirtyRef.current = true;
@@ -2878,7 +3028,7 @@
 
           const metadataModel = taskModels.metadata || DEFAULT_MODEL;
           const result = await handleGeminiCall(payload, metadataModel);
-          const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
+          const parsed = parseAIJson(result.candidates?.[0]) || {};
           const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
 
           const cleanedCategories = (parsed.categories || [])
@@ -3149,26 +3299,35 @@
 
           // Higher weighting to last 4 months (~65%), while considering all time (~35%)
           // Heavily prioritize manual notes (yellow), followed by prompt responses (green), with others as context
+          // Target total is configurable (default: 35)
+          const targetTotal = Math.max(2, promptConfig.maxNotes || 35);
+          const qRecManual = Math.max(1, Math.round(targetTotal * (15 / 35)));
+          const qRecPrompt = Math.round(targetTotal * (6 / 35));
+          const qRecContext = Math.round(targetTotal * (4 / 35));
+          const qOldManual = Math.round(targetTotal * (8 / 35));
+          const qOldPrompt = Math.round(targetTotal * (4 / 35));
+          const qOldContext = Math.round(targetTotal * (2 / 35));
+
           // Recent pool (Last 4 months)
-          addNotes(sample(recent.manual, 15));
-          addNotes(sample(recent.prompt, 6));
-          addNotes(sample(recent.context, 4));
+          addNotes(sample(recent.manual, qRecManual));
+          if (selectedNotes.length < targetTotal) addNotes(sample(recent.prompt, Math.min(qRecPrompt, targetTotal - selectedNotes.length)));
+          if (selectedNotes.length < targetTotal) addNotes(sample(recent.context, Math.min(qRecContext, targetTotal - selectedNotes.length)));
 
           // Older / All-time history
-          addNotes(sample(older.manual, 8));
-          addNotes(sample(older.prompt, 4));
-          addNotes(sample(older.context, 2));
+          if (selectedNotes.length < targetTotal) addNotes(sample(older.manual, Math.min(qOldManual, targetTotal - selectedNotes.length)));
+          if (selectedNotes.length < targetTotal) addNotes(sample(older.prompt, Math.min(qOldPrompt, targetTotal - selectedNotes.length)));
+          if (selectedNotes.length < targetTotal) addNotes(sample(older.context, Math.min(qOldContext, targetTotal - selectedNotes.length)));
 
-          // Top up if we haven't reached 35 notes, preserving priority: manual -> prompt -> context
+          // Top up if we haven't reached targetTotal notes, preserving priority: manual -> prompt -> context
           // Strictly drawn from scopedEntries so notes outside current list view are never included
           const remaining = scopedEntries.filter(e => !chosenIds.has(e.id));
-          if (selectedNotes.length < 35 && remaining.length > 0) {
+          if (selectedNotes.length < targetTotal && remaining.length > 0) {
             const remManual = remaining.filter(e => getEntryType(e) === 'note');
             const remPrompt = remaining.filter(e => getEntryType(e) === 'prompt');
             const remContext = remaining.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e));
-            addNotes(sample(remManual, 35 - selectedNotes.length));
-            if (selectedNotes.length < 35) addNotes(sample(remPrompt, 35 - selectedNotes.length));
-            if (selectedNotes.length < 35) addNotes(sample(remContext, 35 - selectedNotes.length));
+            addNotes(sample(remManual, targetTotal - selectedNotes.length));
+            if (selectedNotes.length < targetTotal) addNotes(sample(remPrompt, targetTotal - selectedNotes.length));
+            if (selectedNotes.length < targetTotal) addNotes(sample(remContext, targetTotal - selectedNotes.length));
           }
 
           if (selectedNotes.length === 0) {
@@ -3215,55 +3374,29 @@
             ? `\n\nACTIVE FILTER FOCUS:\nAll provided notes belong to the user's active list view filters (${filterScopeParts.join(' | ')}). Ground your reflection question exclusively in the context, themes, and goals of these filtered notes.\n`
             : '';
 
-          const systemPrompt = `You are a perceptive thinking assistant inside the user's personal knowledge base.
-Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.${filterFocusInstruction}
+          const userInstruction = (promptConfig.instructions && promptConfig.instructions.trim())
+            ? promptConfig.instructions.trim()
+            : DEFAULT_PROMPT_INSTRUCTIONS;
 
-PROMPT MODES - SELECT EITHER A OR B:
-A) CHECK IN ON AN UNRESOLVED THEME OR LOOSE END:
-   - Identify an unresolved question, lingering curiosity, half-finished idea, or open thread from a note (or recurring across notes).
-   - Check in directly: ask where that stands now, what has developed, or what needs answering.
-B) JUXTAPOSE OR CONNECT THEMES:
-   - Identify 2 concrete ideas, perspectives, or themes across notes.
-   - Connect or contrast them simply: show how one idea impacts, complicates, or illuminates the other.
-(Note: You do NOT always have to juxtapose—spotting an unresolved theme or loose end and checking in is equally valuable.)
+          let systemPrompt = userInstruction;
+          if (filterFocusInstruction && !systemPrompt.includes('ACTIVE FILTER FOCUS:')) {
+            systemPrompt += filterFocusInstruction;
+          }
+          if (pastPromptsList && !systemPrompt.includes('PREVIOUSLY GENERATED PROMPTS')) {
+            systemPrompt += pastPromptsList;
+          }
+          if (!systemPrompt.toLowerCase().includes('json')) {
+            systemPrompt += `\n\nOUTPUT FORMAT:\nRespond with valid JSON ONLY matching this structure:\n{\n  "title": "A short 3-5 word direct title",\n  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes, with inline [[kb-ref:ID]] tags for any referenced entries."\n}`;
+          }
 
-WEIGHTING & TOPIC SELECTION GUIDELINES:
-1. TOPIC SELECTION PRIORITY:
-   - HIGHEST WEIGHT (PRIMARY TOPICS): Choose topics, themes, or loose ends primarily from the user's MANUAL ENTRIES (marked [Manual Note - Yellow]). These reflect the user's direct, personal thoughts, creations, and active reflections.
-   - SECONDARY WEIGHT: Next consider PREVIOUS PROMPT RESPONSES (marked [Previous Prompt Reflection - Green]). Check in on how the user's thinking has progressed or branched out since answering an earlier prompt.
-   - BACKGROUND CONTEXT ONLY: External materials (marked [External Source - Web/Media]) provide supporting context, inspiration, or cross-references to illuminate the user's manual notes. AI chat conversation archives are strictly excluded from prompt synthesis.
-
-2. TIME WEIGHTING (ALL TIME, EMPHASIZING RECENT):
-   - Consider the user's entire knowledge base across ALL TIME (both recent and earlier history).
-   - Give higher weighting to entries from the last 4 months, connecting them to enduring interests or earlier thoughts from across their history when relevant.
-
-3. CLEAR & DIRECT:
-   - Use plain, conversational language. Absolutely avoid academic jargon, flowery rhetoric, or convoluted phrasing.
-   - State the context or thread simply in one sentence, then ask one focused question.
-   - Avoid run-on sentences, nested clauses, or multi-part questions.
-
-4. CONCISE & PERTINENT:
-   - Keep the entire prompt brief (around 30–60 words).
-   - Get straight to the point without any introductory throat-clearing, filler, or fluff.
-
-5. CITE REFERENCED NOTES WITH INLINE [[kb-ref:ID]]:
-   - Whenever your prompt question or context mentions or refers to ideas, themes, or loose ends from specific previous entries, ALWAYS include the exact inline reference tag [[kb-ref:ID]] for that entry (e.g. "In [[kb-ref:entry-1234567890]] you were exploring...").
-   - Use the exact IDs provided in the archive headers above (e.g. [[kb-ref:entry-...]]). This enables the user to hover or click the reference badge to bring up the pop-up summary.
-
-6. NO REPETITION:
-   - Do NOT repeat or retread questions from previous prompts.${pastPromptsList}
-
-OUTPUT FORMAT:
-Respond with valid JSON ONLY matching this structure:
-{
-  "title": "A short 3-5 word direct title",
-  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes, with inline [[kb-ref:ID]] tags for any referenced entries."
-}`;
+          const promptTemperature = (typeof promptConfig.temperature === 'number' && !isNaN(promptConfig.temperature))
+            ? promptConfig.temperature
+            : 0.7;
 
           const payload = {
             contents: [{ parts: [{ text: contextText }] }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { responseMimeType: 'application/json', temperature: 0.7 }
+            generationConfig: { responseMimeType: 'application/json', temperature: promptTemperature }
           };
 
           const activeKey = apiKeys[0]?.key;
@@ -3274,16 +3407,15 @@ Respond with valid JSON ONLY matching this structure:
             return;
           }
           
-          const promptModel = taskModels.prompts || DEFAULT_MODEL;
+          const promptModel = promptConfig.model || taskModels.prompts || DEFAULT_MODEL;
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${promptModel}:generateContent?key=${activeKey}`;
           const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const result = await response.json();
           
           if (result.error) throw new Error(result.error.message);
           
-          const rawText = result.candidates[0].content.parts[0].text;
-          const cleanText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-          const parsed = JSON.parse(cleanText);
+          const rawText = getCandidateText(result.candidates?.[0]);
+          const parsed = parseAIJson(rawText) || {};
           
           const newPromptRecord = {
             id: 'prompt-' + Date.now(),
@@ -3474,7 +3606,7 @@ Respond with valid JSON ONLY matching this structure:
             };
 
             const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-            const parsed = parseAIJson(result.candidates[0].content.parts[0].text);
+            const parsed = parseAIJson(result.candidates?.[0]);
             if (parsed) {
               const updates = {};
               if (needsTitle && parsed.title && typeof parsed.title === 'string' && parsed.title.trim()) {
@@ -3606,7 +3738,22 @@ Respond with valid JSON ONLY matching this structure:
         try {
           const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
-          const prompt = `Read this note and suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Do NOT include quotes, explanations, preambles, or summaries. Return strictly JSON: {"title": "The Title"}.\n\nContent: ${data.fullContent || data.summary}`;
+          let liveContent = '';
+          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+            liveContent = contentTextareaRef.current.value || '';
+          }
+          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
+          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
+            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
+                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+                : '');
+          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || data.summary || '').trim();
+          if (!noteContent) throw new Error("No note content available to generate a title.");
+          const isPrompt = isPromptEntry(data);
+          const prompt = (isPrompt && data.promptQuestion)
+            ? `Read this note answering the prompt "${data.promptQuestion}" and suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Do NOT include quotes, explanations, preambles, or summaries. Return strictly JSON: {"title": "The Title"}.\n\nUser Response:\n${noteContent.substring(0, 30000)}`
+            : `Read this note and suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Do NOT include quotes, explanations, preambles, or summaries. Return strictly JSON: {"title": "The Title"}.\n\nContent:\n${noteContent.substring(0, 30000)}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: {
@@ -3618,17 +3765,21 @@ Respond with valid JSON ONLY matching this structure:
                     type: "STRING",
                     description: "A punchy, highly descriptive title, strictly 3 to 6 words. Never include quotes, explanations, or summaries."
                   }
-                }
+                },
+                required: ["title"]
               },
               temperature: 0.2,
-              maxOutputTokens: 60
+              maxOutputTokens: 300
             }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates[0].content.parts[0].text);
-          if (resData.title) {
-            const formattedTitle = cleanTitle(resData.title);
+          const resData = parseAIJson(result.candidates?.[0]);
+          const candidateTitle = (resData && typeof resData === 'object' && resData.title) ? resData.title : (typeof resData === 'string' ? resData : null);
+          if (candidateTitle && typeof candidateTitle === 'string' && candidateTitle.trim()) {
+            const formattedTitle = cleanTitle(candidateTitle.trim());
             setEntries(prev => prev.map(e => e.id === id ? { ...e, title: formattedTitle, updatedAt: Date.now() } : e));
+          } else {
+            throw new Error("The AI did not return a valid title.");
           }
         } catch(err) {
           setError("Title suggestion failed: " + err.message);
@@ -3645,10 +3796,22 @@ Respond with valid JSON ONLY matching this structure:
         try {
           const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
+          let liveContent = '';
+          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+            liveContent = contentTextareaRef.current.value || '';
+          }
+          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
+          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
+            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
+                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+                : '');
+          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || '').trim();
+          if (!noteContent && !data.promptQuestion) throw new Error("No note content available to summarize.");
           const isPrompt = isPromptEntry(data);
           const prompt = (isPrompt && data.promptQuestion)
-            ? `Write a concise, thoughtful executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than user's response) synthesizing the user's answer. CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${data.fullContent || ''}`
-            : `Write a concise, punchy executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than the content). CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title}\nContent: ${data.fullContent || ''}`;
+            ? `Write a concise, thoughtful executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than user's response) synthesizing the user's answer. CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${noteContent.substring(0, 30000)}`
+            : `Write a concise, punchy executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than the content). CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title || 'Untitled'}\nContent: ${noteContent.substring(0, 30000)}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: {
@@ -3660,17 +3823,21 @@ Respond with valid JSON ONLY matching this structure:
                     type: "STRING",
                     description: "Executive summary in 2 to 3 informative sentences."
                   }
-                }
+                },
+                required: ["summary"]
               },
               temperature: 0.2,
-              maxOutputTokens: 250
+              maxOutputTokens: 800
             }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates[0].content.parts[0].text);
-          if (resData.summary) {
-            const cleanSummary = cleanExecutiveSummary(resData.summary, data.fullContent || "");
+          const resData = parseAIJson(result.candidates?.[0]);
+          const candidateSummary = (resData && typeof resData === 'object' && resData.summary) ? resData.summary : (typeof resData === 'string' ? resData : null);
+          if (candidateSummary && typeof candidateSummary === 'string' && candidateSummary.trim()) {
+            const cleanSummary = cleanExecutiveSummary(candidateSummary.trim(), noteContent);
             setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
+          } else {
+            throw new Error("The AI did not return a valid summary. Please try again.");
           }
         } catch(err) {
           setError("TL;DR generation failed: " + err.message);
@@ -3687,9 +3854,14 @@ Respond with valid JSON ONLY matching this structure:
         try {
           const entry = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!entry) throw new Error("Note not found.");
+          let liveContent = '';
+          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+            liveContent = contentTextareaRef.current.value || '';
+          }
+          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           const questionText = entry.promptQuestion || '';
-          const responseText = entry.fullContent || '';
-          if (!responseText.trim()) throw new Error("No answer written yet to summarize.");
+          const responseText = (liveContent || stagedEdit?.fullContent || entry.fullContent || '').trim();
+          if (!responseText) throw new Error("No answer written yet to summarize.");
 
           const prompt = `You are summarizing the user's answer/response to a prompt question.
 Prompt Question:
@@ -3712,18 +3884,22 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
                     type: "STRING",
                     description: "Summary of response in 2 to 3 sentences."
                   }
-                }
+                },
+                required: ["summary"]
               },
               temperature: 0.2,
-              maxOutputTokens: 250
+              maxOutputTokens: 800
             }
           };
 
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates[0].content.parts[0].text);
-          if (resData.summary) {
-            const cleanSummary = cleanExecutiveSummary(resData.summary);
+          const resData = parseAIJson(result.candidates?.[0]);
+          const candidateSummary = (resData && typeof resData === 'object' && resData.summary) ? resData.summary : (typeof resData === 'string' ? resData : null);
+          if (candidateSummary && typeof candidateSummary === 'string' && candidateSummary.trim()) {
+            const cleanSummary = cleanExecutiveSummary(candidateSummary.trim(), responseText);
             setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
+          } else {
+            throw new Error("The AI did not return a valid summary.");
           }
         } catch (err) {
           setError("Failed to generate answer summary: " + err.message);
@@ -3740,32 +3916,51 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
         try {
           const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
+          let liveContent = '';
+          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+            liveContent = contentTextareaRef.current.value || '';
+          }
+          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
             ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
             : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
                 ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
                 : '');
-          const noteContent = (data.fullContent || chatContent || data.summary || '').trim();
+          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || data.summary || '').trim();
           if (!noteContent) throw new Error("No note content available to extract takeaways from.");
           const isPrompt = isPromptEntry(data);
           const promptContext = (isPrompt && data.promptQuestion)
-            ? `Theme Prompt Question: ${data.promptQuestion}\nUser's Written Response: ${noteContent}`
-            : `Title: ${data.title}\nContent: ${noteContent}`;
+            ? `Theme Prompt Question: ${data.promptQuestion}\nUser's Written Response: ${noteContent.substring(0, 30000)}`
+            : `Title: ${data.title || 'Untitled'}\nContent: ${noteContent.substring(0, 30000)}`;
           const prompt = `Analyze this note. Extract 3-5 descriptive, insightful key takeaways that provide substantive context and detail rather than brief phrases. Return strictly JSON: {"shortVersion": ["detailed takeaway 1", "detailed takeaway 2"]}.\n${promptContext}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: "application/json",
-              responseSchema: { type: "OBJECT", properties: { shortVersion: { type: "ARRAY", items: { type: "STRING" } } } },
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  shortVersion: {
+                    type: "ARRAY",
+                    items: { type: "STRING" }
+                  }
+                },
+                required: ["shortVersion"]
+              },
               temperature: 0.2,
-              maxOutputTokens: 350
+              maxOutputTokens: 800
             }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates[0].content.parts[0].text);
-          if (resData.shortVersion && Array.isArray(resData.shortVersion)) {
-            const cleanTakeaways = resData.shortVersion.map(s => String(s).trim()).filter(Boolean);
+          const resData = parseAIJson(result.candidates?.[0]);
+          const shortVersionList = (resData && typeof resData === 'object' && Array.isArray(resData.shortVersion))
+            ? resData.shortVersion
+            : (Array.isArray(resData) ? resData : null);
+          if (shortVersionList && shortVersionList.length > 0) {
+            const cleanTakeaways = shortVersionList.map(s => String(s).trim()).filter(Boolean);
             setEntries(prev => prev.map(e => e.id === id ? { ...e, shortVersion: cleanTakeaways, updatedAt: Date.now() } : e));
+          } else {
+            throw new Error("The AI did not return valid key takeaways.");
           }
         } catch(err) {
           setError("Key points generation failed: " + err.message);
@@ -3782,35 +3977,57 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
         try {
           const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
           if (!data) throw new Error("Note not found.");
+          let liveContent = '';
+          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+            liveContent = contentTextareaRef.current.value || '';
+          }
+          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
+          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
+            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
+                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+                : '');
+          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || data.summary || '').trim();
           const prompt = `Analyze this note and return JSON matching: {"projects": ["proj"], "categories": ["cat"], "tags": ["tag1"]}.
           - Projects: Assign 0-1 from: ${JSON.stringify(Array.from(allProjects))}.
           - Categories: Assign 1-2 topic/domain categories from: ${JSON.stringify(Array.from(allCategories))}.
           - Tags: Assign 2-4 specific concept keywords. Reuse: ${JSON.stringify(Array.from(allTags))}. Return in lowercase.
           - IMPORTANT: Categories and tags MUST represent domain topics only. NEVER assign words representing entry types or document formats (e.g. "notes", "note", "video", "videos", "media", "audio", "web", "website", "prompt", "pdf", "document").
-          Title: ${data.title}\nContent: ${data.fullContent || data.summary}`;
+          Title: ${data.title || 'Untitled'}\nContent: ${noteContent.substring(0, 30000)}`;
           const payload = {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: "application/json",
-              responseSchema: { type: "OBJECT", properties: { projects: { type: "ARRAY", items: { type: "STRING" } }, categories: { type: "ARRAY", items: { type: "STRING" } }, tags: { type: "ARRAY", items: { type: "STRING" } } } },
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  projects: { type: "ARRAY", items: { type: "STRING" } },
+                  categories: { type: "ARRAY", items: { type: "STRING" } },
+                  tags: { type: "ARRAY", items: { type: "STRING" } }
+                }
+              },
               temperature: 0.2,
-              maxOutputTokens: 200
+              maxOutputTokens: 600
             }
           };
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates[0].content.parts[0].text);
-          setEntries(prev => prev.map(e => {
-            if (e.id === id) {
-              return {
-                ...e,
-                projects: Array.isArray(resData.projects) ? [...new Set([...(e.projects || []), ...resData.projects.map(p => normTax(p)).filter(Boolean)])] : e.projects,
-                categories: Array.isArray(resData.categories) ? [...new Set([...(e.categories || []), ...resData.categories.map(c => normTax(c)).filter(c => c && !isEntryTypeTaxonomy(c))])] : e.categories,
-                tags: Array.isArray(resData.tags) ? [...new Set([...(e.tags || []), ...resData.tags.map(t => normTax(t)).filter(t => t && !isEntryTypeTaxonomy(t))])] : e.tags,
-                updatedAt: Date.now()
-              };
-            }
-            return e;
-          }));
+          const resData = parseAIJson(result.candidates?.[0]);
+          if (resData && typeof resData === 'object') {
+            setEntries(prev => prev.map(e => {
+              if (e.id === id) {
+                return {
+                  ...e,
+                  projects: Array.isArray(resData.projects) ? [...new Set([...(e.projects || []), ...resData.projects.map(p => normTax(p)).filter(Boolean)])] : e.projects,
+                  categories: Array.isArray(resData.categories) ? [...new Set([...(e.categories || []), ...resData.categories.map(c => normTax(c)).filter(c => c && !isEntryTypeTaxonomy(c))])] : e.categories,
+                  tags: Array.isArray(resData.tags) ? [...new Set([...(e.tags || []), ...resData.tags.map(t => normTax(t)).filter(t => t && !isEntryTypeTaxonomy(t))])] : e.tags,
+                  updatedAt: Date.now()
+                };
+              }
+              return e;
+            }));
+          } else {
+            throw new Error("The AI did not return valid taxonomy data.");
+          }
         } catch(err) {
           setError("Auto-tag failed: " + err.message);
         } finally {
@@ -4172,7 +4389,7 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
             let neededIds = [];
             try {
               const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
-              neededIds = parseAIJson(pass1Res.candidates[0].content.parts[0].text);
+              neededIds = parseAIJson(pass1Res.candidates?.[0]);
               if (!Array.isArray(neededIds)) neededIds = [];
             } catch(e) {
               console.warn("Pass 1 routing fallback:", e);
@@ -4392,7 +4609,7 @@ Context:\n${contextText}`
             };
             try {
               const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
-              neededIds = parseAIJson(pass1Res.candidates[0].content.parts[0].text);
+              neededIds = parseAIJson(pass1Res.candidates?.[0]);
               if (!Array.isArray(neededIds)) neededIds = [];
             } catch (p1Err) {
               console.warn("Pass 1 routing fallback:", p1Err);
@@ -5406,7 +5623,7 @@ Context:\n${contextText}`
                                 }
                                 return true;
                               });
-                              const dataStr = JSON.stringify({ entries: exportEntries, tombstones, storedPrompts, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
+                              const dataStr = JSON.stringify({ entries: exportEntries, tombstones, storedPrompts, promptConfig, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
                               const blob = new Blob([dataStr], { type: "application/json" });
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement('a');
@@ -5570,13 +5787,176 @@ Context:\n${contextText}`
                 
                 {/* PROMPT NOTE SECTION (Only visible when at least 2 actual notes exist in visible list view, excluding welcome & aiChat entries) */}
                 {filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
-                  <button 
-                    onClick={generatePromptNote} 
-                    className="w-full p-3.5 rounded-md border-2 border-dashed border-[#10e567] text-[var(--text-main)] hover:bg-[#10e567]/10 hover:text-[var(--text-main)] transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
-                    title={activeListScopeSummary ? `Generate prompt analyzing notes matching: ${activeListScopeSummary}` : "Generate prompt analyzing notes currently visible in the list view"}
-                  >
-                    <i className="fa-solid fa-wand-magic-sparkles text-[#10e567]"></i> <span className="text-[var(--text-main)]">Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}</span>
-                  </button>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={generatePromptNote} 
+                        className="flex-1 p-3.5 rounded-md border-2 border-dashed border-[#10e567] text-[var(--text-main)] hover:bg-[#10e567]/10 hover:text-[var(--text-main)] transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
+                        title={activeListScopeSummary ? `Generate prompt analyzing notes matching: ${activeListScopeSummary}` : "Generate prompt analyzing notes currently visible in the list view"}
+                      >
+                        <i className="fa-solid fa-wand-magic-sparkles text-[#10e567]"></i> <span className="text-[var(--text-main)]">Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsPromptConfigOpen(prev => !prev)}
+                        className={`p-3.5 w-12 rounded-md border-2 border-dashed transition-colors font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center cursor-pointer ${isPromptConfigOpen ? 'border-[#10e567] bg-[#10e567]/20 text-[#10e567]' : 'border-[#10e567] text-[#10e567] hover:bg-[#10e567]/10'}`}
+                        title="Prompt Generation Settings (Creativity, Model, Note Limits)"
+                        aria-label="Prompt Generation Settings"
+                      >
+                        <i className="fa-solid fa-gear text-sm"></i>
+                      </button>
+                    </div>
+
+                    {isPromptConfigOpen && (
+                      <div className="p-4 rounded-md border-2 border-dashed border-[#10e567]/60 bg-[var(--card-bg)] shadow-[var(--track-card-shadow)] space-y-4 animate-entry-fade">
+                        <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
+                          <div className="flex items-center gap-2 text-xs font-bold font-mono text-[var(--text-main)]">
+                            <i className="fa-solid fa-sliders text-[#10e567]"></i>
+                            <span>Prompt Generation Settings</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIsPromptConfigOpen(false)}
+                            className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 text-xs cursor-pointer"
+                            title="Close settings"
+                          >
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+
+                        {/* Creativity (Temperature) Slider */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
+                              <i className="fa-solid fa-fire text-amber-500 text-[10px]"></i> Creativity Level
+                            </label>
+                            <span className="text-[#10e567] font-bold">
+                              {Number(promptConfig.temperature ?? 0.7).toFixed(2)}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={promptConfig.temperature ?? 0.7}
+                            onChange={e => setPromptConfig(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                            className="w-full accent-[#10e567] cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
+                            <span>0.0 (Precise / Factual)</span>
+                            <span>0.7 (Default)</span>
+                            <span>1.0 (Creative)</span>
+                          </div>
+                        </div>
+
+                        {/* Gemini Model Dropdown */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
+                              <i className="fa-solid fa-microchip text-purple-400 text-[10px]"></i> Gemini Model
+                            </label>
+                            <span className="text-[10px] text-[var(--text-muted)] font-mono truncate max-w-[180px]">
+                              {promptConfig.model ? promptConfig.model : `Default (${taskModels.prompts || DEFAULT_MODEL})`}
+                            </span>
+                          </div>
+                          <select
+                            value={promptConfig.model || ''}
+                            onChange={e => setPromptConfig(prev => ({ ...prev, model: e.target.value }))}
+                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[#10e567] focus:outline-none"
+                          >
+                            <option value="">Default ({taskModels.prompts || DEFAULT_MODEL})</option>
+                            {(availableModels.length > 0 ? availableModels : [
+                              { id: 'gemini-flash-lite-latest', displayName: 'Gemini Flash Lite (Latest)' },
+                              { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash' },
+                              { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro' }
+                            ]).map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.displayName || m.id} {m.id === (taskModels.prompts || DEFAULT_MODEL) ? '(Workspace Default)' : ''}
+                              </option>
+                            ))}
+                            {promptConfig.model && !(availableModels.length > 0 ? availableModels : []).some(m => m.id === promptConfig.model) && promptConfig.model !== 'gemini-flash-lite-latest' && promptConfig.model !== 'gemini-2.5-flash' && promptConfig.model !== 'gemini-2.5-pro' && (
+                              <option value={promptConfig.model}>{promptConfig.model} (custom)</option>
+                            )}
+                          </select>
+                        </div>
+
+                        {/* Notes to Involve Slider */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
+                              <i className="fa-solid fa-layer-group text-sky-400 text-[10px]"></i> Notes to Involve
+                            </label>
+                            <span className="text-[#10e567] font-bold">
+                              {promptConfig.maxNotes ?? 35} notes
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="5"
+                            max="60"
+                            step="1"
+                            value={promptConfig.maxNotes ?? 35}
+                            onChange={e => setPromptConfig(prev => ({ ...prev, maxNotes: parseInt(e.target.value, 10) }))}
+                            className="w-full accent-[#10e567] cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
+                            <span>5 (Focused)</span>
+                            <span>35 (Default)</span>
+                            <span>60 (Broad)</span>
+                          </div>
+                        </div>
+
+                        {/* Verbal Instructions (System Prompt) */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
+                              <i className="fa-solid fa-align-left text-emerald-400 text-[10px]"></i> Verbal Instructions (System Prompt)
+                            </label>
+                            {promptConfig.instructions && promptConfig.instructions !== DEFAULT_PROMPT_INSTRUCTIONS && (
+                              <button
+                                type="button"
+                                onClick={() => setPromptConfig(prev => ({ ...prev, instructions: DEFAULT_PROMPT_INSTRUCTIONS }))}
+                                className="text-[10px] text-[#10e567] hover:underline font-mono cursor-pointer"
+                                title="Reset instructions back to default"
+                              >
+                                Reset Instructions
+                              </button>
+                            )}
+                          </div>
+                          <textarea
+                            value={promptConfig.instructions !== undefined ? promptConfig.instructions : DEFAULT_PROMPT_INSTRUCTIONS}
+                            onChange={e => setPromptConfig(prev => ({ ...prev, instructions: e.target.value }))}
+                            rows={8}
+                            className="w-full text-[11px] leading-relaxed bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded p-2.5 font-mono focus:border-[#10e567] focus:outline-none resize-y"
+                            placeholder="Enter system prompt instructions for Gemini..."
+                          />
+                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                            The verbal guidance given to Gemini. Active filter focus, past prompt history, and JSON output schema are automatically preserved and injected.
+                          </div>
+                        </div>
+
+                        {/* Reset to Defaults & Done Buttons */}
+                        <div className="pt-2 flex items-center justify-between border-t border-[var(--border)]">
+                          <button
+                            type="button"
+                            onClick={() => setPromptConfig({ ...DEFAULT_PROMPT_CONFIG })}
+                            className="text-xs text-[var(--text-muted)] hover:text-[#10e567] flex items-center gap-1.5 font-mono cursor-pointer transition-colors"
+                            title="Reset creativity, model, note limits, and verbal instructions to defaults"
+                          >
+                            <i className="fa-solid fa-rotate-left text-[10px]"></i> Reset to Defaults
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsPromptConfigOpen(false)}
+                            className="text-xs bg-[#10e567] text-neutral-900 font-bold px-3 py-1 rounded font-mono hover:bg-[#00c853] transition-colors cursor-pointer"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {promptState.isGenerating && (
                   <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[#10e567]/60 text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
