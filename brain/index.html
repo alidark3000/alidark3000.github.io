@@ -115,9 +115,16 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.28";
+    const APP_VERSION = "v2.8.29";
 
     const CHANGELOG = [
+      {
+        version: "v2.8.29",
+        date: "2026-10-14",
+        highlights: [
+          "Anti-Trope Guard for Prompt Generation: Strictly bans formulaic AI reflection tropes, self-help clichés, and life-coaching formulas (e.g. 'What is one small step / action / shift...', 'How might you...', 'In what ways can you...') from theme prompt synthesis. Grounds reflection questions peer-to-peer in the concrete ideas, tensions, and trade-offs of the user's notes."
+        ]
+      },
       {
         version: "v2.8.28",
         date: "2026-10-13",
@@ -1111,27 +1118,40 @@ WEIGHTING & TOPIC SELECTION GUIDELINES:
    - Consider the user's entire knowledge base across ALL TIME (both recent and earlier history).
    - Give higher weighting to entries from the last 4 months, connecting them to enduring interests or earlier thoughts from across their history when relevant.
 
-3. CLEAR & DIRECT:
+3. STRICTLY AVOID PROMPT TROPES & COACHING CLICHÉS:
+   - Ban all formulaic AI prompting tropes, life-coaching formulas, and self-help clichés.
+   - NEVER start or structure questions with tropes such as:
+     * "What is one small step / action / shift / thing you could take..."
+     * "What is one thing you can do today..."
+     * "How might you..."
+     * "In what ways can you..."
+     * "What would it look like if..."
+     * "What is holding you back from..."
+     * "Take a moment to reflect / ask yourself..."
+     * "How can you bridge the gap between..."
+   - Instead, ask a direct, intellectually substantive question anchored in the actual ideas, trade-offs, contradictions, or specific developments found in the notes. Speak naturally peer-to-peer, not like a therapist or productivity coach.
+
+4. CLEAR & DIRECT:
    - Use plain, conversational language. Absolutely avoid academic jargon, flowery rhetoric, or convoluted phrasing.
    - State the context or thread simply in one sentence, then ask one focused question.
    - Avoid run-on sentences, nested clauses, or multi-part questions.
 
-4. CONCISE & PERTINENT:
+5. CONCISE & PERTINENT:
    - Keep the entire prompt brief (around 30–60 words).
    - Get straight to the point without any introductory throat-clearing, filler, or fluff.
 
-5. CITE REFERENCED NOTES WITH INLINE [[kb-ref:ID]]:
+6. CITE REFERENCED NOTES WITH INLINE [[kb-ref:ID]]:
    - Whenever your prompt question or context mentions or refers to ideas, themes, or loose ends from specific previous entries, ALWAYS include the exact inline reference tag [[kb-ref:ID]] for that entry (e.g. "In [[kb-ref:entry-1234567890]] you were exploring...").
    - Use the exact IDs provided in the archive headers above (e.g. [[kb-ref:entry-...]]). This enables the user to hover or click the reference badge to bring up the pop-up summary.
 
-6. NO REPETITION:
+7. NO REPETITION:
    - Do NOT repeat or retread questions from previous prompts.
 
 OUTPUT FORMAT:
 Respond with valid JSON ONLY matching this structure:
 {
   "title": "A short 3-5 word direct title",
-  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes, with inline [[kb-ref:ID]] tags for any referenced entries."
+  "content": "A direct, clear, concise question (approx 30-60 words) grounded in the notes, free of AI coaching tropes, with inline [[kb-ref:ID]] tags for any referenced entries."
 }`;
 
       const DEFAULT_PROMPT_CONFIG = {
@@ -1145,11 +1165,16 @@ Respond with valid JSON ONLY matching this structure:
           const saved = localStorage.getItem('kb_prompt_config');
           if (saved) {
             const parsed = JSON.parse(saved);
+            const savedInstructions = typeof parsed.instructions === 'string' ? parsed.instructions : '';
+            // If instructions was the previous default (did not have trope guidance) or empty, upgrade to latest default
+            const instructionsToUse = (!savedInstructions || (!savedInstructions.includes('AVOID PROMPT TROPES') && savedInstructions.startsWith('You are a perceptive thinking assistant')))
+              ? DEFAULT_PROMPT_INSTRUCTIONS
+              : savedInstructions;
             return {
               temperature: typeof parsed.temperature === 'number' ? parsed.temperature : DEFAULT_PROMPT_CONFIG.temperature,
               model: typeof parsed.model === 'string' ? parsed.model : DEFAULT_PROMPT_CONFIG.model,
               maxNotes: typeof parsed.maxNotes === 'number' ? parsed.maxNotes : DEFAULT_PROMPT_CONFIG.maxNotes,
-              instructions: typeof parsed.instructions === 'string' ? parsed.instructions : DEFAULT_PROMPT_CONFIG.instructions
+              instructions: instructionsToUse
             };
           }
         } catch (e) {}
@@ -3379,6 +3404,9 @@ Respond with valid JSON ONLY matching this structure:
             : DEFAULT_PROMPT_INSTRUCTIONS;
 
           let systemPrompt = userInstruction;
+          if (!systemPrompt.includes('AVOID PROMPT TROPES') && !systemPrompt.includes('ANTI-TROPE')) {
+            systemPrompt += `\n\nSTRICT ANTI-TROPE CONSTRAINT:\nStrictly avoid formulaic AI prompting tropes, life-coaching formulas, and self-help clichés. NEVER use questions like "What is one small step / action / shift / thing you could take...", "What is one thing you can do today...", "How might you...", "In what ways can you...", "What would it look like if...", or "Take a moment to reflect...". Ask a direct, intellectually substantive question anchored in the concrete ideas, trade-offs, or tensions in the notes.\n`;
+          }
           if (filterFocusInstruction && !systemPrompt.includes('ACTIVE FILTER FOCUS:')) {
             systemPrompt += filterFocusInstruction;
           }
