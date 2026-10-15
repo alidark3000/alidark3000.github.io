@@ -115,9 +115,88 @@
     // 2. Prepend a new entry to CHANGELOG with the date and highlights.
     // 3. Update readme.html to reflect the modified/new functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.29";
+    const APP_VERSION = "v2.8.40";
 
     const CHANGELOG = [
+      {
+        version: "v2.8.40",
+        date: "2026-10-15",
+        highlights: [
+          "Expanded Token Budget for Pro Reasoning: Raised maxOutputTokens to 8,192 tokens across prompt synthesis and repair passes. Completely prevents thinking models (e.g. gemini-pro-latest, gemini-2.5-pro) from cutting off questions mid-sentence when internal thinking tokens consume generation limits.",
+          "Candidate Pool Diversity & Anti-Repetition Engine: Added dynamic partitioning of candidate notes in Round 1 scouting, placing unexamined notes at the top of the candidate index and deprioritizing recently explored notes. Enforced explicit diversity constraints to prevent models (such as gemini-flash-lite-latest) from repeatedly latching onto the exact same note pairs across consecutive clicks.",
+          "Truncated Shortcode Healing: Added automated cleanup for incomplete or truncated [[kb-ref: tags, guaranteeing clean closing punctuation and well-formed syntax."
+        ]
+      },
+      {
+        version: "v2.8.39",
+        date: "2026-10-14",
+        highlights: [
+          "Mandatory JSON Response Schemas & Empty Prompt Guard: Resolved empty prompt card issue by adding explicit responseSchema definitions with required 'title' and 'content' properties across all prompt synthesis and repair calls. Enhanced getCandidateText to isolate thinking tokens, added resilient regex fallback extraction for content/question/theme keys in parseAIJson, and instituted strict safety guards guaranteeing prompt content is never empty."
+        ]
+      },
+      {
+        version: "v2.8.38",
+        date: "2026-10-14",
+        highlights: [
+          "Strict Prompt Settings Enforcement for Recent Notes & Creativity: Bound Creativity Level (temperature) directly to Round 1 scouting, Round 2 synthesis, and repair loops. Replaced arbitrary proportional quotas and random shuffling with strict chronological recency prioritization (newest notes first), ensuring the configured 'Number of Recent Notes' accurately governs candidate pool selection."
+        ]
+      },
+      {
+        version: "v2.8.37",
+        date: "2026-10-14",
+        highlights: [
+          "Streamlined Prompt Settings: Removed user-editable verbal instructions from Prompt Settings, standardizing prompt generation on the organic issue-driven inquiry engine and eliminating configuration drift while keeping creativity, model selection, and candidate note limits configurable."
+        ]
+      },
+      {
+        version: "v2.8.36",
+        date: "2026-10-14",
+        highlights: [
+          "Candidate Pool Filter for Theme Prompts: Notes lacking both an executive summary and key takeaways are now strictly excluded from the reflection prompt candidate pool and UI button requirements, ensuring only summarized and processed notes are evaluated and synthesized."
+        ]
+      },
+      {
+        version: "v2.8.35",
+        date: "2026-10-14",
+        highlights: [
+          "Two-Pass Theme Prompt Engine with Complete Unabridged Notes: Transitioned reflection prompt synthesis to an efficient two-pass architecture. Round 1 rapidly evaluates candidate note profiles to identify the core contradiction or paradox between 2–3 notes. Round 2 injects the 100% complete, unabridged content of those chosen notes, completely eliminating character cutoffs and preventing the AI from falsely assuming thoughts trailed off mid-sentence."
+        ]
+      },
+      {
+        version: "v2.8.34",
+        date: "2026-10-14",
+        highlights: [
+          "Organic Issue-Driven Theme Prompting: Eliminated repetitive, mundane question stems (e.g. 'How do you explain...') in favor of organically constructed inquiries derived directly from the specific tension, paradox, or loose end in the notes. Formulates the exact question best suited to examine the issue while strictly barring life-coaching actions, habits, and tasks."
+        ]
+      },
+      {
+        version: "v2.8.33",
+        date: "2026-10-14",
+        highlights: [
+          "Mandatory Explain & Explore Guard for Theme Prompts: Enforced strict requirement for reflection prompts to ask the user to explain, explore, examine, or unpack conceptual tensions rather than prescribing actions, habits, or life-coaching steps ('what is one tangible action you can anchor yourself in today?'). Added automated post-generation trope detection, repair re-prompting, and auto-upgrade of stored prompt templates."
+        ]
+      },
+      {
+        version: "v2.8.32",
+        date: "2026-10-14",
+        highlights: [
+          "Unified History Navigation Shortcuts via Button Triggers: Routed history backward (Alt+← / Cmd+[ / Ctrl+[) and forward (Alt+→ / Cmd+] / Ctrl+]) keyboard shortcuts directly to the top floating navigation button click triggers, removing the separate event listener and closure. Guarantees continuous, reliable history navigation across multiple steps."
+        ]
+      },
+      {
+        version: "v2.8.31",
+        date: "2026-10-14",
+        highlights: [
+          "Unified Metadata Instruction Registry (Single Source of Truth): Consolidated title, executive summary, taxonomy, and key takeaway instructions, JSON schemas, and post-processing into a centralized definition registry (METADATA_FIELD_SPECS). Both single-field margin refresh actions and combined initial background generation now pull from the identical canonical instructions and schema definitions, ensuring 100% prompt consistency and zero drift."
+        ]
+      },
+      {
+        version: "v2.8.30",
+        date: "2026-10-14",
+        highlights: [
+          "Simultaneous Initial Auto-Generation for Taxonomies, Title & Summary: Expanded first-unfocus and initial save background synthesis to auto-generate topic categories, concept tags, and project associations alongside the title and executive summary. Taxonomy generation strictly isolates subject matter from entry formats, aligns with existing workspace taxonomies, and unifies metadata synthesis in a single high-efficiency API call with synchronized margin loading indicators."
+        ]
+      },
       {
         version: "v2.8.29",
         date: "2026-10-14",
@@ -937,7 +1016,9 @@
       if (typeof cand === 'string') return cand;
       const parts = cand.content?.parts || cand.parts;
       if (Array.isArray(parts)) {
-        const textParts = parts.filter(p => p && typeof p.text === 'string').map(p => p.text);
+        const nonThoughtParts = parts.filter(p => p && typeof p.text === 'string' && !p.thought);
+        const targetParts = nonThoughtParts.length > 0 ? nonThoughtParts : parts.filter(p => p && typeof p.text === 'string');
+        const textParts = targetParts.map(p => p.text);
         if (textParts.length > 0) return textParts.join('');
         const first = parts[0];
         if (first && typeof first.text === 'string') return first.text;
@@ -947,7 +1028,7 @@
 
     const parseAIJson = (textOrCandidate) => {
       if (!textOrCandidate) return null;
-      if (typeof textOrCandidate === 'object' && !textOrCandidate.content && !textOrCandidate.parts && (textOrCandidate.summary || textOrCandidate.title || textOrCandidate.shortVersion || textOrCandidate.projects)) {
+      if (typeof textOrCandidate === 'object' && !textOrCandidate.parts && !Array.isArray(textOrCandidate.content?.parts) && (textOrCandidate.summary || textOrCandidate.title || textOrCandidate.content || textOrCandidate.question || textOrCandidate.prompt || textOrCandidate.theme || textOrCandidate.shortVersion || textOrCandidate.projects || textOrCandidate.categories || textOrCandidate.tags)) {
         return textOrCandidate;
       }
       const text = typeof textOrCandidate === 'string' ? textOrCandidate : getCandidateText(textOrCandidate);
@@ -984,11 +1065,39 @@
           if (titleMatch) extracted.title = titleMatch[1];
           const summaryMatch = t.match(/"summary"\s*:\s*"([\s\S]*?)(?:"|\Z)/i);
           if (summaryMatch) extracted.summary = summaryMatch[1];
+          const contentMatch = t.match(/"(?:content|question|prompt|reflection|inquiry)"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
+          if (contentMatch) extracted.content = contentMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim();
+          const themeMatch = t.match(/"theme"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
+          if (themeMatch) extracted.theme = themeMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim();
+          const selectedIdsMatch = t.match(/"selectedIds"\s*:\s*\[([\s\S]*?)\]/i);
+          if (selectedIdsMatch) {
+            try {
+              extracted.selectedIds = JSON.parse(`[${selectedIdsMatch[1]}]`);
+            } catch (sErr) {}
+          }
           const shortVersionMatch = t.match(/"shortVersion"\s*:\s*\[([\s\S]*?)\]/i);
           if (shortVersionMatch) {
             try {
               extracted.shortVersion = JSON.parse(`[${shortVersionMatch[1]}]`);
             } catch (svErr) {}
+          }
+          const projectsMatch = t.match(/"projects"\s*:\s*\[([\s\S]*?)\]/i);
+          if (projectsMatch) {
+            try {
+              extracted.projects = JSON.parse(`[${projectsMatch[1]}]`);
+            } catch (pErr) {}
+          }
+          const categoriesMatch = t.match(/"categories"\s*:\s*\[([\s\S]*?)\]/i);
+          if (categoriesMatch) {
+            try {
+              extracted.categories = JSON.parse(`[${categoriesMatch[1]}]`);
+            } catch (cErr) {}
+          }
+          const tagsMatch = t.match(/"tags"\s*:\s*\[([\s\S]*?)\]/i);
+          if (tagsMatch) {
+            try {
+              extracted.tags = JSON.parse(`[${tagsMatch[1]}]`);
+            } catch (tErr) {}
           }
           if (Object.keys(extracted).length > 0) return extracted;
           console.warn('Failed to parse AI JSON:', t, e);
@@ -1091,90 +1200,74 @@
       const [syncNotification, setSyncNotification] = useState(null);
       const isDirtyRef = useRef(false);
       const isLoadedRef = useRef(false);
+      const navBackBtnRef = useRef(null);
+      const navForwardBtnRef = useRef(null);
       
       const [historyState, setHistoryState] = useState({ past: [], present: [] });
       const entries = historyState.present;
 
       const [storedPrompts, setStoredPrompts] = useState([]);
-      const DEFAULT_PROMPT_INSTRUCTIONS = `You are a perceptive thinking assistant inside the user's personal knowledge base.
-Your goal is to ask ONE clear, direct, and pertinent question based on the user's notes to prompt immediate, focused reflection.
+      const DEFAULT_PROMPT_INSTRUCTIONS = `You are a perceptive intellectual thinking assistant inside the user's personal knowledge base.
+Your goal is to identify an unresolved issue, paradox, or juxtaposition across the user's notes, and formulate the specific question that best allows the user to deeply examine that exact issue.
 
-PROMPT MODES - SELECT EITHER A OR B:
-A) CHECK IN ON AN UNRESOLVED THEME OR LOOSE END:
-   - Identify an unresolved question, lingering curiosity, half-finished idea, or open thread from a note (or recurring across notes).
-   - Check in directly: ask where that stands now, what has developed, or what needs answering.
-B) JUXTAPOSE OR CONNECT THEMES:
-   - Identify 2 concrete ideas, perspectives, or themes across notes.
-   - Connect or contrast them simply: show how one idea impacts, complicates, or illuminates the other.
-(Note: You do NOT always have to juxtapose—spotting an unresolved theme or loose end and checking in is equally valuable.)
+CORE PRINCIPLE — ORGANIC INQUIRY (NO FORMULAIC QUESTION STEMS):
+- Formulate the question DIRECTLY out of the specific tension, contradiction, or juxtaposition.
+- Do NOT use repetitive, mundane question stems. NEVER default to starting questions with "How do you explain...", "Can you explain...", or "How do you reconcile...".
+- Instead, dive straight into the crux of the collision, unexamined trade-off, or loose end.
 
-WEIGHTING & TOPIC SELECTION GUIDELINES:
-1. TOPIC SELECTION PRIORITY:
-   - HIGHEST WEIGHT (PRIMARY TOPICS): Choose topics, themes, or loose ends primarily from the user's MANUAL ENTRIES (marked [Manual Note - Yellow]). These reflect the user's direct, personal thoughts, creations, and active reflections.
-   - SECONDARY WEIGHT: Next consider PREVIOUS PROMPT RESPONSES (marked [Previous Prompt Reflection - Green]). Check in on how the user's thinking has progressed or branched out since answering an earlier prompt.
-   - BACKGROUND CONTEXT ONLY: External materials (marked [External Source - Web/Media]) provide supporting context, inspiration, or cross-references to illuminate the user's manual notes. AI chat conversation archives are strictly excluded from prompt synthesis.
+HOW TO SHAPE THE QUESTION AROUND THE ISSUE:
+1. COLLISION / JUXTAPOSITION OF TWO FORCES:
+   - When two notes or perspectives pull in opposite directions, ask which force governs the situation, what decides between them, or under what conditions each holds true.
+   - Example style: "In [[kb-ref:187]] lingering regret stalls your momentum, yet in [[kb-ref:116]] you treat hesitation as a necessary filter. Which force is actually dictating your stillness here—the fear of repeating the past, or doubts about the direction forward?"
+2. UNRESOLVED LOOSE END OR SKEPTICISM:
+   - When a note leaves a thread hanging, question whether an initial doubt has proven true or where the boundary lies.
+   - Example style: "You suspected in [[kb-ref:42]] that the overhead of this system would eventually outweigh its benefits. Where has that friction surfaced in practice, and what has kept you from abandoning it?"
+3. HIDDEN ASSUMPTIONS & PARADOXES:
+   - When an argument rests on an unexamined premise, test whether that premise holds under pressure.
+   - Example style: "Does the creative focus you describe in [[kb-ref:89]] truly require complete solitude, or does the solitude simply remove the discomfort of outside judgment?"
+4. ASYMMETRIES OR SELECTIVE STANDARDS:
+   - When standards diverge between topics, ask what makes the rule apply in one domain but fail in another.
+   - Example style: "You apply strict minimalism to your digital workspace [[kb-ref:24]], but embrace deliberate redundancy in your writing process [[kb-ref:71]]. What makes redundancy a liability in the first case but an asset in the second?"
 
-2. TIME WEIGHTING (ALL TIME, EMPHASIZING RECENT):
-   - Consider the user's entire knowledge base across ALL TIME (both recent and earlier history).
-   - Give higher weighting to entries from the last 4 months, connecting them to enduring interests or earlier thoughts from across their history when relevant.
+STRICT PROHIBITION ON LIFE-COACHING & ACTION TROPES:
+- Absolutely NEVER ask for actions, steps, tasks, habits, moves, routines, or things to do "today" or "tomorrow".
+- NEVER ask:
+  * "What is one tangible action you can anchor yourself in today?"
+  * "What is one small step / action / shift / thing you can take..."
+  * "What is one thing you can do today..."
+  * "How might you..." / "In what ways can you..."
+  * "What would it look like if..."
+  * "What is holding you back from..."
+  * "Take a moment to reflect / ask yourself..."
+- The user is using this system to think, analyze, and examine their thoughts—NOT for behavioral coaching, productivity to-dos, or therapy.
 
-3. STRICTLY AVOID PROMPT TROPES & COACHING CLICHÉS:
-   - Ban all formulaic AI prompting tropes, life-coaching formulas, and self-help clichés.
-   - NEVER start or structure questions with tropes such as:
-     * "What is one small step / action / shift / thing you could take..."
-     * "What is one thing you can do today..."
-     * "How might you..."
-     * "In what ways can you..."
-     * "What would it look like if..."
-     * "What is holding you back from..."
-     * "Take a moment to reflect / ask yourself..."
-     * "How can you bridge the gap between..."
-   - Instead, ask a direct, intellectually substantive question anchored in the actual ideas, trade-offs, contradictions, or specific developments found in the notes. Speak naturally peer-to-peer, not like a therapist or productivity coach.
-
-4. CLEAR & DIRECT:
-   - Use plain, conversational language. Absolutely avoid academic jargon, flowery rhetoric, or convoluted phrasing.
-   - State the context or thread simply in one sentence, then ask one focused question.
-   - Avoid run-on sentences, nested clauses, or multi-part questions.
-
-5. CONCISE & PERTINENT:
-   - Keep the entire prompt brief (around 30–60 words).
-   - Get straight to the point without any introductory throat-clearing, filler, or fluff.
-
-6. CITE REFERENCED NOTES WITH INLINE [[kb-ref:ID]]:
-   - Whenever your prompt question or context mentions or refers to ideas, themes, or loose ends from specific previous entries, ALWAYS include the exact inline reference tag [[kb-ref:ID]] for that entry (e.g. "In [[kb-ref:entry-1234567890]] you were exploring...").
-   - Use the exact IDs provided in the archive headers above (e.g. [[kb-ref:entry-...]]). This enables the user to hover or click the reference badge to bring up the pop-up summary.
-
-7. NO REPETITION:
-   - Do NOT repeat or retread questions from previous prompts.
+CLEAR, CONCISE & NATURAL:
+- Use plain, sharp, conversational English. Avoid jargon, flowery rhetoric, or filler preambles.
+- Keep the entire prompt brief (around 30–60 words): state the context in one concise sentence, then ask the tailored question.
+- Cite referenced notes using inline [[kb-ref:ID]] tags.
+- Do not repeat previous prompts.
 
 OUTPUT FORMAT:
 Respond with valid JSON ONLY matching this structure:
 {
   "title": "A short 3-5 word direct title",
-  "content": "A direct, clear, concise question (approx 30-60 words) grounded in the notes, free of AI coaching tropes, with inline [[kb-ref:ID]] tags for any referenced entries."
+  "content": "A direct, sharp question (approx 30-60 words) emerging organically from the issue or juxtaposition, strictly free of canned stems ('how do you explain') and free of coaching action tropes, with inline [[kb-ref:ID]] tags."
 }`;
 
       const DEFAULT_PROMPT_CONFIG = {
         temperature: 0.7,
         model: '',
-        maxNotes: 35,
-        instructions: DEFAULT_PROMPT_INSTRUCTIONS
+        maxNotes: 35
       };
       const [promptConfig, setPromptConfig] = useState(() => {
         try {
           const saved = localStorage.getItem('kb_prompt_config');
           if (saved) {
             const parsed = JSON.parse(saved);
-            const savedInstructions = typeof parsed.instructions === 'string' ? parsed.instructions : '';
-            // If instructions was the previous default (did not have trope guidance) or empty, upgrade to latest default
-            const instructionsToUse = (!savedInstructions || (!savedInstructions.includes('AVOID PROMPT TROPES') && savedInstructions.startsWith('You are a perceptive thinking assistant')))
-              ? DEFAULT_PROMPT_INSTRUCTIONS
-              : savedInstructions;
             return {
               temperature: typeof parsed.temperature === 'number' ? parsed.temperature : DEFAULT_PROMPT_CONFIG.temperature,
               model: typeof parsed.model === 'string' ? parsed.model : DEFAULT_PROMPT_CONFIG.model,
-              maxNotes: typeof parsed.maxNotes === 'number' ? parsed.maxNotes : DEFAULT_PROMPT_CONFIG.maxNotes,
-              instructions: instructionsToUse
+              maxNotes: typeof parsed.maxNotes === 'number' ? parsed.maxNotes : DEFAULT_PROMPT_CONFIG.maxNotes
             };
           }
         } catch (e) {}
@@ -1215,8 +1308,10 @@ Respond with valid JSON ONLY matching this structure:
 
       useEffect(() => {
         const handleKeyDown = (e) => {
+          const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
+
           if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+            if (isInput) return;
             e.preventDefault();
             undoEntries();
           }
@@ -1224,6 +1319,18 @@ Respond with valid JSON ONLY matching this structure:
             if (activeSingleEntryRef.current && isAiChatEntry(activeSingleEntryRef.current)) return;
             e.preventDefault();
             setIsAssistantOpen(prev => !prev);
+          }
+          if ((e.altKey && e.key === 'ArrowLeft') || ((e.metaKey || e.ctrlKey) && e.key === '[')) {
+            if (isInput) return;
+            e.preventDefault();
+            const btn = navBackBtnRef.current || document.getElementById('nav-back-btn');
+            btn?.click();
+          }
+          if ((e.altKey && e.key === 'ArrowRight') || ((e.metaKey || e.ctrlKey) && e.key === ']')) {
+            if (isInput) return;
+            e.preventDefault();
+            const btn = navForwardBtnRef.current || document.getElementById('nav-forward-btn');
+            btn?.click();
           }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -1295,8 +1402,11 @@ Respond with valid JSON ONLY matching this structure:
         const existingTitle = (currentEntry?.title || '').trim();
         const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
         const needsSummary = !currentEntry?.summary || (currentEntry?.fullContent || '').trim() !== finalContent;
+        const hasTaxonomies = ((currentEntry?.categories?.length || 0) > 0) || ((currentEntry?.tags?.length || 0) > 0) || ((currentEntry?.projects?.length || 0) > 0);
+        const isInitialGen = isUntitled || (!currentEntry?.summary && !hasTaxonomies);
+        const needsTaxonomies = isInitialGen;
 
-        if (isUntitled || needsSummary) {
+        if (isUntitled || needsSummary || needsTaxonomies) {
           autoGeneratedMetaIdsRef.current.add(id);
           // Sync staged data so saveNote has the latest textarea content
           if (editDataRef.current) {
@@ -1462,23 +1572,6 @@ Respond with valid JSON ONLY matching this structure:
           setSelectedEntryIds(targetIds);
         }
       };
-
-      useEffect(() => {
-        const handleNavKeyDown = (e) => {
-          const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
-          if (isInput) return;
-
-          if ((e.altKey && e.key === 'ArrowLeft') || ((e.metaKey || e.ctrlKey) && e.key === '[')) {
-            e.preventDefault();
-            handleNavBack();
-          } else if ((e.altKey && e.key === 'ArrowRight') || ((e.metaKey || e.ctrlKey) && e.key === ']')) {
-            e.preventDefault();
-            handleNavForward();
-          }
-        };
-        window.addEventListener('keydown', handleNavKeyDown);
-        return () => window.removeEventListener('keydown', handleNavKeyDown);
-      }, [navIndex, navHistory]);
 
       const [addInput, setAddInput] = useState('');
       const [isDragging, setIsDragging] = useState(false);
@@ -2853,6 +2946,13 @@ Respond with valid JSON ONLY matching this structure:
         return entry.id === 'sample-1' || entry.id === INITIAL_ENTRY.id || (entry.numericId === 1 && entry.title === 'Welcome to your Knowledge Base');
       };
 
+      const hasSummaryOrTakeaways = (entry) => {
+        if (!entry) return false;
+        const hasSummary = Boolean(entry.summary && typeof entry.summary === 'string' && entry.summary.trim().length > 0);
+        const hasTakeaways = Boolean(Array.isArray(entry.shortVersion) && entry.shortVersion.length > 0);
+        return hasSummary || hasTakeaways;
+      };
+
       const userEntries = entries.filter(e => !isWelcomeEntry(e));
 
       // Taxonomy stats (excluding sample welcome note from counts)
@@ -3274,113 +3374,84 @@ Respond with valid JSON ONLY matching this structure:
           const fourMonthsAgo = now - (120 * 24 * 60 * 60 * 1000);
           
           // Potential pool: whatever entries are currently shown in the entry list view (filtered by type, taxonomy, or search)
-          // Strictly excludes the welcome starter note and all AI chat archives
-          const scopedEntries = filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e));
+          // Strictly excludes the welcome starter note, AI chat archives, and notes lacking a summary or key takeaways
+          const scopedEntries = filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e));
 
           if (scopedEntries.length < 2) {
             if (activeListScopeSummary) {
-              throw new Error(`At least 2 non-chat notes visible in the list are required to generate a theme prompt. Only ${scopedEntries.length} found matching filter(s) [${activeListScopeSummary}].`);
+              throw new Error(`At least 2 summarized non-chat notes visible in the list are required to generate a theme prompt. Only ${scopedEntries.length} found with an executive summary or key takeaways matching filter(s) [${activeListScopeSummary}].`);
             } else {
-              throw new Error("At least 2 notes (excluding AI chat archives) are required in the knowledge base to synthesize themes and loose ends.");
+              throw new Error("At least 2 notes with an executive summary or key takeaways (excluding AI chat archives) are required in the knowledge base to synthesize themes and loose ends.");
             }
           }
 
-          // 1. Partition scoped entries across all time into recent (last 4 months) and older history
-          const recentEntries = scopedEntries.filter(e => {
-            const time = Number(e.createdAt) || Number(e.updatedAt) || now;
+          // 1. Sort scoped entries chronologically (newest first by updatedAt or createdAt)
+          const sortedEntries = [...scopedEntries].sort((a, b) => {
+            const timeA = Number(a.updatedAt) || Number(a.createdAt) || 0;
+            const timeB = Number(b.updatedAt) || Number(b.createdAt) || 0;
+            return timeB - timeA;
+          });
+
+          // 2. Partition into recent window (last 4 months) and older history
+          const recentEntries = sortedEntries.filter(e => {
+            const time = Number(e.updatedAt) || Number(e.createdAt) || now;
             return time >= fourMonthsAgo;
           });
-          const olderEntries = scopedEntries.filter(e => {
-            const time = Number(e.createdAt) || Number(e.updatedAt) || now;
+          const olderEntries = sortedEntries.filter(e => {
+            const time = Number(e.updatedAt) || Number(e.createdAt) || now;
             return time < fourMonthsAgo;
           });
 
-          // 2. Classify by topic hierarchy:
-          //    - Manual entries (yellow / 'note'): highest priority for topic selection
-          //    - Previous prompt responses (green / 'prompt'): secondary priority
-          //    - External reference materials (web, media): background context only (AI chat entries strictly excluded)
-          const categorize = (list) => ({
-            manual: list.filter(e => getEntryType(e) === 'note'),
-            prompt: list.filter(e => getEntryType(e) === 'prompt'),
-            context: list.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e))
-          });
-
-          const recent = categorize(recentEntries);
-          const older = categorize(olderEntries);
-
-          const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
-          const sample = (arr, count) => shuffle(arr).slice(0, count);
+          // Target number of candidate notes directly from user setting (default: 35)
+          const targetTotal = Math.max(2, promptConfig.maxNotes || 35);
 
           let selectedNotes = [];
           const chosenIds = new Set();
           const addNotes = (notes) => {
             notes.forEach(n => {
-              if (n && !chosenIds.has(n.id)) {
+              if (n && !chosenIds.has(n.id) && selectedNotes.length < targetTotal) {
                 chosenIds.add(n.id);
                 selectedNotes.push(n);
               }
             });
           };
 
-          // Higher weighting to last 4 months (~65%), while considering all time (~35%)
-          // Heavily prioritize manual notes (yellow), followed by prompt responses (green), with others as context
-          // Target total is configurable (default: 35)
-          const targetTotal = Math.max(2, promptConfig.maxNotes || 35);
-          const qRecManual = Math.max(1, Math.round(targetTotal * (15 / 35)));
-          const qRecPrompt = Math.round(targetTotal * (6 / 35));
-          const qRecContext = Math.round(targetTotal * (4 / 35));
-          const qOldManual = Math.round(targetTotal * (8 / 35));
-          const qOldPrompt = Math.round(targetTotal * (4 / 35));
-          const qOldContext = Math.round(targetTotal * (2 / 35));
+          // Prioritize the user's most recent notes in chronological order (newest first):
+          // Manual notes (yellow) first, followed by previous prompt reflections (green), then background context
+          const recManual = recentEntries.filter(e => getEntryType(e) === 'note');
+          const recPrompt = recentEntries.filter(e => getEntryType(e) === 'prompt');
+          const recContext = recentEntries.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e));
 
-          // Recent pool (Last 4 months)
-          addNotes(sample(recent.manual, qRecManual));
-          if (selectedNotes.length < targetTotal) addNotes(sample(recent.prompt, Math.min(qRecPrompt, targetTotal - selectedNotes.length)));
-          if (selectedNotes.length < targetTotal) addNotes(sample(recent.context, Math.min(qRecContext, targetTotal - selectedNotes.length)));
+          addNotes(recManual);
+          if (selectedNotes.length < targetTotal) addNotes(recPrompt);
+          if (selectedNotes.length < targetTotal) addNotes(recContext);
 
-          // Older / All-time history
-          if (selectedNotes.length < targetTotal) addNotes(sample(older.manual, Math.min(qOldManual, targetTotal - selectedNotes.length)));
-          if (selectedNotes.length < targetTotal) addNotes(sample(older.prompt, Math.min(qOldPrompt, targetTotal - selectedNotes.length)));
-          if (selectedNotes.length < targetTotal) addNotes(sample(older.context, Math.min(qOldContext, targetTotal - selectedNotes.length)));
-
-          // Top up if we haven't reached targetTotal notes, preserving priority: manual -> prompt -> context
-          // Strictly drawn from scopedEntries so notes outside current list view are never included
-          const remaining = scopedEntries.filter(e => !chosenIds.has(e.id));
-          if (selectedNotes.length < targetTotal && remaining.length > 0) {
-            const remManual = remaining.filter(e => getEntryType(e) === 'note');
-            const remPrompt = remaining.filter(e => getEntryType(e) === 'prompt');
-            const remContext = remaining.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e));
-            addNotes(sample(remManual, targetTotal - selectedNotes.length));
-            if (selectedNotes.length < targetTotal) addNotes(sample(remPrompt, targetTotal - selectedNotes.length));
-            if (selectedNotes.length < targetTotal) addNotes(sample(remContext, targetTotal - selectedNotes.length));
+          // If the recent window has fewer notes than targetTotal, seamlessly top up with earlier notes in chronological order
+          if (selectedNotes.length < targetTotal) {
+            const oldManual = olderEntries.filter(e => getEntryType(e) === 'note');
+            const oldPrompt = olderEntries.filter(e => getEntryType(e) === 'prompt');
+            const oldContext = olderEntries.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e));
+            addNotes(oldManual);
+            if (selectedNotes.length < targetTotal) addNotes(oldPrompt);
+            if (selectedNotes.length < targetTotal) addNotes(oldContext);
           }
 
           if (selectedNotes.length === 0) {
             throw new Error("No notes found in current list view to analyze.");
           }
 
-          const contextText = selectedNotes.map(e => {
-            const time = Number(e.createdAt) || Number(e.updatedAt) || now;
-            const dateStr = new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            const isRecent = time >= fourMonthsAgo;
-            const type = getEntryType(e);
+          const activeKey = apiKeys[0]?.key;
+          if (!activeKey) {
+            setShowKeyModal(true);
+            setError("Please configure your Gemini API key in Settings first.");
+            setPromptState({ isGenerating: false, draft: null });
+            return;
+          }
 
-            let roleLabel = '';
-            if (type === 'note') {
-              roleLabel = 'PRIMARY TOPIC SOURCE [Manual Note - Yellow]';
-            } else if (type === 'prompt') {
-              roleLabel = 'SECONDARY TOPIC SOURCE [Previous Prompt Reflection - Green]';
-            } else {
-              roleLabel = `BACKGROUND CONTEXT ONLY [External Source - ${type.toUpperCase()}]`;
-            }
-
-            const ageLabel = isRecent ? 'Recent (Last 4 Months)' : 'Earlier History';
-            const takeaways = Array.isArray(e.shortVersion) && e.shortVersion.length ? `\nTakeaways: ${e.shortVersion.join('; ')}` : '';
-            const summary = (type !== 'prompt' && e.summary) ? `\nSummary: ${e.summary}` : '';
-            const contentText = e.fullContent ? e.fullContent.trim() : '';
-            const snippet = (type === 'prompt' || !summary) && contentText ? `\nContent: ${contentText.substring(0, 350)}` : '';
-            return `--- [[kb-ref:${e.id}]] "${e.title || 'Untitled'}" (${roleLabel} | ${dateStr} - ${ageLabel}) ---${summary}${takeaways}${snippet}`;
-          }).join('\n\n');
+          const promptModel = promptConfig.model || taskModels.prompts || DEFAULT_MODEL;
+          const promptTemperature = (typeof promptConfig.temperature === 'number' && !isNaN(promptConfig.temperature))
+            ? promptConfig.temperature
+            : 0.7;
 
           const pastPromptsList = storedPrompts.length > 0
             ? "\n\nPREVIOUSLY GENERATED PROMPTS (DO NOT REPEAT OR CLOSELY RETREAD ANY OF THESE THEMES OR QUESTIONS):\n" +
@@ -3399,13 +3470,130 @@ Respond with valid JSON ONLY matching this structure:
             ? `\n\nACTIVE FILTER FOCUS:\nAll provided notes belong to the user's active list view filters (${filterScopeParts.join(' | ')}). Ground your reflection question exclusively in the context, themes, and goals of these filtered notes.\n`
             : '';
 
-          const userInstruction = (promptConfig.instructions && promptConfig.instructions.trim())
-            ? promptConfig.instructions.trim()
-            : DEFAULT_PROMPT_INSTRUCTIONS;
+          // Extract recently referenced note IDs and themes from past prompts to prevent repetition
+          const recentReferencedIds = new Set();
+          const recentThemes = [];
+          storedPrompts.slice(-10).forEach(p => {
+            if (Array.isArray(p.noteIds)) p.noteIds.forEach(id => recentReferencedIds.add(String(id)));
+            if (p.content) {
+              const matches = p.content.matchAll(/\[\[kb-ref:([^\]]+)\]\]/g);
+              for (const m of matches) recentReferencedIds.add(m[1].trim());
+            }
+            if (p.title && !['Theme Prompt', 'Theme Reflection'].includes(p.title)) {
+              recentThemes.push(p.title);
+            }
+          });
 
-          let systemPrompt = userInstruction;
-          if (!systemPrompt.includes('AVOID PROMPT TROPES') && !systemPrompt.includes('ANTI-TROPE')) {
-            systemPrompt += `\n\nSTRICT ANTI-TROPE CONSTRAINT:\nStrictly avoid formulaic AI prompting tropes, life-coaching formulas, and self-help clichés. NEVER use questions like "What is one small step / action / shift / thing you could take...", "What is one thing you can do today...", "How might you...", "In what ways can you...", "What would it look like if...", or "Take a moment to reflect...". Ask a direct, intellectually substantive question anchored in the concrete ideas, trade-offs, or tensions in the notes.\n`;
+          // Partition selected candidates into unexplored vs already explored in recent prompts
+          const unexploredCandidates = selectedNotes.filter(n => !recentReferencedIds.has(String(n.id)) && !recentReferencedIds.has(String(n.numericId)));
+          const exploredCandidates = selectedNotes.filter(n => recentReferencedIds.has(String(n.id)) || recentReferencedIds.has(String(n.numericId)));
+          const orderedCandidates = [...unexploredCandidates, ...exploredCandidates];
+
+          // =============================================================
+          // ROUND 1: EFFICIENT NOTE SELECTION (Scouting candidate pool)
+          // =============================================================
+          let chosenNotes = [];
+          let focusTheme = '';
+
+          if (selectedNotes.length <= 3) {
+            chosenNotes = selectedNotes;
+          } else {
+            const candidateProfiles = orderedCandidates.map(e => {
+              const time = Number(e.createdAt) || Number(e.updatedAt) || now;
+              const dateStr = new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+              const type = getEntryType(e);
+              const roleLabel = type === 'note' ? 'Manual Note' : (type === 'prompt' ? 'Prompt Reflection' : `External ${type.toUpperCase()}`);
+              const summary = e.summary ? `Summary: ${e.summary}` : '';
+              const takeaways = Array.isArray(e.shortVersion) && e.shortVersion.length ? `Takeaways: ${e.shortVersion.join('; ')}` : '';
+              const descriptor = [summary, takeaways].filter(Boolean).join(' | ');
+              const isRecentTag = recentReferencedIds.has(String(e.id)) || recentReferencedIds.has(String(e.numericId)) ? ' [Recently Paired]' : '';
+              return `[ID: ${e.id}] [Ref: ${e.numericId}] "${e.title || 'Untitled'}" (${roleLabel} | ${dateStr}${isRecentTag}) - ${descriptor}`;
+            }).join('\n');
+
+            const diversityNotice = recentReferencedIds.size > 0
+              ? `CRITICAL NOVELTY REQUIREMENT:
+The user has recently generated prompts exploring notes ${Array.from(recentReferencedIds).slice(-6).map(id => `[ID: ${id}]`).join(', ')} (Recent Themes: "${recentThemes.slice(-3).join('", "') || 'recent reflections'}").
+You MUST explore a NEW, UNEXAMINED angle and select a DIFFERENT pair of candidate notes. Prioritize candidate notes from the top of the index below that have not been paired yet.\n\n`
+              : '';
+
+            const scoutingPrompt = `You are an intellectual research scout analyzing a personal knowledge base index containing the user's candidate notes.
+${diversityNotice}Identify 2 to 3 notes from the index below that contain the most compelling unresolved contradiction, tension, paradox, or collision of ideas between them. Do NOT select the same note pairs that were recently explored.
+
+${pastPromptsList ? pastPromptsList + '\n\n' : ''}Candidate Notes Index:
+${candidateProfiles}
+
+Respond with valid JSON ONLY matching this structure:
+{
+  "theme": "A concise 1-2 sentence description of the specific conceptual friction, paradox, or unresolved question connecting these notes",
+  "selectedIds": ["id-1", "id-2"]
+}`;
+
+            try {
+              const round1Payload = {
+                contents: [{ parts: [{ text: scoutingPrompt }] }],
+                generationConfig: {
+                  responseMimeType: 'application/json',
+                  responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                      theme: { type: "STRING", description: "A concise 1-2 sentence description of the specific conceptual friction or question" },
+                      selectedIds: {
+                        type: "ARRAY",
+                        items: { type: "STRING" },
+                        description: "2 to 3 note IDs or numeric references"
+                      }
+                    },
+                    required: ["theme", "selectedIds"]
+                  },
+                  temperature: promptTemperature,
+                  maxOutputTokens: 8192
+                }
+              };
+              const round1Res = await callGemini(activeKey, round1Payload, promptModel);
+              const round1Parsed = parseAIJson(getCandidateText(round1Res.candidates?.[0]));
+              if (round1Parsed && Array.isArray(round1Parsed.selectedIds) && round1Parsed.selectedIds.length >= 2) {
+                const matched = round1Parsed.selectedIds.map(id => {
+                  const cleanId = String(id).replace(/^\[*kb-ref:/i, '').replace(/\]*$/, '').trim();
+                  return scopedEntries.find(e => e.id === cleanId || String(e.numericId) === cleanId);
+                }).filter(Boolean);
+                if (matched.length >= 2) {
+                  chosenNotes = matched;
+                  focusTheme = round1Parsed.theme || '';
+                }
+              }
+            } catch (r1Err) {
+              console.warn("Round 1 scouting fallback:", r1Err);
+            }
+
+            if (chosenNotes.length < 2) {
+              chosenNotes = (unexploredCandidates.length >= 2 ? unexploredCandidates : selectedNotes).slice(0, 3);
+            }
+          }
+
+          // =============================================================
+          // ROUND 2: DEEP SYNTHESIS & REASONING (WITH COMPLETE FULL NOTES)
+          // =============================================================
+          const completeNotesText = chosenNotes.map(e => {
+            const time = Number(e.createdAt) || Number(e.updatedAt) || now;
+            const dateStr = new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            const type = getEntryType(e);
+            const roleLabel = type === 'note' ? 'Manual Note - Yellow' : (type === 'prompt' ? 'Previous Prompt Reflection - Green' : `External Reference - ${type.toUpperCase()}`);
+            const summaryPart = e.summary ? `\nSummary: ${e.summary}` : '';
+            const takeawaysPart = Array.isArray(e.shortVersion) && e.shortVersion.length ? `\nTakeaways: ${e.shortVersion.join('; ')}` : '';
+            const fullBody = (e.fullContent && e.fullContent.trim()) ? e.fullContent.trim() : (e.summary || 'No text content available.');
+            
+            return `=== NOTE [[kb-ref:${e.id}]] [Ref ID: ${e.numericId}] "${e.title || 'Untitled'}" (${roleLabel} | ${dateStr}) ===${summaryPart}${takeawaysPart}\n\nCOMPLETE UNABRIDGED NOTE CONTENT:\n"""\n${fullBody}\n"""`;
+          }).join('\n\n' + '='.repeat(50) + '\n\n');
+
+          let round2Context = completeNotesText;
+          if (focusTheme) {
+            round2Context += `\n\nIDENTIFIED THEMATIC CRUX / UNRESOLVED FRICTION:\n${focusTheme}`;
+          }
+          round2Context += `\n\nTASK:\nDerive a sharp, organic inquiry question (30-60 words) and a concise 3-5 word title directly exploring the unresolved tension or paradox across these notes. Return valid JSON containing "title" and "content".`;
+
+          let systemPrompt = DEFAULT_PROMPT_INSTRUCTIONS;
+          if (!systemPrompt.includes('CORE PRINCIPLE — ORGANIC INQUIRY')) {
+            systemPrompt += `\n\nCORE PRINCIPLE — ORGANIC INQUIRY (NO FORMULAIC QUESTION STEMS):\nFormulate the question DIRECTLY out of the specific tension, contradiction, or juxtaposition. NEVER use formulaic, repetitive stems like "How do you explain...", "Can you explain...", or "How do you reconcile...". Derive the question specifically from the unresolved issue (e.g. Which force dictates the outcome? Where does this premise break down? What makes the rule apply in one domain but not another?). Absolutely NO action/coaching tropes (e.g. NEVER ask for actions, steps, or things to do today).\n`;
           }
           if (filterFocusInstruction && !systemPrompt.includes('ACTIVE FILTER FOCUS:')) {
             systemPrompt += filterFocusInstruction;
@@ -3414,41 +3602,141 @@ Respond with valid JSON ONLY matching this structure:
             systemPrompt += pastPromptsList;
           }
           if (!systemPrompt.toLowerCase().includes('json')) {
-            systemPrompt += `\n\nOUTPUT FORMAT:\nRespond with valid JSON ONLY matching this structure:\n{\n  "title": "A short 3-5 word direct title",\n  "content": "A direct, clear, concise question (approx 30-60 words) either checking in on a loose end or linking themes, with inline [[kb-ref:ID]] tags for any referenced entries."\n}`;
+            systemPrompt += `\n\nOUTPUT FORMAT:\nRespond with valid JSON ONLY matching this structure:\n{\n  "title": "A short 3-5 word direct title",\n  "content": "A direct, sharp question (approx 30-60 words) emerging organically from the issue or juxtaposition, strictly free of canned stems ('how do you explain') and free of coaching action tropes, with inline [[kb-ref:ID]] tags for any referenced entries."\n}`;
           }
-
-          const promptTemperature = (typeof promptConfig.temperature === 'number' && !isNaN(promptConfig.temperature))
-            ? promptConfig.temperature
-            : 0.7;
 
           const payload = {
-            contents: [{ parts: [{ text: contextText }] }],
+            contents: [{ parts: [{ text: round2Context }] }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { responseMimeType: 'application/json', temperature: promptTemperature }
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING", description: "A concise 3-5 word direct title capturing the essence of the inquiry" },
+                  content: { type: "STRING", description: "A direct, sharp question (approx 30-60 words) derived organically from the unresolved tension or paradox, referencing notes via [[kb-ref:ID]]" }
+                },
+                required: ["title", "content"]
+              },
+              temperature: promptTemperature,
+              maxOutputTokens: 8192
+            }
           };
 
-          const activeKey = apiKeys[0]?.key;
-          if (!activeKey) {
-            setShowKeyModal(true);
-            setError("Please configure your Gemini API key in Settings first.");
-            setPromptState({ isGenerating: false, draft: null });
-            return;
-          }
-          
-          const promptModel = promptConfig.model || taskModels.prompts || DEFAULT_MODEL;
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${promptModel}:generateContent?key=${activeKey}`;
-          const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          const result = await response.json();
-          
-          if (result.error) throw new Error(result.error.message);
-          
+          const result = await callGemini(activeKey, payload, promptModel);
           const rawText = getCandidateText(result.candidates?.[0]);
           const parsed = parseAIJson(rawText) || {};
+
+          let promptContent = (
+            parsed.content ||
+            parsed.question ||
+            parsed.prompt ||
+            parsed.reflection ||
+            parsed.inquiry ||
+            parsed.text ||
+            ""
+          ).trim();
+
+          let promptTitle = (parsed.title || "").trim();
+
+          // Resilient fallback if parsed object was missing content but rawText has text
+          if (!promptContent && rawText) {
+            const cMatch = rawText.match(/"(?:content|question|prompt|reflection|inquiry|text)"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
+            if (cMatch) {
+              promptContent = cMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, ' ').trim();
+            } else {
+              const cleaned = rawText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+              if (cleaned && !cleaned.startsWith('{')) {
+                promptContent = cleaned;
+              }
+            }
+          }
+
+          if (!promptTitle && rawText) {
+            const tMatch = rawText.match(/"title"\s*:\s*"([^"]+)"/i);
+            if (tMatch) promptTitle = tMatch[1].trim();
+          }
+          if (!promptTitle) {
+            promptTitle = focusTheme ? focusTheme.split(/[:.—]/)[0].trim().slice(0, 35) : "Theme Reflection";
+          }
+
+          // Strip any truncated or unclosed reference shortcode at the end (e.g. [[kb-ref:entry or [[kb-ref:)
+          promptContent = promptContent.replace(/\[\[kb-ref:[^\]]*$/i, '').trim();
+
+          const containsForbiddenPattern = (text) => {
+            if (!text) return false;
+            const hasActionTrope = /\b(tangible\s+action|action\s+you\s+can|anchor\s+(yourself|in)|one\s+(small|tangible|practical|concrete|simple)?\s*(action|step|thing|shift|move|habit|practice)|what\s+(action|step)|(can|will|should)\s+you\s+(do|take|anchor)\s+today|today\s*\?|anchor\s+in\s+today|what\s+is\s+one\b.*(today|step|action|shift))\b/i.test(text);
+            const hasCannedStem = /\b(how\s+do\s+you\s+explain|can\s+you\s+explain|how\s+would\s+you\s+explain|how\s+do\s+you\s+reconcile)\b/i.test(text);
+            return hasActionTrope || hasCannedStem;
+          };
+
+          if (containsForbiddenPattern(promptContent)) {
+            try {
+              const repairPayload = {
+                contents: [{ parts: [{ text: `The following reflection question is formulaic or contains clichés: "${promptContent}".\n\nRewrite it into valid JSON so that the question is constructed directly and organically out of the specific tension, paradox, or juxtaposition described.\nCRITICAL RULES:\n- NEVER use canned stems like "How do you explain...", "Can you explain...", or "How do you reconcile...".\n- NEVER ask for tangible actions, steps, habits, or things to do today.\n- Identify the specific crux or unresolved conflict and formulate the inquiry from that exact dynamic.\n{\n  "title": "${promptTitle || 'Theme Reflection'}",\n  "content": "..."\n}` }] }],
+                systemInstruction: { parts: [{ text: "You are an analytical editor refining intellectual inquiry questions. Derive questions organically from the specific conflict, contradiction, or friction. Never use boilerplate question stems ('How do you explain') or coaching/action clichés." }] },
+                generationConfig: {
+                  responseMimeType: 'application/json',
+                  responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                      title: { type: "STRING" },
+                      content: { type: "STRING" }
+                    },
+                    required: ["title", "content"]
+                  },
+                  temperature: Math.min(promptTemperature, 0.4),
+                  maxOutputTokens: 4096
+                }
+              };
+              const repJson = await callGemini(activeKey, repairPayload, promptModel);
+              const repText = getCandidateText(repJson.candidates?.[0]);
+              const repParsed = parseAIJson(repText);
+              const repContent = (repParsed?.content || repParsed?.question || "").trim();
+              if (repContent && !containsForbiddenPattern(repContent)) {
+                promptContent = repContent;
+                if (repParsed.title) promptTitle = repParsed.title.trim();
+              }
+            } catch (repErr) {
+              console.warn("Prompt repair fallback error:", repErr);
+            }
+          }
+
+          if (containsForbiddenPattern(promptContent)) {
+            const stripped = promptContent.replace(/,\s*(?:what\s+is\s+one\b.*|what\s+action\b.*|how\s+can\s+you\s+anchor\b.*)\?*$/i, '').trim();
+            if (stripped.length >= 20) {
+              promptContent = stripped;
+            }
+            promptContent = promptContent
+              .replace(/\bhow\s+do\s+you\s+explain\s+the\s+relationship\s+between\b/gi, 'What governs the tension between')
+              .replace(/\bhow\s+do\s+you\s+explain\b/gi, 'What dynamic drives')
+              .replace(/\bhow\s+do\s+you\s+reconcile\b/gi, 'Where does the boundary fall between')
+              .replace(/\bcan\s+you\s+explain\b/gi, 'What reveals');
+          }
+
+          // Strip any truncated or unclosed reference shortcode at the end
+          promptContent = promptContent.replace(/\[\[kb-ref:[^\]]*$/i, '').trim();
+          if (promptContent && !/[?.!]$/.test(promptContent)) {
+            promptContent += '?';
+          }
+
+          // Strict Safety Guard: Never present an empty prompt card
+          if (!promptContent || promptContent.length < 15) {
+            if (focusTheme) {
+              promptContent = `Where does the friction between these ideas lead: ${focusTheme}?`;
+            } else if (chosenNotes.length >= 2) {
+              const refTags = chosenNotes.map(n => `[[kb-ref:${n.id}]]`).join(' and ');
+              promptContent = `What is the underlying tension connecting ${refTags}, and which principle decides between them?`;
+            } else {
+              throw new Error("AI generated an empty prompt response. Please click 'Generate Prompt' again.");
+            }
+          }
           
           const newPromptRecord = {
             id: 'prompt-' + Date.now(),
-            title: parsed.title || "Theme Prompt",
-            content: parsed.content || "",
+            title: promptTitle || "Theme Prompt",
+            content: promptContent,
+            noteIds: chosenNotes.map(n => n.id),
             createdAt: Date.now()
           };
 
@@ -3503,6 +3791,217 @@ Respond with valid JSON ONLY matching this structure:
           }
         }));
         setEditingEntries(prev => ({ ...prev, [entry.id]: true }));
+      };
+
+      // =========================================================================
+      // CANONICAL METADATA FIELD DEFINITION REGISTRY (Single Source of Truth)
+      // All single-field generators and combined initial auto-generation MUST use
+      // these unified field specifications for instructions, schemas, and cleaning.
+      // =========================================================================
+      const METADATA_FIELD_SPECS = {
+        title: {
+          key: 'title',
+          getInstructions: (entry) => {
+            const isPrompt = isPromptEntry(entry);
+            if (isPrompt && entry?.promptQuestion) {
+              return "In 'title': Suggest a punchy, reflective title (strictly 3 to 6 words maximum) based on the user's answer. Never append explanations, quotes, preambles, or summaries.";
+            }
+            return "In 'title': Suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Never append explanations, quotes, preambles, or summaries.";
+          },
+          schemaProperty: {
+            type: "STRING",
+            description: "Concise title, strictly 3 to 6 words maximum. Never include quotes, explanations, preambles, or summaries."
+          },
+          apply: (parsed, currentEntry, updates) => {
+            const candidate = (parsed && typeof parsed === 'object' && parsed.title) ? parsed.title : (typeof parsed === 'string' ? parsed : null);
+            if (candidate && typeof candidate === 'string' && candidate.trim()) {
+              updates.title = cleanTitle(candidate.trim());
+            }
+          }
+        },
+
+        summary: {
+          key: 'summary',
+          getInstructions: (entry) => {
+            const isPrompt = isPromptEntry(entry);
+            if (isPrompt && entry?.promptQuestion) {
+              return "In 'summary': Provide a concise, thoughtful executive summary (1-2 sentences, strictly under 70 words, maximum 100 words, and never more than 50% longer than the user's response) directly synthesizing the answer. CRITICAL: Jump straight into substance; no meta-intros.";
+            }
+            return "In 'summary': Provide a concise, punchy executive summary (1-2 sentences, strictly under 70 words, maximum 100 words, and never more than 50% longer than the note content). CRITICAL: Jump straight into substance; no meta-intros.";
+          },
+          schemaProperty: {
+            type: "STRING",
+            description: "Concise executive summary, strictly no longer than 100 words and proportional to content length."
+          },
+          apply: (parsed, currentEntry, updates, contentToAnalyze) => {
+            const candidate = (parsed && typeof parsed === 'object' && parsed.summary) ? parsed.summary : (typeof parsed === 'string' ? parsed : null);
+            if (candidate && typeof candidate === 'string' && candidate.trim()) {
+              updates.summary = cleanExecutiveSummary(candidate.trim(), contentToAnalyze);
+            }
+          }
+        },
+
+        taxonomies: {
+          key: 'taxonomies',
+          getInstructions: (entry, taxContext = {}) => {
+            const knownProjects = JSON.stringify(Array.from(taxContext.allProjects || []));
+            const knownCategories = JSON.stringify(Array.from(taxContext.allCategories || []));
+            const knownTags = JSON.stringify(Array.from(taxContext.allTags || []));
+            return [
+              `In 'projects': Assign 0-1 scoped initiative from: ${knownProjects}. Return lowercase strings.`,
+              `In 'categories': Assign 1-2 topic/domain categories from: ${knownCategories}. Return lowercase strings.`,
+              `In 'tags': Assign 2-4 concept keywords, reusing when applicable: ${knownTags}. Return lowercase strings.`,
+              "CRITICAL TAXONOMY RULE: Categories and tags MUST represent domain topics only. NEVER assign words representing entry types or document formats (e.g. 'notes', 'note', 'video', 'videos', 'media', 'audio', 'web', 'website', 'prompt', 'pdf', 'document')."
+            ];
+          },
+          schemaProperties: {
+            projects: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "0 to 1 scoped initiative project in lowercase."
+            },
+            categories: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "1 to 2 broad topic/domain categories in lowercase."
+            },
+            tags: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "2 to 4 concept keywords in lowercase."
+            }
+          },
+          apply: (parsed, currentEntry, updates) => {
+            if (!parsed || typeof parsed !== 'object') return;
+            const curProjects = Array.isArray(currentEntry?.projects) ? currentEntry.projects : [];
+            const curCategories = Array.isArray(currentEntry?.categories) ? currentEntry.categories : [];
+            const curTags = Array.isArray(currentEntry?.tags) ? currentEntry.tags : [];
+
+            if (Array.isArray(parsed.projects)) {
+              const cleanedProjects = parsed.projects.map(p => normTax(p)).filter(Boolean);
+              if (cleanedProjects.length > 0) {
+                updates.projects = [...new Set([...curProjects, ...cleanedProjects])];
+              }
+            }
+            if (Array.isArray(parsed.categories)) {
+              const cleanedCats = parsed.categories.map(c => normTax(c)).filter(c => c && !isEntryTypeTaxonomy(c));
+              if (cleanedCats.length > 0) {
+                updates.categories = [...new Set([...curCategories, ...cleanedCats])];
+              }
+            }
+            if (Array.isArray(parsed.tags)) {
+              const cleanedTags = parsed.tags.map(t => normTax(t)).filter(t => t && !isEntryTypeTaxonomy(t));
+              if (cleanedTags.length > 0) {
+                updates.tags = [...new Set([...curTags, ...cleanedTags])];
+              }
+            }
+          }
+        },
+
+        takeaways: {
+          key: 'takeaways',
+          getInstructions: () => {
+            return "In 'shortVersion': Extract 3-5 descriptive, insightful key takeaways that provide substantive context and actionable depth rather than brief fragments.";
+          },
+          schemaProperty: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            description: "3 to 5 descriptive, insightful key takeaways."
+          },
+          apply: (parsed, currentEntry, updates) => {
+            const list = (parsed && typeof parsed === 'object' && Array.isArray(parsed.shortVersion))
+              ? parsed.shortVersion
+              : (Array.isArray(parsed) ? parsed : null);
+            if (list && list.length > 0) {
+              updates.shortVersion = list.map(s => String(s).trim()).filter(Boolean);
+            }
+          }
+        }
+      };
+
+      const getEntryForAnalysis = (id) => {
+        return (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
+      };
+
+      const getEntryContentForAnalysis = (id, entry) => {
+        let liveContent = '';
+        if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+          liveContent = contentTextareaRef.current.value || '';
+        }
+        const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
+        const chatContent = (Array.isArray(entry?.chatMessages) && entry.chatMessages.length > 0)
+          ? entry.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+          : (Array.isArray(entry?.chatHistory) && entry.chatHistory.length > 0
+              ? entry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
+              : '');
+        return (liveContent || stagedEdit?.fullContent || entry?.fullContent || chatContent || entry?.summary || '').trim();
+      };
+
+      const buildMetadataPayload = (fieldKeys, entry, contentToAnalyze, taxContext) => {
+        const instructions = [];
+        const schemaProps = {};
+
+        fieldKeys.forEach(key => {
+          const spec = METADATA_FIELD_SPECS[key];
+          if (!spec) return;
+
+          if (key === 'taxonomies') {
+            const taxInstrs = spec.getInstructions(entry, taxContext);
+            taxInstrs.forEach(instr => instructions.push(instr));
+            Object.assign(schemaProps, spec.schemaProperties);
+          } else {
+            const instr = spec.getInstructions(entry, taxContext);
+            instructions.push(instr);
+            const propKey = key === 'takeaways' ? 'shortVersion' : key;
+            schemaProps[propKey] = spec.schemaProperty;
+          }
+        });
+
+        const isPrompt = isPromptEntry(entry);
+        const existingTitle = (entry?.title || '').trim();
+        const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
+        const titleContext = (isUntitled || fieldKeys.includes('title')) ? '' : `Title: ${existingTitle}\n`;
+        const promptContext = (isPrompt && entry?.promptQuestion)
+          ? `Prompt Question:\n${entry.promptQuestion}\n\nUser's Answer/Response:\n`
+          : 'Content:\n';
+
+        const numberedInstructions = instructions.map((ins, i) => `${i + 1}. ${ins}`).join('\n');
+        const aiPrompt = `Analyze this note and generate the requested metadata:\n${numberedInstructions}\n\n${titleContext}${promptContext}${contentToAnalyze.substring(0, 30000)}`;
+
+        const requiredProps = Object.keys(schemaProps);
+        let maxTokens = 800;
+        if (fieldKeys.length === 1 && fieldKeys[0] === 'title') {
+          maxTokens = 300;
+        } else if (fieldKeys.length === 1 && fieldKeys[0] === 'taxonomies') {
+          maxTokens = 600;
+        } else if (fieldKeys.length > 1) {
+          maxTokens = 1000;
+        }
+
+        return {
+          contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: schemaProps,
+              required: requiredProps
+            },
+            temperature: 0.2,
+            maxOutputTokens: maxTokens
+          }
+        };
+      };
+
+      const applyMetadataResults = (fieldKeys, parsed, entry, contentToAnalyze) => {
+        const updates = {};
+        fieldKeys.forEach(key => {
+          const spec = METADATA_FIELD_SPECS[key];
+          if (spec && spec.apply) {
+            spec.apply(parsed, entry, updates, contentToAnalyze);
+          }
+        });
+        return updates;
       };
 
       const saveNote = async (id) => {
@@ -3565,15 +4064,19 @@ Respond with valid JSON ONLY matching this structure:
         if (editDataRef.current) { delete editDataRef.current[id]; }
         savingIdsRef.current.delete(id);
 
-        // Auto-generate title and summary when user stops editing
+        // Auto-generate title, summary, and taxonomies when user stops editing
         if (isAiChatEntry(initialSavedEntry)) return;
 
         const existingTitle = (initialSavedEntry.title || '').trim();
         const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
-        const isPrompt = isPromptEntry(initialSavedEntry);
         const contentChanged = Boolean(!existingEntry || (existingEntry.fullContent || '').trim() !== (initialSavedEntry.fullContent || '').trim());
         const needsTitle = isUntitled;
         const needsSummary = !initialSavedEntry.summary || contentChanged;
+        const hasTaxonomies = (Array.isArray(initialSavedEntry.categories) && initialSavedEntry.categories.length > 0) ||
+                              (Array.isArray(initialSavedEntry.tags) && initialSavedEntry.tags.length > 0) ||
+                              (Array.isArray(initialSavedEntry.projects) && initialSavedEntry.projects.length > 0);
+        const isInitialGen = isUntitled || (!existingEntry?.summary && !initialSavedEntry.summary) || (!hasTaxonomies && !autoGeneratedMetaIdsRef.current.has(id));
+        const needsTaxonomies = isInitialGen;
 
         let liveContent = '';
         if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
@@ -3581,74 +4084,27 @@ Respond with valid JSON ONLY matching this structure:
         }
         const contentToAnalyze = (liveContent || initialSavedEntry.fullContent || initialSavedEntry.summary || '').trim();
 
-        if ((needsTitle || needsSummary) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
+        if ((needsTitle || needsSummary || needsTaxonomies) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
+          autoGeneratedMetaIdsRef.current.add(id);
           setIsAnalyzing(true);
           setGeneratingField('metadata');
           try {
-            const instructions = [];
-            const schemaProps = {};
+            const requestedFields = [];
+            if (needsTitle) requestedFields.push('title');
+            if (needsSummary) requestedFields.push('summary');
+            if (needsTaxonomies) requestedFields.push('taxonomies');
 
-            if (needsTitle) {
-              if (isPrompt) {
-                instructions.push("1. In 'title': Suggest a punchy, reflective title (strictly 3 to 6 words maximum) based on the user's answer. Never append explanations, quotes, or summaries.");
-              } else {
-                instructions.push("1. In 'title': Suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Never append explanations, quotes, or summaries.");
-              }
-              schemaProps.title = {
-                type: "STRING",
-                description: "Concise title, strictly 3 to 6 words maximum. Never include quotes or summaries."
-              };
-            }
-
-            if (needsSummary) {
-              if (isPrompt && initialSavedEntry.promptQuestion) {
-                instructions.push("2. In 'summary': Provide a concise, thoughtful executive summary (1-2 sentences, strictly under 70 words, and no more than 50% longer than the user's response) directly synthesizing the answer. CRITICAL: Jump straight into substance; no meta-intros.");
-              } else {
-                instructions.push("2. In 'summary': Provide a concise, punchy executive summary (1-2 sentences, strictly under 70 words, maximum 100 words, and never more than 50% longer than the note content). CRITICAL: Jump straight into substance; no meta-intros.");
-              }
-              schemaProps.summary = {
-                type: "STRING",
-                description: "Concise executive summary, strictly no longer than 100 words and proportional to content length."
-              };
-            }
-
-            const titleContext = isUntitled ? '' : `Title: ${initialSavedEntry.title}\n`;
-            const promptContext = (isPrompt && initialSavedEntry.promptQuestion)
-              ? `Prompt Question:\n${initialSavedEntry.promptQuestion}\n\nUser's Answer/Response:\n`
-              : 'Content:\n';
-            const aiPrompt = `Analyze this note and generate the requested metadata:\n${instructions.join('\n')}\n\n${titleContext}${promptContext}${contentToAnalyze.substring(0, 30000)}`;
-
-            const requiredProps = Object.keys(schemaProps);
-            const payload = {
-              contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: "OBJECT",
-                  properties: schemaProps,
-                  required: requiredProps
-                },
-                temperature: 0.2,
-                maxOutputTokens: 800
-              }
-            };
-
+            const payload = buildMetadataPayload(requestedFields, initialSavedEntry, contentToAnalyze, { allProjects, allCategories, allTags });
             const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
             const parsed = parseAIJson(result.candidates?.[0]);
             if (parsed) {
-              const updates = {};
-              if (needsTitle && parsed.title && typeof parsed.title === 'string' && parsed.title.trim()) {
-                updates.title = cleanTitle(parsed.title);
-              }
-              if (needsSummary && parsed.summary && typeof parsed.summary === 'string' && parsed.summary.trim()) {
-                updates.summary = cleanExecutiveSummary(parsed.summary.trim(), contentToAnalyze);
-              }
+              const updates = applyMetadataResults(requestedFields, parsed, initialSavedEntry, contentToAnalyze);
               if (Object.keys(updates).length > 0) {
                 setEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates, updatedAt: Date.now() } : e));
               }
             }
           } catch (err) {
-            console.error("Auto-generation of title/summary failed:", err);
+            console.error("Auto-generation of title/summary/taxonomies failed:", err);
             setError("Metadata auto-generation: " + err.message);
           } finally {
             setIsAnalyzing(false);
@@ -3764,48 +4220,17 @@ Respond with valid JSON ONLY matching this structure:
         setIsAnalyzing(true);
         setGeneratingField('title');
         try {
-          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          if (!data) throw new Error("Note not found.");
-          let liveContent = '';
-          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
-            liveContent = contentTextareaRef.current.value || '';
-          }
-          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
-            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
-                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-                : '');
-          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || data.summary || '').trim();
+          const entry = getEntryForAnalysis(id);
+          if (!entry) throw new Error("Note not found.");
+          const noteContent = getEntryContentForAnalysis(id, entry);
           if (!noteContent) throw new Error("No note content available to generate a title.");
-          const isPrompt = isPromptEntry(data);
-          const prompt = (isPrompt && data.promptQuestion)
-            ? `Read this note answering the prompt "${data.promptQuestion}" and suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Do NOT include quotes, explanations, preambles, or summaries. Return strictly JSON: {"title": "The Title"}.\n\nUser Response:\n${noteContent.substring(0, 30000)}`
-            : `Read this note and suggest a punchy, highly descriptive title (strictly 3 to 6 words maximum). Do NOT include quotes, explanations, preambles, or summaries. Return strictly JSON: {"title": "The Title"}.\n\nContent:\n${noteContent.substring(0, 30000)}`;
-          const payload = {
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: "OBJECT",
-                properties: {
-                  title: {
-                    type: "STRING",
-                    description: "A punchy, highly descriptive title, strictly 3 to 6 words. Never include quotes, explanations, or summaries."
-                  }
-                },
-                required: ["title"]
-              },
-              temperature: 0.2,
-              maxOutputTokens: 300
-            }
-          };
+
+          const payload = buildMetadataPayload(['title'], entry, noteContent, { allProjects, allCategories, allTags });
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates?.[0]);
-          const candidateTitle = (resData && typeof resData === 'object' && resData.title) ? resData.title : (typeof resData === 'string' ? resData : null);
-          if (candidateTitle && typeof candidateTitle === 'string' && candidateTitle.trim()) {
-            const formattedTitle = cleanTitle(candidateTitle.trim());
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, title: formattedTitle, updatedAt: Date.now() } : e));
+          const parsed = parseAIJson(result.candidates?.[0]);
+          const updates = applyMetadataResults(['title'], parsed, entry, noteContent);
+          if (updates.title) {
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, title: updates.title, updatedAt: Date.now() } : e));
           } else {
             throw new Error("The AI did not return a valid title.");
           }
@@ -3822,171 +4247,46 @@ Respond with valid JSON ONLY matching this structure:
         setIsAnalyzing(true);
         setGeneratingField('summary');
         try {
-          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          if (!data) throw new Error("Note not found.");
-          let liveContent = '';
-          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
-            liveContent = contentTextareaRef.current.value || '';
-          }
-          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
-            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
-                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-                : '');
-          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || '').trim();
-          if (!noteContent && !data.promptQuestion) throw new Error("No note content available to summarize.");
-          const isPrompt = isPromptEntry(data);
-          const prompt = (isPrompt && data.promptQuestion)
-            ? `Write a concise, thoughtful executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than user's response) synthesizing the user's answer. CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nPrompt Question: ${data.promptQuestion}\nUser's Answer/Response: ${noteContent.substring(0, 30000)}`
-            : `Write a concise, punchy executive summary (strictly under 70 words, maximum 100 words, and not more than 50% longer than the content). CRITICAL: Jump straight into the substance; no meta-intros. Return strictly JSON: {"summary": "text"}.\nTitle: ${data.title || 'Untitled'}\nContent: ${noteContent.substring(0, 30000)}`;
-          const payload = {
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: "OBJECT",
-                properties: {
-                  summary: {
-                    type: "STRING",
-                    description: "Executive summary in 2 to 3 informative sentences."
-                  }
-                },
-                required: ["summary"]
-              },
-              temperature: 0.2,
-              maxOutputTokens: 800
-            }
-          };
+          const entry = getEntryForAnalysis(id);
+          if (!entry) throw new Error("Note not found.");
+          const noteContent = getEntryContentForAnalysis(id, entry);
+          if (!noteContent && !entry.promptQuestion) throw new Error("No note content available to summarize.");
+
+          const payload = buildMetadataPayload(['summary'], entry, noteContent, { allProjects, allCategories, allTags });
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates?.[0]);
-          const candidateSummary = (resData && typeof resData === 'object' && resData.summary) ? resData.summary : (typeof resData === 'string' ? resData : null);
-          if (candidateSummary && typeof candidateSummary === 'string' && candidateSummary.trim()) {
-            const cleanSummary = cleanExecutiveSummary(candidateSummary.trim(), noteContent);
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
+          const parsed = parseAIJson(result.candidates?.[0]);
+          const updates = applyMetadataResults(['summary'], parsed, entry, noteContent);
+          if (updates.summary) {
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: updates.summary, updatedAt: Date.now() } : e));
           } else {
             throw new Error("The AI did not return a valid summary. Please try again.");
           }
         } catch(err) {
-          setError("TL;DR generation failed: " + err.message);
+          setError("Summary generation failed: " + err.message);
         } finally {
           setIsAnalyzing(false);
           setGeneratingField(null);
         }
       };
 
-      const handleGenerateAnswerSummary = async (id) => {
-        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
-        setIsAnalyzing(true);
-        setGeneratingField('summary');
-        try {
-          const entry = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          if (!entry) throw new Error("Note not found.");
-          let liveContent = '';
-          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
-            liveContent = contentTextareaRef.current.value || '';
-          }
-          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          const questionText = entry.promptQuestion || '';
-          const responseText = (liveContent || stagedEdit?.fullContent || entry.fullContent || '').trim();
-          if (!responseText) throw new Error("No answer written yet to summarize.");
-
-          const prompt = `You are summarizing the user's answer/response to a prompt question.
-Prompt Question:
-${questionText}
-
-User's Written Response:
-${responseText.substring(0, 30000)}
-
-Instructions:
-Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroughly synthesizes the user's answer/response to the prompt question. Return strictly JSON: {"summary": "text"}.`;
-
-          const payload = {
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: "OBJECT",
-                properties: {
-                  summary: {
-                    type: "STRING",
-                    description: "Summary of response in 2 to 3 sentences."
-                  }
-                },
-                required: ["summary"]
-              },
-              temperature: 0.2,
-              maxOutputTokens: 800
-            }
-          };
-
-          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates?.[0]);
-          const candidateSummary = (resData && typeof resData === 'object' && resData.summary) ? resData.summary : (typeof resData === 'string' ? resData : null);
-          if (candidateSummary && typeof candidateSummary === 'string' && candidateSummary.trim()) {
-            const cleanSummary = cleanExecutiveSummary(candidateSummary.trim(), responseText);
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: cleanSummary, updatedAt: Date.now() } : e));
-          } else {
-            throw new Error("The AI did not return a valid summary.");
-          }
-        } catch (err) {
-          setError("Failed to generate answer summary: " + err.message);
-        } finally {
-          setIsAnalyzing(false);
-          setGeneratingField(null);
-        }
-      };
+      const handleGenerateAnswerSummary = handleGenerateTLDR;
 
       const handleGenerateTakeaways = async (id) => {
         if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
         setIsAnalyzing(true);
         setGeneratingField('takeaways');
         try {
-          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          if (!data) throw new Error("Note not found.");
-          let liveContent = '';
-          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
-            liveContent = contentTextareaRef.current.value || '';
-          }
-          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
-            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
-                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-                : '');
-          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || data.summary || '').trim();
+          const entry = getEntryForAnalysis(id);
+          if (!entry) throw new Error("Note not found.");
+          const noteContent = getEntryContentForAnalysis(id, entry);
           if (!noteContent) throw new Error("No note content available to extract takeaways from.");
-          const isPrompt = isPromptEntry(data);
-          const promptContext = (isPrompt && data.promptQuestion)
-            ? `Theme Prompt Question: ${data.promptQuestion}\nUser's Written Response: ${noteContent.substring(0, 30000)}`
-            : `Title: ${data.title || 'Untitled'}\nContent: ${noteContent.substring(0, 30000)}`;
-          const prompt = `Analyze this note. Extract 3-5 descriptive, insightful key takeaways that provide substantive context and detail rather than brief phrases. Return strictly JSON: {"shortVersion": ["detailed takeaway 1", "detailed takeaway 2"]}.\n${promptContext}`;
-          const payload = {
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: "OBJECT",
-                properties: {
-                  shortVersion: {
-                    type: "ARRAY",
-                    items: { type: "STRING" }
-                  }
-                },
-                required: ["shortVersion"]
-              },
-              temperature: 0.2,
-              maxOutputTokens: 800
-            }
-          };
+
+          const payload = buildMetadataPayload(['takeaways'], entry, noteContent, { allProjects, allCategories, allTags });
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates?.[0]);
-          const shortVersionList = (resData && typeof resData === 'object' && Array.isArray(resData.shortVersion))
-            ? resData.shortVersion
-            : (Array.isArray(resData) ? resData : null);
-          if (shortVersionList && shortVersionList.length > 0) {
-            const cleanTakeaways = shortVersionList.map(s => String(s).trim()).filter(Boolean);
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, shortVersion: cleanTakeaways, updatedAt: Date.now() } : e));
+          const parsed = parseAIJson(result.candidates?.[0]);
+          const updates = applyMetadataResults(['takeaways'], parsed, entry, noteContent);
+          if (updates.shortVersion && updates.shortVersion.length > 0) {
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, shortVersion: updates.shortVersion, updatedAt: Date.now() } : e));
           } else {
             throw new Error("The AI did not return valid key takeaways.");
           }
@@ -4003,56 +4303,16 @@ Write a descriptive, thoughtful summary (2-3 sentences) that clearly and thoroug
         setIsAnalyzing(true);
         setGeneratingField('taxonomies');
         try {
-          const data = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id) || (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          if (!data) throw new Error("Note not found.");
-          let liveContent = '';
-          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
-            liveContent = contentTextareaRef.current.value || '';
-          }
-          const stagedEdit = (editDataRef.current && editDataRef.current[id]) || (editData && editData[id]);
-          const chatContent = (Array.isArray(data.chatMessages) && data.chatMessages.length > 0)
-            ? data.chatMessages.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-            : (Array.isArray(data.chatHistory) && data.chatHistory.length > 0
-                ? data.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
-                : '');
-          const noteContent = (liveContent || stagedEdit?.fullContent || data.fullContent || chatContent || data.summary || '').trim();
-          const prompt = `Analyze this note and return JSON matching: {"projects": ["proj"], "categories": ["cat"], "tags": ["tag1"]}.
-          - Projects: Assign 0-1 from: ${JSON.stringify(Array.from(allProjects))}.
-          - Categories: Assign 1-2 topic/domain categories from: ${JSON.stringify(Array.from(allCategories))}.
-          - Tags: Assign 2-4 specific concept keywords. Reuse: ${JSON.stringify(Array.from(allTags))}. Return in lowercase.
-          - IMPORTANT: Categories and tags MUST represent domain topics only. NEVER assign words representing entry types or document formats (e.g. "notes", "note", "video", "videos", "media", "audio", "web", "website", "prompt", "pdf", "document").
-          Title: ${data.title || 'Untitled'}\nContent: ${noteContent.substring(0, 30000)}`;
-          const payload = {
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: "OBJECT",
-                properties: {
-                  projects: { type: "ARRAY", items: { type: "STRING" } },
-                  categories: { type: "ARRAY", items: { type: "STRING" } },
-                  tags: { type: "ARRAY", items: { type: "STRING" } }
-                }
-              },
-              temperature: 0.2,
-              maxOutputTokens: 600
-            }
-          };
+          const entry = getEntryForAnalysis(id);
+          if (!entry) throw new Error("Note not found.");
+          const noteContent = getEntryContentForAnalysis(id, entry);
+
+          const payload = buildMetadataPayload(['taxonomies'], entry, noteContent, { allProjects, allCategories, allTags });
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const resData = parseAIJson(result.candidates?.[0]);
-          if (resData && typeof resData === 'object') {
-            setEntries(prev => prev.map(e => {
-              if (e.id === id) {
-                return {
-                  ...e,
-                  projects: Array.isArray(resData.projects) ? [...new Set([...(e.projects || []), ...resData.projects.map(p => normTax(p)).filter(Boolean)])] : e.projects,
-                  categories: Array.isArray(resData.categories) ? [...new Set([...(e.categories || []), ...resData.categories.map(c => normTax(c)).filter(c => c && !isEntryTypeTaxonomy(c))])] : e.categories,
-                  tags: Array.isArray(resData.tags) ? [...new Set([...(e.tags || []), ...resData.tags.map(t => normTax(t)).filter(t => t && !isEntryTypeTaxonomy(t))])] : e.tags,
-                  updatedAt: Date.now()
-                };
-              }
-              return e;
-            }));
+          const parsed = parseAIJson(result.candidates?.[0]);
+          const updates = applyMetadataResults(['taxonomies'], parsed, entry, noteContent);
+          if (updates.projects || updates.categories || updates.tags) {
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates, updatedAt: Date.now() } : e));
           } else {
             throw new Error("The AI did not return valid taxonomy data.");
           }
@@ -5316,6 +5576,8 @@ Context:\n${contextText}`
             }}
           >
             <button 
+              ref={navBackBtnRef}
+              id="nav-back-btn"
               type="button"
               onClick={handleNavBack} 
               disabled={!canGoBack} 
@@ -5326,6 +5588,8 @@ Context:\n${contextText}`
               <i className="fa-solid fa-arrow-left text-[10px]"></i>
             </button>
             <button 
+              ref={navForwardBtnRef}
+              id="nav-forward-btn"
               type="button"
               onClick={handleNavForward} 
               disabled={!canGoForward} 
@@ -5813,8 +6077,8 @@ Context:\n${contextText}`
               {/* Note Cards List: 30px margin between cards */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
                 
-                {/* PROMPT NOTE SECTION (Only visible when at least 2 actual notes exist in visible list view, excluding welcome & aiChat entries) */}
-                {filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
+                {/* PROMPT NOTE SECTION (Only visible when at least 2 summarized non-chat notes exist in visible list view) */}
+                {filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2">
                       <button 
@@ -5909,11 +6173,11 @@ Context:\n${contextText}`
                           </select>
                         </div>
 
-                        {/* Notes to Involve Slider */}
+                        {/* Number of Recent Notes Slider */}
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between text-xs font-mono">
                             <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
-                              <i className="fa-solid fa-layer-group text-sky-400 text-[10px]"></i> Notes to Involve
+                              <i className="fa-solid fa-clock-rotate-left text-sky-400 text-[10px]"></i> Number of Recent Notes
                             </label>
                             <span className="text-[#10e567] font-bold">
                               {promptConfig.maxNotes ?? 35} notes
@@ -5935,42 +6199,13 @@ Context:\n${contextText}`
                           </div>
                         </div>
 
-                        {/* Verbal Instructions (System Prompt) */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-mono">
-                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
-                              <i className="fa-solid fa-align-left text-emerald-400 text-[10px]"></i> Verbal Instructions (System Prompt)
-                            </label>
-                            {promptConfig.instructions && promptConfig.instructions !== DEFAULT_PROMPT_INSTRUCTIONS && (
-                              <button
-                                type="button"
-                                onClick={() => setPromptConfig(prev => ({ ...prev, instructions: DEFAULT_PROMPT_INSTRUCTIONS }))}
-                                className="text-[10px] text-[#10e567] hover:underline font-mono cursor-pointer"
-                                title="Reset instructions back to default"
-                              >
-                                Reset Instructions
-                              </button>
-                            )}
-                          </div>
-                          <textarea
-                            value={promptConfig.instructions !== undefined ? promptConfig.instructions : DEFAULT_PROMPT_INSTRUCTIONS}
-                            onChange={e => setPromptConfig(prev => ({ ...prev, instructions: e.target.value }))}
-                            rows={8}
-                            className="w-full text-[11px] leading-relaxed bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded p-2.5 font-mono focus:border-[#10e567] focus:outline-none resize-y"
-                            placeholder="Enter system prompt instructions for Gemini..."
-                          />
-                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
-                            The verbal guidance given to Gemini. Active filter focus, past prompt history, and JSON output schema are automatically preserved and injected.
-                          </div>
-                        </div>
-
                         {/* Reset to Defaults & Done Buttons */}
                         <div className="pt-2 flex items-center justify-between border-t border-[var(--border)]">
                           <button
                             type="button"
                             onClick={() => setPromptConfig({ ...DEFAULT_PROMPT_CONFIG })}
                             className="text-xs text-[var(--text-muted)] hover:text-[#10e567] flex items-center gap-1.5 font-mono cursor-pointer transition-colors"
-                            title="Reset creativity, model, note limits, and verbal instructions to defaults"
+                            title="Reset creativity, model, and note limits to defaults"
                           >
                             <i className="fa-solid fa-rotate-left text-[10px]"></i> Reset to Defaults
                           </button>
@@ -6680,11 +6915,11 @@ Context:\n${contextText}`
                                 type="button"
                                 onClick={() => handleGenerateTaxonomies(activeSingleEntry.id)}
                                 disabled={isAnalyzing}
-                                className={`absolute left-full ml-3 top-4 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'taxonomies') ? 'opacity-100' : ''}`}
+                                className={`absolute left-full ml-3 top-4 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
                                 title="Auto-generate taxonomy & tags"
                                 aria-label="Auto-generate taxonomy & tags"
                               >
-                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'taxonomies') ? 'animate-spin' : ''}`}></i>
+                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
                               </button>
                             </div>
                           ) : (
@@ -6729,11 +6964,11 @@ Context:\n${contextText}`
                                   handleGenerateTaxonomies(activeSingleEntry.id);
                                 }}
                                 disabled={isAnalyzing}
-                                className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.projects?.length && !activeSingleEntry.categories?.length && !activeSingleEntry.tags?.length) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'taxonomies') ? 'opacity-100' : ''}`}
+                                className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.projects?.length && !activeSingleEntry.categories?.length && !activeSingleEntry.tags?.length) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
                                 title="Auto-generate taxonomy & tags"
                                 aria-label="Auto-generate taxonomy & tags"
                               >
-                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'taxonomies') ? 'animate-spin' : ''}`}></i>
+                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
                               </button>
                             </div>
                           )}

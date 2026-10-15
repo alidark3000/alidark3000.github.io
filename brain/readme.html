@@ -55,6 +55,18 @@
       font-size: 0.9em;
       border: 1px solid var(--border);
     }
+    kbd {
+      background: var(--code-bg);
+      color: var(--text-main);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+      display: inline-block;
+      white-space: nowrap;
+    }
     pre {
       background: var(--code-bg);
       padding: 1rem;
@@ -85,7 +97,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.29</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.40</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
@@ -122,6 +134,7 @@
       <li>&bull; <a href="#assistant">7. Unified AI Assistant & Chat Modes</a></li>
       <li>&bull; <a href="#referencing">8. Backlinks & Decimal Numeric IDs</a></li>
       <li>&bull; <a href="#settings">9. Settings & Workspace Management</a></li>
+      <li>&bull; <a href="#shortcuts">10. Keyboard Shortcuts & Gestures</a></li>
     </ul>
   </nav>
 
@@ -249,7 +262,10 @@
             <i class="fa-solid fa-rotate-right text-emerald-400"></i> Targeted Field Generators & Auto-Metadata
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Key Takeaways) without affecting the rest of the document. When a user finishes editing a note (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes a descriptive title (if untitled) and a substantive executive summary in the background, while key takeaways are generated on-demand when the user clicks the refresh action. Title generation features strict token bounds, low temperature decoding, runaway token sanitization with auto-healing on workspace load, and automatic background synthesis the first time the content editor is unfocused/blurred.
+            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Key Takeaways) without affecting the rest of the document. When a user finishes editing a note (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes a descriptive title (if untitled), a substantive executive summary, and contextual domain taxonomies (projects, categories, and tags) in the background, while key takeaways are generated on-demand when the user clicks the refresh action.
+          </p>
+          <p class="text-xs text-[var(--text-muted)] leading-relaxed mt-2">
+            <strong>Unified Instruction Registry (Single Source of Truth):</strong> Both targeted individual field generators and the combined initial auto-generation pipeline share a canonical, DRY instruction registry (<code>METADATA_FIELD_SPECS</code>). Dynamic prompt construction, schema definitions, token budgets (300 for titles, 600 for taxonomies, 800 for summaries/takeaways, and 1000 for combined synthesis), and sanitizers are maintained in one place, ensuring 100% prompt consistency and zero behavioral drift between single-field and multi-field synthesis.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -285,7 +301,7 @@
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Web Article Scraping:</strong> Strips navigation bars, advertisements, cookie notices, and scripts using <code>turndown</code> to capture clean article text and formatting.</li>
         <li><strong>Media Embedding:</strong> Automatically recognizes YouTube and Vimeo links to embed a responsive media player alongside synchronized note-taking capabilities.</li>
-        <li><strong>Direct Substance Metadata Extraction:</strong> When a user finishes editing a note, Gemini AI automatically synthesizes a concise title (if untitled) and a substantive executive summary (2&ndash;3 informative sentences articulating context, core arguments, and takeaways without throat-clearing preambles). Key takeaways and domain taxonomy tags are generated on-demand when explicitly triggered via their respective refresh buttons.</li>
+        <li><strong>Direct Substance Metadata Extraction:</strong> When a user finishes editing a note, Gemini AI automatically synthesizes a concise title (if untitled), a substantive executive summary (2&ndash;3 informative sentences articulating context, core arguments, and takeaways without throat-clearing preambles), and contextual domain taxonomies (projects, categories, and tags). Key takeaways are generated on-demand when explicitly triggered via their respective refresh button.</li>
       </ul>
     </section>
 
@@ -308,33 +324,37 @@
         <div class="pt-2 border-t border-[var(--border)]">
           <strong>Prompt Generation Settings & Customization:</strong> Located directly beside the "Generate Prompt" button, a gear icon opens configurable parameters for synthesis:
           <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><strong>Creativity Level (Temperature):</strong> A slider ranging from <code>0.0</code> (precise and factual) to <code>1.0</code> (creative and exploratory), defaulting to <code>0.7</code>.</li>
+            <li><strong>Creativity Level (Temperature):</strong> A slider ranging from <code>0.0</code> (precise and deterministic) to <code>1.0</code> (exploratory and divergent), defaulting to <code>0.7</code>. Strictly governs temperature end-to-end across Round 1 note scouting, Round 2 deep reasoning synthesis, and repair loops.</li>
             <li><strong>Gemini Model Assignment:</strong> A dropdown allowing you to override the model used for synthesis or inherit the workspace default (<code>taskModels.prompts || gemini-flash-lite-latest</code>).</li>
-            <li><strong>Notes to Involve:</strong> A slider adjusting the number of notes analyzed from <code>5</code> to <code>60</code> (default: <code>35</code>). Note sampling scales proportionally across recent and older notes while prioritizing manual notes.</li>
-            <li><strong>Verbal Instructions (System Prompt):</strong> An editable textarea exposing the full verbal guidance and system instructions sent to Gemini. Active filter context, past prompt history, and JSON output formatting are automatically preserved. Includes an individual "Reset Instructions" button.</li>
-            <li><strong>Reset to Defaults:</strong> A one-click master button restoring creativity to 0.7, inheriting the workspace prompt model, setting note limit to 35, and resetting verbal instructions back to standard thinking assistant guidelines.</li>
+            <li><strong>Number of Recent Notes:</strong> A slider adjusting the candidate pool size from <code>5</code> to <code>60</code> (default: <code>35</code>). Strictly selects your freshest notes in chronological order (newest first), ensuring your most recent manual thoughts, outlines, and reflections are prioritized for synthesis.</li>
+            <li><strong>Reset to Defaults:</strong> A one-click master button restoring creativity to 0.7, inheriting the workspace prompt model, and resetting the candidate note limit to 35.</li>
           </ul>
         </div>
         <div>
-          <strong>Scoped Context & Candidate Limits:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. The synthesis payload selects up to the configured limit (default: <strong>35 entries</strong>) from the visible pool to stay safely within token and reasoning limits:
+          <strong>Scoped Context & Candidate Selection:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. The candidate pool sorts all summarized visible notes chronologically (newest first) and selects up to the configured limit (default: <strong>35 entries</strong>):
           <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><em>Recent Window (Last 4 Months, ~65% weight):</em> Scaled quota prioritizing manual notes, prompt responses, and external context notes.</li>
-            <li><em>All-Time / Earlier History (~35% weight):</em> Scaled quota connecting historical themes to recent thoughts.</li>
-            <li><em>Priority Fill:</em> If fewer notes are selected, remaining slots are topped up preserving priority (manual &rarr; prompt &rarr; external context).</li>
+            <li><em>Chronological Recency Prioritization:</em> Populates candidate slots starting with the freshest manual notes and prompt reflections created or modified in the recent 4-month window, followed by recent external context notes.</li>
+            <li><em>Historical Top-Up:</em> If fewer recent notes exist than the configured target, remaining slots are filled with earlier historical notes in chronological order.</li>
           </ul>
-          If list filters are active, prompt synthesis isolates itself strictly to those visible notes, and notes created from the prompt inherit active taxonomies. <em>AI Chat</em> archive entries and the starter welcome note are strictly excluded from the prompt candidate pool under all conditions. When only the default-hidden <em>AI Chat</em> type is deselected, the "Generate Prompt" button cleanly displays its standard label without listing type filters, treating all content types as active.
+          If list filters are active, prompt synthesis isolates itself strictly to those visible notes, and notes created from the prompt inherit active taxonomies. <em>AI Chat</em> archive entries, the starter welcome note, and any notes lacking both an executive summary and key takeaways are strictly excluded from the prompt candidate pool under all conditions. When only the default-hidden <em>AI Chat</em> type is deselected, the "Generate Prompt" button cleanly displays its standard label without listing type filters, treating all content types as active.
         </div>
         <div>
-          <strong>Minimum Entry Requirement:</strong> The "Generate Prompt" button requires at least 2 non-chat notes visible in the list view; when fewer than 2 notes exist, the button is hidden to ensure meaningful synthesis and comparison.
+          <strong>Minimum Entry Requirement:</strong> The "Generate Prompt" button requires at least 2 summarized non-chat notes (possessing an executive summary or key takeaways) visible in the list view; when fewer than 2 summarized notes exist, the button is hidden to ensure only processed notes are synthesized.
         </div>
         <div>
-          <strong>Injected Entry Fields:</strong> Prompt generation injects each candidate note's title, ID, type/age labels, executive summary, takeaways, and up to a 350-character snippet of content if unsummarized.
+          <strong>Two-Pass Synthesis & Complete Unabridged Notes:</strong> Theme prompt generation operates via an efficient two-round architecture. In Round 1, an efficient scouting pass scans candidate note profiles (titles, timestamps, roles, summaries, and key takeaways) to identify the core conceptual contradiction, paradox, or collision between 2–3 notes. In Round 2, the engine injects the <strong>100% complete, unabridged text</strong> of those chosen notes into the deep reasoning prompt—eliminating previous 350-character snippets and ensuring the AI reasons over full contexts without misinterpreting text boundaries as thoughts trailing off mid-sentence.
         </div>
         <div>
           <strong>Inline Note References:</strong> Prompts automatically embed bi-directional references (<code>[[kb-ref:ENTRY_ID]]</code>) to source notes, allowing immediate preview and navigation.
         </div>
         <div>
-          <strong>Non-Repetition:</strong> Retains a history of previously generated prompts in <code>storedPrompts</code> to prevent generating redundant or repetitive questions.
+          <strong>Non-Repetition & Candidate Novelty Engine:</strong> Retains a history of previously generated prompts and referenced note IDs in <code>storedPrompts</code>. In Round 1, candidate notes are dynamically partitioned so unexamined notes appear at the top of the candidate index, while previously paired notes are deprioritized. Explicit novelty constraints instruct the model to explore fresh, unexamined contradictions rather than repeatedly retreading the same note pairs.
+        </div>
+        <div>
+          <strong>Organic Issue-Driven Inquiry Engine (No Formulaic Question Stems):</strong> Prompt synthesis strictly bans formulaic, repetitive question stems (such as <em>"How do you explain..."</em>, <em>"Can you explain..."</em>, or <em>"How do you reconcile..."</em>) as well as all action-oriented, advice-seeking, or life-coaching questions (e.g. <em>"What is one tangible action you can anchor yourself in today?"</em>, <em>"What is one small step / action / shift..."</em>, <em>"How might you..."</em>). Instead, questions are constructed organically and directly out of the specific tension, contradiction, loose end, or juxtaposition identified across the notes (e.g., examining which force governs a collision, where a premise breaks down under pressure, or what allows opposing standards to coexist). Features runtime pattern detection, analytical repair loops, and deterministic fallback rephrasing to guarantee deep, organic intellectual inquiry.
+        </div>
+        <div>
+          <strong>Mandatory JSON Schema Contracts & 8,192 Token Reasoning Budget:</strong> Both Round 1 scouting and Round 2 synthesis enforce explicit <code>responseSchema</code> contracts with required <code>title</code> and <code>content</code> fields, supported by an expanded 8,192-token ceiling to prevent reasoning models (like <code>gemini-pro-latest</code> and <code>gemini-2.5-pro</code>) from truncating questions mid-sentence when thinking tokens consume generation limits. Supported by multi-key regex extraction, thinking token isolation, and automated fallback safety nets, the prompt engine guarantees the prompt card is never presented empty or syntactically broken.
         </div>
       </div>
     </section>
@@ -401,6 +421,166 @@
       </ul>
     </section>
 
+    <!-- 10. Keyboard Shortcuts & Gestures -->
+    <section id="shortcuts" class="scroll-mt-6">
+      <h2 class="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border)] pb-2 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-keyboard text-emerald-400 text-sm"></i> 10. Keyboard Shortcuts & Gestures
+      </h2>
+      <p class="mb-3 text-[var(--text-main)]">
+        Ali Brain is optimized for high-speed, keyboard-driven navigation, writing, and curation. Use these global shortcuts, editor keybindings, and gesture modifiers to navigate your knowledge base seamlessly without reaching for the mouse.
+      </p>
+
+      <div class="space-y-4 my-4">
+        <!-- Global & Navigation -->
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-3 text-[var(--text-main)] flex items-center gap-1.5 uppercase tracking-wider">
+            <i class="fa-solid fa-compass text-sky-400"></i> Global Navigation & Workspace Controls
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="border-b border-[var(--border)] text-[var(--text-muted)]">
+                  <th class="py-2 pr-4 font-semibold w-2/5">Shortcut</th>
+                  <th class="py-2 font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--border)]">
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Alt</kbd> + <kbd>&larr;</kbd> &nbsp;/&nbsp; <kbd>Cmd</kbd> + <kbd>[</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>[</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Navigate backward in note selection history (triggers the floating on-screen Back button directly).</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Alt</kbd> + <kbd>&rarr;</kbd> &nbsp;/&nbsp; <kbd>Cmd</kbd> + <kbd>]</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>]</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Navigate forward in note selection history (triggers the floating on-screen Forward button directly).</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Cmd</kbd> + <kbd>Z</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Z</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Undo note modification or deletion (active outside text input fields).</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Cmd</kbd> + <kbd>J</kbd> &nbsp;/&nbsp; <kbd>Cmd</kbd> + <kbd>L</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>J</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Toggle the contextual AI Assistant drawer for the active note (bypassed in Whole Brain chat mode).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Note Editing & Writing -->
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-3 text-[var(--text-main)] flex items-center gap-1.5 uppercase tracking-wider">
+            <i class="fa-solid fa-pen-nib text-amber-400"></i> Note Editing & Focus Mode
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="border-b border-[var(--border)] text-[var(--text-muted)]">
+                  <th class="py-2 pr-4 font-semibold w-2/5">Shortcut</th>
+                  <th class="py-2 font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--border)]">
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Escape</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Exit Focus Mode or inline textarea editor; commits and saves changes immediately, triggers background metadata synthesis, and restores rendered Markdown view.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Tab</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Insert 2 spaces for text indentation inside note editor textarea without moving focus.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Enter</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Confirm and commit single-line inline edit fields (Title, Summary, Takeaway). In taxonomy inputs (Projects, Categories, Tags), commits the entered item.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>,</kbd> (Comma)</td>
+                  <td class="py-2 text-[var(--text-muted)]">In taxonomy input fields, immediately adds the typed tag, project, or category.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Escape</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">In single-line inline edit fields, cancels editing and reverts to previous text.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- AI Chat & Search -->
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-3 text-[var(--text-main)] flex items-center gap-1.5 uppercase tracking-wider">
+            <i class="fa-solid fa-comments text-purple-400"></i> AI Conversations & Search
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="border-b border-[var(--border)] text-[var(--text-muted)]">
+                  <th class="py-2 pr-4 font-semibold w-2/5">Shortcut</th>
+                  <th class="py-2 font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--border)]">
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Enter</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Submit message to AI (in both Whole Brain full-width chat and Current Entry assistant drawer).</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Shift</kbd> + <kbd>Enter</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Insert newline in AI chat input boxes without submitting.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Escape</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">When search bar is focused with an active query, clears the search text and resets the notes list.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Curation & Mouse Modifiers -->
+        <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+          <div class="font-bold text-xs mb-3 text-[var(--text-main)] flex items-center gap-1.5 uppercase tracking-wider">
+            <i class="fa-solid fa-hand-pointer text-[var(--accent)]"></i> Mouse & Click Modifiers
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="border-b border-[var(--border)] text-[var(--text-muted)]">
+                  <th class="py-2 pr-4 font-semibold w-2/5">Gesture / Modifier</th>
+                  <th class="py-2 font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--border)]">
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Shift</kbd> + Click Entry Type</td>
+                  <td class="py-2 text-[var(--text-muted)]"><strong>Solo Filter:</strong> Instantly isolates that specific entry type (Notes, Prompts, Media, Web, AI Chat), hiding all others. Shift-clicking the active solo type restores all default types.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + Click Note</td>
+                  <td class="py-2 text-[var(--text-muted)]">Toggle multi-selection of notes in the sidebar list.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + Click Taxonomy</td>
+                  <td class="py-2 text-[var(--text-muted)]">Multi-select projects, categories, or tags in the sidebar to view notes matching multiple taxonomy filters.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono">Drag Note &rarr; Editor</td>
+                  <td class="py-2 text-[var(--text-muted)]">Drag any note card from the sidebar list into the editor to insert a bi-directional reference link (<code class="text-[10px]">[[kb-ref:ID]]</code>).</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono">Drag Note &rarr; Taxonomy</td>
+                  <td class="py-2 text-[var(--text-muted)]">Drag note cards onto any sidebar project, category, or tag to assign taxonomy immediately.</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono">Double-Click Text Field</td>
+                  <td class="py-2 text-[var(--text-muted)]">Initiate inline editing directly on note titles, summaries, or content body.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- Footer -->
@@ -409,7 +589,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.25</strong></span>
+      <span>Version <strong>v2.8.40</strong></span>
       <a href="index.html">Back to Brain App</a>
     </div>
   </footer>
