@@ -97,9 +97,12 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.40</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.65</span></p>
     </div>
     <div class="flex items-center gap-3">
+      <a href="changelog.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
+        <i class="fa-solid fa-clock-rotate-left text-[var(--accent)]"></i> Changelog
+      </a>
       <a href="index.html" class="px-3 py-1.5 rounded bg-[var(--accent)] text-white text-xs font-semibold no-underline hover:opacity-90 transition-opacity flex items-center gap-1.5">
         <i class="fa-solid fa-arrow-left"></i> Open Brain App
       </a>
@@ -116,8 +119,8 @@
     </p>
     <ol class="list-decimal pl-5 text-xs text-[var(--text-muted)] space-y-1.5">
       <li><strong>Bump the Version Number:</strong> Update <code>const APP_VERSION = "vX.Y.Z";</code> at the top of <code>index.html</code>.</li>
-      <li><strong>Update In-App Changelog:</strong> Prepend the new release entry to <code>CHANGELOG</code> in <code>index.html</code> with date and bulleted highlights.</li>
-      <li><strong>Update This Readme:</strong> Update <code>readme.html</code> to document any modified behaviors, settings, or architectural enhancements, keeping this manual as an accurate single source of truth.</li>
+      <li><strong>Update Standalone Changelog:</strong> Update <code>changelog.html</code> and <code>CHANGELOG.md</code> (keeping 3-digit dot points only for the current minor series, and condensing the previous series into a round 2-digit entry when advancing to a new 2-digit version).</li>
+      <li><strong>Update This Readme:</strong> Update <code>readme.html</code> and <code>README.md</code> to document any modified behaviors, settings, or architectural enhancements, keeping this manual as an accurate single source of truth.</li>
     </ol>
   </section>
 
@@ -262,10 +265,10 @@
             <i class="fa-solid fa-rotate-right text-emerald-400"></i> Targeted Field Generators & Auto-Metadata
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Key Takeaways) without affecting the rest of the document. When a user finishes editing a note (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes a descriptive title (if untitled), a substantive executive summary, and contextual domain taxonomies (projects, categories, and tags) in the background, while key takeaways are generated on-demand when the user clicks the refresh action.
+            Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Key Takeaways) without affecting the rest of the document. When a user saves a note's content edit for the first time (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes <strong>all metadata fields in a single pass</strong>&mdash;generating a descriptive title (if untitled), an executive summary, key takeaways, and contextual domain taxonomies (projects, categories, and tags) together.
           </p>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed mt-2">
-            <strong>Unified Instruction Registry (Single Source of Truth):</strong> Both targeted individual field generators and the combined initial auto-generation pipeline share a canonical, DRY instruction registry (<code>METADATA_FIELD_SPECS</code>). Dynamic prompt construction, schema definitions, token budgets (300 for titles, 600 for taxonomies, 800 for summaries/takeaways, and 1000 for combined synthesis), and sanitizers are maintained in one place, ensuring 100% prompt consistency and zero behavioral drift between single-field and multi-field synthesis.
+            <strong>Unified Instruction Registry (Single Source of Truth):</strong> Both targeted individual field generators and the combined initial auto-generation pipeline share a canonical, DRY instruction registry (<code>METADATA_FIELD_SPECS</code>). Dynamic prompt construction, schema definitions, and sanitizers are maintained in one place, ensuring 100% prompt consistency and zero behavioral drift between single-field and multi-field synthesis.
           </p>
         </div>
         <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
@@ -301,7 +304,7 @@
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Web Article Scraping:</strong> Strips navigation bars, advertisements, cookie notices, and scripts using <code>turndown</code> to capture clean article text and formatting.</li>
         <li><strong>Media Embedding:</strong> Automatically recognizes YouTube and Vimeo links to embed a responsive media player alongside synchronized note-taking capabilities.</li>
-        <li><strong>Direct Substance Metadata Extraction:</strong> When a user finishes editing a note, Gemini AI automatically synthesizes a concise title (if untitled), a substantive executive summary (2&ndash;3 informative sentences articulating context, core arguments, and takeaways without throat-clearing preambles), and contextual domain taxonomies (projects, categories, and tags). Key takeaways are generated on-demand when explicitly triggered via their respective refresh button.</li>
+        <li><strong>Direct Substance Metadata Extraction:</strong> When a user finishes editing a note for the first time, Gemini AI automatically synthesizes all metadata fields together in one pass: a concise title (if untitled), a substantive executive summary (1&ndash;2 informative sentences articulating context, core arguments, and takeaways without throat-clearing preambles), 3&ndash;5 insightful key takeaways, and contextual domain taxonomies (projects, categories, and tags). Supported by a 4,096-token output budget and multi-layer extraction fallbacks to guarantee uninterrupted completion across reasoning models (Gemini 2.5 Flash / Pro).</li>
       </ul>
     </section>
 
@@ -311,50 +314,24 @@
         <i class="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-sm"></i> 6. Gemini AI Synthesis & Theme Prompt Generator
       </h2>
       <p class="mb-3 text-[var(--text-main)]">
-        The Theme Prompt Generator acts as an autonomous intellectual sparring partner. By analyzing themes, contradictions, and loose ends across your knowledge base, it generates thought-provoking reflection questions that prompt you to write new notes and deepen your understanding.
+        The Theme Prompt Generator analyzes your notes to surface connections, contradictions, and open questions that prompt new reflection notes.
       </p>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)] space-y-2.5 text-xs text-[var(--text-muted)]">
-        <div><strong>Synthesis Hierarchy & Generation Logic:</strong></div>
-        <div>1. <strong>Primary Topics (Highest Weight):</strong> Manual notes receive the highest priority, grounding questions in your original ideas and personal reflections.</div>
-        <div>2. <strong>Secondary Topics:</strong> Previous prompt responses explore how your perspective has evolved over time.</div>
-        <div>3. <strong>Supporting Context:</strong> Ingested external materials (Web, Media, PDF) provide background references without becoming the sole subject of prompts.</div>
-        <div class="pt-2 border-t border-[var(--border)]">
-          <strong>Temporal Weighting:</strong> Evaluates your complete knowledge base across all time, giving ~65% priority to notes created or modified in the last 4 months.
+        <div>
+          <strong>Filter-Scoped Candidate Pool:</strong> Draws with equal weight from whatever notes are currently visible in your list (based on active Entry Types, Projects, Categories, Tags, and Search filters) that have an Executive Summary or Key Takeaways.
         </div>
         <div class="pt-2 border-t border-[var(--border)]">
-          <strong>Prompt Generation Settings & Customization:</strong> Located directly beside the "Generate Prompt" button, a gear icon opens configurable parameters for synthesis:
-          <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><strong>Creativity Level (Temperature):</strong> A slider ranging from <code>0.0</code> (precise and deterministic) to <code>1.0</code> (exploratory and divergent), defaulting to <code>0.7</code>. Strictly governs temperature end-to-end across Round 1 note scouting, Round 2 deep reasoning synthesis, and repair loops.</li>
-            <li><strong>Gemini Model Assignment:</strong> A dropdown allowing you to override the model used for synthesis or inherit the workspace default (<code>taskModels.prompts || gemini-flash-lite-latest</code>).</li>
-            <li><strong>Number of Recent Notes:</strong> A slider adjusting the candidate pool size from <code>5</code> to <code>60</code> (default: <code>35</code>). Strictly selects your freshest notes in chronological order (newest first), ensuring your most recent manual thoughts, outlines, and reflections are prioritized for synthesis.</li>
-            <li><strong>Reset to Defaults:</strong> A one-click master button restoring creativity to 0.7, inheriting the workspace prompt model, and resetting the candidate note limit to 35.</li>
+          <strong>Prompt Pool Settings (Sliders Icon):</strong> Clicking the sliders icon beside <strong>Generate Prompt</strong> opens two pool controls:
+          <ul class="list-disc list-inside mt-1 ml-2 space-y-1 text-xs text-[var(--text-muted)]">
+            <li><strong>Date Range (<code>dateRangeMonths</code>):</strong> Defaults to <strong>2 months</strong> (adjustable from <code>1</code> to <code>24</code> months, or <strong>All Time</strong>). Restricts the pool to notes created or updated within that timeframe.</li>
+            <li><strong>Pool Size (<code>poolSize</code>):</strong> Defaults to <strong>10 notes</strong> (adjustable from <code>5</code> to <code>50</code> in steps of 5, with the final step set to <strong>All</strong>). Controls how many eligible notes are randomly sampled (or all sent when set to <strong>All</strong>) in the request.</li>
           </ul>
         </div>
-        <div>
-          <strong>Scoped Context & Candidate Selection:</strong> Whatever entries are currently shown in the entry list view (filtered by type, project/category/tag taxonomy, or search query) form the candidate pool for prompt generation. The candidate pool sorts all summarized visible notes chronologically (newest first) and selects up to the configured limit (default: <strong>35 entries</strong>):
-          <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><em>Chronological Recency Prioritization:</em> Populates candidate slots starting with the freshest manual notes and prompt reflections created or modified in the recent 4-month window, followed by recent external context notes.</li>
-            <li><em>Historical Top-Up:</em> If fewer recent notes exist than the configured target, remaining slots are filled with earlier historical notes in chronological order.</li>
-          </ul>
-          If list filters are active, prompt synthesis isolates itself strictly to those visible notes, and notes created from the prompt inherit active taxonomies. <em>AI Chat</em> archive entries, the starter welcome note, and any notes lacking both an executive summary and key takeaways are strictly excluded from the prompt candidate pool under all conditions. When only the default-hidden <em>AI Chat</em> type is deselected, the "Generate Prompt" button cleanly displays its standard label without listing type filters, treating all content types as active.
+        <div class="pt-2 border-t border-[var(--border)]">
+          <strong>Single-Pass Synthesis:</strong> Sends only the <strong>Title</strong>, <strong>Date</strong>, <strong>Executive Summary</strong>, and <strong>Key Takeaways</strong> of the sampled notes in a single API call. The model isolates one specific idea from 1 or 2 notes, links them with <code>[[kb-ref:ID]]</code> citations, and asks one open-ended "Why" or "How" reflection question (capped at 50 words).
         </div>
-        <div>
-          <strong>Minimum Entry Requirement:</strong> The "Generate Prompt" button requires at least 2 summarized non-chat notes (possessing an executive summary or key takeaways) visible in the list view; when fewer than 2 summarized notes exist, the button is hidden to ensure only processed notes are synthesized.
-        </div>
-        <div>
-          <strong>Two-Pass Synthesis & Complete Unabridged Notes:</strong> Theme prompt generation operates via an efficient two-round architecture. In Round 1, an efficient scouting pass scans candidate note profiles (titles, timestamps, roles, summaries, and key takeaways) to identify the core conceptual contradiction, paradox, or collision between 2–3 notes. In Round 2, the engine injects the <strong>100% complete, unabridged text</strong> of those chosen notes into the deep reasoning prompt—eliminating previous 350-character snippets and ensuring the AI reasons over full contexts without misinterpreting text boundaries as thoughts trailing off mid-sentence.
-        </div>
-        <div>
-          <strong>Inline Note References:</strong> Prompts automatically embed bi-directional references (<code>[[kb-ref:ENTRY_ID]]</code>) to source notes, allowing immediate preview and navigation.
-        </div>
-        <div>
-          <strong>Non-Repetition & Candidate Novelty Engine:</strong> Retains a history of previously generated prompts and referenced note IDs in <code>storedPrompts</code>. In Round 1, candidate notes are dynamically partitioned so unexamined notes appear at the top of the candidate index, while previously paired notes are deprioritized. Explicit novelty constraints instruct the model to explore fresh, unexamined contradictions rather than repeatedly retreading the same note pairs.
-        </div>
-        <div>
-          <strong>Organic Issue-Driven Inquiry Engine (No Formulaic Question Stems):</strong> Prompt synthesis strictly bans formulaic, repetitive question stems (such as <em>"How do you explain..."</em>, <em>"Can you explain..."</em>, or <em>"How do you reconcile..."</em>) as well as all action-oriented, advice-seeking, or life-coaching questions (e.g. <em>"What is one tangible action you can anchor yourself in today?"</em>, <em>"What is one small step / action / shift..."</em>, <em>"How might you..."</em>). Instead, questions are constructed organically and directly out of the specific tension, contradiction, loose end, or juxtaposition identified across the notes (e.g., examining which force governs a collision, where a premise breaks down under pressure, or what allows opposing standards to coexist). Features runtime pattern detection, analytical repair loops, and deterministic fallback rephrasing to guarantee deep, organic intellectual inquiry.
-        </div>
-        <div>
-          <strong>Mandatory JSON Schema Contracts & 8,192 Token Reasoning Budget:</strong> Both Round 1 scouting and Round 2 synthesis enforce explicit <code>responseSchema</code> contracts with required <code>title</code> and <code>content</code> fields, supported by an expanded 8,192-token ceiling to prevent reasoning models (like <code>gemini-pro-latest</code> and <code>gemini-2.5-pro</code>) from truncating questions mid-sentence when thinking tokens consume generation limits. Supported by multi-key regex extraction, thinking token isolation, and automated fallback safety nets, the prompt engine guarantees the prompt card is never presented empty or syntactically broken.
+        <div class="pt-2 border-t border-[var(--border)]">
+          <strong>Model &amp; Default Temperature (<code>1.0</code>):</strong> Uses the Theme Prompts model configured in Settings (<code>taskModels.prompts</code>) with a fixed default temperature of <code>1.0</code> (Google's recommended default for Gemini 2.5 reasoning models and associative synthesis across disparate ideas).
         </div>
       </div>
     </section>
@@ -365,22 +342,24 @@
         <i class="fa-solid fa-comments text-[var(--accent)] text-sm"></i> 7. Unified AI Assistant & Chat Modes
       </h2>
       <p class="mb-3 text-[var(--text-main)]">
-        The integrated AI Assistant provides conversational intelligence directly alongside your notes. It can switch dynamically between deep inspection of your currently open document and multi-pass synthesis across your entire library of notes.
+        The AI Assistant lets you chat with either a single open note or your broader knowledge base.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Current Entry Mode:</strong> Injects the active note's full text, summary, takeaways, and source link alongside the summaries and takeaways of up to 10 same-category/project notes. The conversation is hosted inside the right collapsible drawer, bound to the open document with quick prompt chips.</li>
-        <li><strong>Search Grounding Disabled:</strong> Google Search grounding tools are disabled across all assistant modes (single-note, workspace, and whole brain) to eliminate massive token retrieval overhead and keep conversations grounded exclusively in your notes.</li>
-        <li><strong>Full-Width Whole Brain AI View:</strong> Uses two-pass retrieval that scans one-line note summaries across the library to identify relevant entries, then injects the complete text of the top 5 matching notes for synthesis. The main document view is fully replaced with an expansive, dedicated AI Chat interface featuring pinned message history, real-time citation synthesis, and a bottom input bar.</li>
-        <li><strong>Immediate Placeholder Creation:</strong> Starting a new Whole Brain chat immediately creates a dedicated <em>AI Chat</em> placeholder entry (purple) in the library so every conversation exists as its own persistent entity from the very first moment.</li>
-        <li><strong>Non-Destructive Archival & Natural Continuation:</strong> Every message exchange is stored non-destructively directly on the active AI Chat entry. When you select an archived AI chat from the notes list, its entire conversational transcript and message history are automatically repopulated into the full-width AI view, allowing you to continue the conversation naturally while preserving session integrity and auto-updating summaries.</li>
-        <li><strong>Initial Note Selection on Load:</strong> Because <em>AI Chat</em> entries have visibility turned off by default in the list view, opening the application automatically selects the most recent non-AI Chat note (or top visible entry according to active type filters) so you are immediately presented with an active, visible document.</li>
-        <li><strong>Direct Content Insertion:</strong> One-click insertion transfers assistant answers or synthesized outlines straight into your active note editor, syncing in-memory edit buffers so subsequent edits and auto-saving never overwrite or discard inserted content.</li>
-        <li><strong>Automatic Empty Placeholder & Manual Note Cleanup:</strong> If a user creates a new blank manual note or a new Whole Brain AI chat and navigates away or clicks off without writing any content, the empty entry is automatically deleted and pruned from the library and navigation history to prevent abandoned blank records.</li>
-        <li><strong>Auto-Focus on AI Chat Creation:</strong> Creating a new Whole Brain AI chat session or navigating to an AI chat entry automatically focuses the chat input field so you can begin typing immediately.</li>
-        <li><strong>Strict Assistant Drawer Segregation:</strong> Whole Brain chat mode is completely isolated from Current Entry chat. When in Whole Brain chat, the top-right magic wand toggle button is cleanly removed from the DOM entirely, keyboard shortcuts (<kbd>Cmd+J</kbd> / <kbd>Cmd+L</kbd> / <kbd>Ctrl+J</kbd>) are ignored, and the assistant drawer is automatically collapsed so Current Entry chat can never be accessed during Whole Brain chat.</li>
-        <li><strong>Clean Borderless Message Bubbles & Layout:</strong> All message entries across both the full-width Whole Brain conversation and the Current Entry assistant drawer are designed without borders, floating with clean contrast and subtle card shadows against the canvas. In Whole Brain mode, dividing lines below the header and above the message input bar are eliminated for a seamless document flow.</li>
-        <li><strong>Concise & Conversational Response Rules:</strong> Across all assistant modes (Whole Brain and Current Entry), AI responses are governed by strict concise writing rules and a 50-word target limit unless longer answers are specifically requested or necessary, defaulting to short. Assistant models are calibrated with a focused temperature of 0.3. The assistant proceeds step-by-step, avoids spilling large amounts of text, uses the active voice, cuts unnecessary filler, prefers short words and plain English, keeps sentences declarative and focused (one idea per sentence), uses natural contractions, reserves emojis strictly for headers, and cites sources cleanly using <code>[[kb-ref:ID]]</code>.</li>
-        <li><strong>Keyboard Accessibility:</strong> Toggle the assistant drawer anytime with <kbd>Cmd+J</kbd> or <kbd>Ctrl+J</kbd> when viewing standard notes.</li>
+        <li><strong>Current Entry Chat (Right Drawer):</strong>
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li><em>Context:</em> Sends the active note's full text, summary, takeaways, and source URL, plus summaries and takeaways of up to 10 related notes in the same category or project.</li>
+            <li><em>Auto-Close &amp; Auto-Reopen:</em> Switching notes automatically closes the drawer if the new note has no prior chat, and automatically re-opens it if the note already has a saved conversation (<code>assistantChats[entry.id]</code>). Toggle manually anytime with <kbd>Cmd+J</kbd> / <kbd>Ctrl+J</kbd>.</li>
+          </ul>
+        </li>
+        <li><strong>Whole Brain / Scoped AI Chat (Full-Width Purple View):</strong>
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li><em>Dynamic Scope &amp; Naming:</em> Named automatically after your active Entry Type and Taxonomy filters (e.g., <code>Whole Brain AI Chat</code> or <code>Project: X AI Chat</code>).</li>
+            <li><em>Uncapped Summaries First, Details On Demand:</em> Sends <strong>all</strong> matching note <strong>Executive Summaries</strong> (<code>summary</code>) with no artificial count limit&mdash;you control the scope via your type and taxonomy selections. If summaries are enough to answer, the AI replies in a <strong>single pass</strong> (<code>directReply</code>). If deeper detail is required, it automatically fetches <strong>Key Takeaways</strong> (<code>takeawayIds</code>) or <strong>Full Content</strong> (<code>contentIds</code>) for specific notes in a second pass.</li>
+            <li><em>Auto-Selected Type &amp; Excluded Prior Chats:</em> Clicking the purple <strong>Chat</strong> / <strong>New Chat</strong> button automatically enables the <em>AI Chat</em> entry type in the list so your chat sessions are visible, while strictly excluding previous <em>AI Chat</em> entries from being fed into context for new chats.</li>
+            <li><em>Persistent &amp; Self-Cleaning:</em> Conversations save automatically to their <em>AI Chat</em> entry and resume when clicked. Empty chats that you navigate away from without sending a message are pruned automatically.</li>
+          </ul>
+        </li>
+        <li><strong>Response Style &amp; Temperature (<code>0.3</code>):</strong> Uses a focused temperature of <code>0.3</code> for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline <code>[[kb-ref:ID]]</code> source citations.</li>
       </ul>
     </section>
 
@@ -589,7 +568,8 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.40</strong></span>
+      <span>Version <strong>v2.8.65</strong></span>
+      <a href="changelog.html">Changelog</a>
       <a href="index.html">Back to Brain App</a>
     </div>
   </footer>

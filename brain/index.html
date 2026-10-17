@@ -111,587 +111,16 @@
     // =========================================================================
     // VERSIONING & DOCUMENTATION PROTOCOL:
     // With each functional change or new feature, maintainers MUST:
-    // 1. Bump APP_VERSION below (e.g. v2.3.0 -> v2.3.1 or v2.4.0).
-    // 2. Prepend a new entry to CHANGELOG with the date and highlights.
-    // 3. Update readme.html to reflect the modified/new functionality.
+    // 1. Bump APP_VERSION below (e.g. v2.8.65 -> v2.8.66 or v2.9.0).
+    // 2. Update changelog.html and CHANGELOG.md:
+    //    - Keep 3-digit dot points (e.g. v2.8.x) ONLY for the current minor series,
+    //      merging cumulative/iterative updates into the latest entry.
+    //    - When bumping to a new two-digit minor version (e.g. v2.9), condense and
+    //      summarize all 3-digit entries from the previous series into a single
+    //      round two-digit entry (e.g. "v2.8").
+    // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.40";
-
-    const CHANGELOG = [
-      {
-        version: "v2.8.40",
-        date: "2026-10-15",
-        highlights: [
-          "Expanded Token Budget for Pro Reasoning: Raised maxOutputTokens to 8,192 tokens across prompt synthesis and repair passes. Completely prevents thinking models (e.g. gemini-pro-latest, gemini-2.5-pro) from cutting off questions mid-sentence when internal thinking tokens consume generation limits.",
-          "Candidate Pool Diversity & Anti-Repetition Engine: Added dynamic partitioning of candidate notes in Round 1 scouting, placing unexamined notes at the top of the candidate index and deprioritizing recently explored notes. Enforced explicit diversity constraints to prevent models (such as gemini-flash-lite-latest) from repeatedly latching onto the exact same note pairs across consecutive clicks.",
-          "Truncated Shortcode Healing: Added automated cleanup for incomplete or truncated [[kb-ref: tags, guaranteeing clean closing punctuation and well-formed syntax."
-        ]
-      },
-      {
-        version: "v2.8.39",
-        date: "2026-10-14",
-        highlights: [
-          "Mandatory JSON Response Schemas & Empty Prompt Guard: Resolved empty prompt card issue by adding explicit responseSchema definitions with required 'title' and 'content' properties across all prompt synthesis and repair calls. Enhanced getCandidateText to isolate thinking tokens, added resilient regex fallback extraction for content/question/theme keys in parseAIJson, and instituted strict safety guards guaranteeing prompt content is never empty."
-        ]
-      },
-      {
-        version: "v2.8.38",
-        date: "2026-10-14",
-        highlights: [
-          "Strict Prompt Settings Enforcement for Recent Notes & Creativity: Bound Creativity Level (temperature) directly to Round 1 scouting, Round 2 synthesis, and repair loops. Replaced arbitrary proportional quotas and random shuffling with strict chronological recency prioritization (newest notes first), ensuring the configured 'Number of Recent Notes' accurately governs candidate pool selection."
-        ]
-      },
-      {
-        version: "v2.8.37",
-        date: "2026-10-14",
-        highlights: [
-          "Streamlined Prompt Settings: Removed user-editable verbal instructions from Prompt Settings, standardizing prompt generation on the organic issue-driven inquiry engine and eliminating configuration drift while keeping creativity, model selection, and candidate note limits configurable."
-        ]
-      },
-      {
-        version: "v2.8.36",
-        date: "2026-10-14",
-        highlights: [
-          "Candidate Pool Filter for Theme Prompts: Notes lacking both an executive summary and key takeaways are now strictly excluded from the reflection prompt candidate pool and UI button requirements, ensuring only summarized and processed notes are evaluated and synthesized."
-        ]
-      },
-      {
-        version: "v2.8.35",
-        date: "2026-10-14",
-        highlights: [
-          "Two-Pass Theme Prompt Engine with Complete Unabridged Notes: Transitioned reflection prompt synthesis to an efficient two-pass architecture. Round 1 rapidly evaluates candidate note profiles to identify the core contradiction or paradox between 2–3 notes. Round 2 injects the 100% complete, unabridged content of those chosen notes, completely eliminating character cutoffs and preventing the AI from falsely assuming thoughts trailed off mid-sentence."
-        ]
-      },
-      {
-        version: "v2.8.34",
-        date: "2026-10-14",
-        highlights: [
-          "Organic Issue-Driven Theme Prompting: Eliminated repetitive, mundane question stems (e.g. 'How do you explain...') in favor of organically constructed inquiries derived directly from the specific tension, paradox, or loose end in the notes. Formulates the exact question best suited to examine the issue while strictly barring life-coaching actions, habits, and tasks."
-        ]
-      },
-      {
-        version: "v2.8.33",
-        date: "2026-10-14",
-        highlights: [
-          "Mandatory Explain & Explore Guard for Theme Prompts: Enforced strict requirement for reflection prompts to ask the user to explain, explore, examine, or unpack conceptual tensions rather than prescribing actions, habits, or life-coaching steps ('what is one tangible action you can anchor yourself in today?'). Added automated post-generation trope detection, repair re-prompting, and auto-upgrade of stored prompt templates."
-        ]
-      },
-      {
-        version: "v2.8.32",
-        date: "2026-10-14",
-        highlights: [
-          "Unified History Navigation Shortcuts via Button Triggers: Routed history backward (Alt+← / Cmd+[ / Ctrl+[) and forward (Alt+→ / Cmd+] / Ctrl+]) keyboard shortcuts directly to the top floating navigation button click triggers, removing the separate event listener and closure. Guarantees continuous, reliable history navigation across multiple steps."
-        ]
-      },
-      {
-        version: "v2.8.31",
-        date: "2026-10-14",
-        highlights: [
-          "Unified Metadata Instruction Registry (Single Source of Truth): Consolidated title, executive summary, taxonomy, and key takeaway instructions, JSON schemas, and post-processing into a centralized definition registry (METADATA_FIELD_SPECS). Both single-field margin refresh actions and combined initial background generation now pull from the identical canonical instructions and schema definitions, ensuring 100% prompt consistency and zero drift."
-        ]
-      },
-      {
-        version: "v2.8.30",
-        date: "2026-10-14",
-        highlights: [
-          "Simultaneous Initial Auto-Generation for Taxonomies, Title & Summary: Expanded first-unfocus and initial save background synthesis to auto-generate topic categories, concept tags, and project associations alongside the title and executive summary. Taxonomy generation strictly isolates subject matter from entry formats, aligns with existing workspace taxonomies, and unifies metadata synthesis in a single high-efficiency API call with synchronized margin loading indicators."
-        ]
-      },
-      {
-        version: "v2.8.29",
-        date: "2026-10-14",
-        highlights: [
-          "Anti-Trope Guard for Prompt Generation: Strictly bans formulaic AI reflection tropes, self-help clichés, and life-coaching formulas (e.g. 'What is one small step / action / shift...', 'How might you...', 'In what ways can you...') from theme prompt synthesis. Grounds reflection questions peer-to-peer in the concrete ideas, tensions, and trade-offs of the user's notes."
-        ]
-      },
-      {
-        version: "v2.8.28",
-        date: "2026-10-13",
-        highlights: [
-          "Robust Manual Summary (TL;DR) Generation: Resolved 'Cannot read properties of null (reading summary)' error by adding null-safe response parsing, multi-part candidate extraction (handling thinking tokens seamlessly), syncing live textarea/chat content, increasing output token limits to 800, and requiring the summary key in the API schema."
-        ]
-      },
-      {
-        version: "v2.8.27",
-        date: "2026-10-13",
-        highlights: [
-          "Editable Verbal Prompt Instructions: Exposed the system prompt and verbal instructions sent to Gemini during theme prompt generation inside the Prompt Settings popover. Users can customize, experiment with, or fine-tune prompt guidance while preserving dynamic filter context and citation schemas.",
-          "Verbal Prompt Default Reset: Added a one-click action to reset the verbal instructions to the default thinking assistant prompt, as well as inclusion in the master 'Reset to Defaults' action."
-        ]
-      },
-      {
-        version: "v2.8.26",
-        date: "2026-10-13",
-        highlights: [
-          "Configurable Prompt Generation Settings: Added a settings gear button beside the 'Generate Prompt' button allowing users to customize creativity level (temperature slider 0.0–1.0), Gemini model dropdown, and note sampling count (slider 5–60 notes).",
-          "Reset to Defaults: Included a one-click 'Reset to Defaults' action restoring creativity to 0.7, inheriting the workspace prompt model, and note quota to 35.",
-          "Persistent Prompt Preferences: Automatically saves prompt settings to workspace data and browser storage across sessions."
-        ]
-      },
-      {
-        version: "v2.8.25",
-        date: "2026-10-12",
-        highlights: [
-          "Automatic Cleanup of Empty Manual Notes: Creating a blank note and clicking off or navigating away without writing any content now automatically deletes and prunes the empty note from the library, preventing abandoned blank entries.",
-          "Auto-Focus on Whole Brain AI Chat Input: Creating a new AI Chat session or switching to an AI Chat entry automatically focuses the chat input field so you can begin typing immediately."
-        ]
-      },
-      {
-        version: "v2.8.24",
-        date: "2026-10-12",
-        highlights: [
-          "Smooth Creation Fade-In (200ms): Newly created notes and AI chat sessions now smoothly fade into view over 200ms (.animate-entry-fade) when gaining focus in the main editor/chat view."
-        ]
-      },
-      {
-        version: "v2.8.23",
-        date: "2026-10-12",
-        highlights: [
-          "Prompt Generation Button Styling: Updated the 'Generate Prompt' button and loading placeholder with a green border matching the prompt entry type (#10e567) alongside dark/grey typography."
-        ]
-      },
-      {
-        version: "v2.8.22",
-        date: "2026-10-12",
-        highlights: [
-          "Suppress Self-References in Current Entry AI Chat: Instructed the single-note AI Assistant copilot to never insert redundant [[kb-ref:ID]] self-citations pointing to the active note being viewed, reserving reference tags exclusively for cross-referenced related notes."
-        ]
-      },
-      {
-        version: "v2.8.21",
-        date: "2026-10-12",
-        highlights: [
-          "Calibrated Concise Summaries (<=100 words & <=150% note length): Constrained AI prompts and schema descriptions to generate crisp, punchy executive summaries capped at 100 words max and proportional to content length. Upgraded cleanExecutiveSummary to strictly enforce the 100-word ceiling and prevent summaries from exceeding 1.5x note length."
-        ]
-      },
-      {
-        version: "v2.8.20",
-        date: "2026-10-12",
-        highlights: [
-          "Mandatory JSON Schema Specification for Simultaneous Metadata: Added explicit required array to responseSchema for title and executive summary auto-generation, ensuring Gemini generates the summary alongside the title rather than omitting optional object properties."
-        ]
-      },
-      {
-        version: "v2.8.19",
-        date: "2026-10-12",
-        highlights: [
-          "Resilient JSON Parsing & Token Budget Expansion for Auto-Metadata: Expanded maxOutputTokens from 300 to 800 for simultaneous title and executive summary generation, preventing mid-stream token truncation. Upgraded parseAIJson with robust fallback regex extraction so partial or malformed model responses never silently drop generated metadata."
-        ]
-      },
-      {
-        version: "v2.8.18",
-        date: "2026-10-12",
-        highlights: [
-          "Direct Textarea Injection for First-Unfocus Title & Summary Generation: Fixed auto-generation on textarea blur by directly capturing live textarea DOM content into analysis prompt and state, preventing empty content payloads or unhandled reference errors during background generation."
-        ]
-      },
-      {
-        version: "v2.8.17",
-        date: "2026-10-12",
-        highlights: [
-          "First-Unfocus Title & Executive Summary Auto-Generation: Unfocusing (blurring) the content editing textarea for the first time on a note now automatically triggers background title and executive summary synthesis if untitled or summary is needed, without waiting for the Done button or outside dismiss click."
-        ]
-      },
-      {
-        version: "v2.8.16",
-        date: "2026-10-12",
-        highlights: [
-          "Runaway Title Sanitization & Model Token Guard: Added strict title cleaning (`cleanTitle`) to strip concatenated runaway token loops, non-Latin script transitions, and text dumps. Calibrated metadata AI calls to temperature 0.2 and strict `maxOutputTokens` constraints, preventing generative babble while automatically healing existing corrupted titles on workspace load."
-        ]
-      },
-      {
-        version: "v2.8.15",
-        date: "2026-10-12",
-        highlights: [
-          "Automatic Title & Summary Generation on Stop Editing: When a user finishes editing a note (via Done, clicking outside, or exiting Focus Mode), Gemini AI automatically synthesizes a descriptive title (if untitled) and a substantive executive summary in the background without blocking the UI.",
-          "On-Demand Key Takeaways on Refresh: Key takeaways are generated on-demand when the user clicks the refresh action (available via the margin refresh icon and the card header button), avoiding unnecessary API calls and preserving customized takeaways across routine edits."
-        ]
-      },
-      {
-        version: "v2.8.14",
-        date: "2026-10-12",
-        highlights: [
-          "Taxonomy-Scoped Single Note Chat Context: Scoped single-note chat background context strictly to up to 10 previous notes sharing the active note's category or project, eliminating library-wide prompt context dumps.",
-          "Search Grounding Disabled: Turned off Google Search grounding across single-note, workspace, and whole-brain AI chats to reduce input token overhead.",
-          "On-Demand Metadata Generation: Removed automatic background metadata generation on save; metadata (title, summary, takeaways, taxonomies) is generated strictly when requested by the user."
-        ]
-      },
-      {
-        version: "v2.8.13",
-        date: "2026-10-12",
-        highlights: [
-          "Clean Prompt Button Label: Suppressed taxonomy and type filter suffixes on the 'Generate Prompt' button when only the default-hidden AI Chat type is deselected, cleanly displaying 'Generate Prompt' as if all types were active."
-        ]
-      },
-      {
-        version: "v2.8.12",
-        date: "2026-10-12",
-        highlights: [
-          "Ultra-Concise 50-Word Target: Tightened the AI response limit to under 50 words unless requested or necessary, defaulting to punchy, conversational answers."
-        ]
-      },
-      {
-        version: "v2.8.11",
-        date: "2026-10-12",
-        highlights: [
-          "Strict 100-Word Response Ceiling: Enforced a 100-word maximum limit on all AI Assistant responses across Whole Brain and Current Entry modes unless longer answers are specifically requested.",
-          "Temperature Calibration to 0.3: Reduced temperature to 0.3 across all assistant and whole-brain chat payloads to ensure disciplined, concise, and deterministic responses."
-        ]
-      },
-      {
-        version: "v2.8.10",
-        date: "2026-10-11",
-        highlights: [
-          "Manual Focus Mode Activation: Content editing now opens in an inline textarea by default without automatically launching Focus Mode. The distraction-free Focus Mode is accessed exclusively via the visible Focus link above the content editor.",
-          "Auto-Save on Focus Exit: Exiting Focus Mode (via Esc, backdrop click, or close button) immediately finishes editing, saves all changes to disk and storage, and returns directly to the rendered Markdown reader view."
-        ]
-      },
-      {
-        version: "v2.8.9",
-        date: "2026-10-11",
-        highlights: [
-          "Concise & Conversational AI Responses: Updated system prompts across Whole Brain and Current Entry assistant modes to enforce concise, conversational, and direct responses that progress one step at a time without text dumps.",
-          "Strict Concise Writing Rules: Embedded concise writing rules (active voice, short declarative sentences, plain English, contractions, zero hyperbole, no filler preambles, and emojis in headings only) into assistant system instructions."
-        ]
-      },
-      {
-        version: "v2.8.8",
-        date: "2026-10-11",
-        highlights: [
-          "Direct Substance Summaries: Eliminated redundant preamble meta-openings (e.g. 'This note summarises...', 'This document explores...') across all AI generation pipelines (URL/PDF/Media ingestion, TL;DR generation, and auto-save metadata enrichment).",
-          "Automated Summary Preamble Sanitization: Added automatic post-generation filtering to strip throat-clearing meta-phrases and jump immediately into the core findings, substance, and takeaways."
-        ]
-      },
-      {
-        version: "v2.8.7",
-        date: "2026-10-11",
-        highlights: [
-          "AI View Toggle Removal in Whole Brain Mode: Cleanly removed the top-right AI Assistant toggle button from the interface entirely when in Whole Brain mode, keeping the top navigation area uncluttered without displaying disabled controls.",
-          "Seamless Whole Brain Chat Layout: Eliminated the hard dividing borders below the sticky chat header and above the bottom message input area, creating an open, unbordered conversational reading and typing flow."
-        ]
-      },
-      {
-        version: "v2.8.6",
-        date: "2026-10-11",
-        highlights: [
-          "Automatic Empty Chat Placeholder Cleanup: Clicking off or navigating away from an empty Whole Brain AI chat placeholder with no message history immediately deletes and cleans up the placeholder from both the notes library and navigation history.",
-          "Strict Assistant Drawer Segregation: When in Whole Brain chat, the top-right AI view toggle button is explicitly disabled (with dimmed opacity and disabled cursor), keyboard shortcuts (Cmd+J / Cmd+L / Ctrl+J) are ignored, and the assistant drawer is automatically collapsed to guarantee Current Entry chat is never accessible within Whole Brain mode.",
-          "Clean Borderless Chat Bubbles: Removed all borders from chat message cards across both Whole Brain full-width view and Current Entry assistant drawer, achieving a clean, modern aesthetic with subtle elevation shadows."
-        ]
-      },
-      {
-        version: "v2.8.5",
-        date: "2026-10-11",
-        highlights: [
-          "Full-Width Whole Brain AI View: When Whole Brain chat is selected, the center document view is fully replaced with an expansive, dedicated AI Chat interface featuring pinned message history, real-time citation synthesis, and a bottom input bar.",
-          "Immediate Placeholder Chat Creation: Initiating a Whole Brain chat immediately creates a dedicated AI Chat placeholder entry in the library so each discussion exists as its own persistent entity.",
-          "Seamless Archive Repopulation & Continuation: Selecting any archived AI Chat note from the library repopulates its entire conversational history into the full-width AI view, allowing users to continue the chat naturally while non-destructively updating message logs and summaries.",
-          "Dedicated Current-Entry Drawer: The right-hand AI Assistant drawer is retained exclusively for focused discussion with the active document when viewing standard notes."
-        ]
-      },
-      {
-        version: "v2.8.4",
-        date: "2026-10-11",
-        highlights: [
-          "Non-AI Chat Initial Note Selection on App Load: When the workspace loads, initial note selection automatically selects the most recent non-AI Chat note (or top visible entry according to active type filters), preventing the application from loading with an archived AI chat note selected when AI chat visibility is off."
-        ]
-      },
-      {
-        version: "v2.8.3",
-        date: "2026-10-11",
-        highlights: [
-          "Strict Exclusion of AI Chat Archives from Prompt Generation: Theme prompt synthesis, candidate pooling, and visible note thresholds now strictly exclude all AI Chat archive entries, ensuring generated reflection questions synthesize authentic user notes and external materials rather than prior conversational logs.",
-          "Editable & Generatable Summaries and Key Takeaways for AI Chats: Enabled double-click inline editing and Gemini auto-generation (refresh/add/delete) for executive summaries and key takeaways on AI Chat entries, while preserving the immutability of the underlying chat transcript content."
-        ]
-      },
-      {
-        version: "v2.8.2",
-        date: "2026-10-11",
-        highlights: [
-          "Dynamic Assistant 'New Chat' Visibility: The 'New Chat' button in Whole Brain mode is now conditionally rendered only when the conversation contains active messages, preventing empty session resets.",
-          "Immutable AI Chat Archives: AI Chat entry contents and transcripts are now strictly non-editable and read-only, disabling Focus Mode, double-click inline edits, backlink drops, and response insertions to protect session integrity.",
-          "Descriptive Summaries & Key Takeaways: Replaced artificial 15-word constraints across all Gemini AI ingestion, auto-save, TL;DR, and prompt synthesis pipelines with instructions to generate comprehensive, descriptive 2-3 sentence summaries and context-rich takeaways."
-        ]
-      },
-      {
-        version: "v2.8.1",
-        date: "2026-10-11",
-        highlights: [
-          "Fix Workspace Initialization & Loading Regression: Resolved ReferenceError where `migrated` was undefined during workspace initialization (`loadWorkspaceData`) and manual JSON import (`handleManualImport`) by correctly calling `migrateWorkspaceData(data)`."
-        ]
-      },
-      {
-        version: "v2.8.0",
-        date: "2026-10-11",
-        highlights: [
-          "AI Assistant Header & Streamlined Controls: Removed redundant close and archive icons; kept model name badge alongside the assistant title, and eliminated the colored square preceding the title.",
-          "Merged Web & PDF Entry Types: Unified 'PDF' and 'Web' into a single 'Web' entry type with sky blue accent color (#38bdf8), maintaining complete support for local and linked PDF document analysis.",
-          "Dedicated 'AI Chat' Entry Type: Created a new 'aiChat' entry type with distinctive purple styling (#a855f7) and speech bubble icon. Visually hidden by default in the list filter, allowing users to toggle or solo inspect conversational archives whenever desired.",
-          "Automatic Whole Brain Chat Archival on Startup: Active whole-brain assistant conversations are safely converted and archived into structured AI Chat entries upon application launch, resetting to a fresh session while preserving full markdown dialogues.",
-          "On-Demand Chat Archival & New Chat Flow: Starting a new chat in Whole Brain mode cleanly archives the active conversation into an AI Chat entry, seamlessly resetting the session. Current Entry discussions persist on their active document without disruptive archiving."
-        ]
-      },
-      {
-        version: "v2.7.9",
-        date: "2026-10-11",
-        highlights: [
-          "Preserve Inserted AI Summaries & Responses Across Note Edits: Fixed an issue where inserting an AI copilot synthesis into an open note was lost upon editing or auto-saving. Insertion now immediately updates both active entries and in-memory draft buffers (`editData` & `editDataRef`), and saving safely cleans up editing buffers while preserving note contents and summaries."
-        ]
-      },
-      {
-        version: "v2.7.8",
-        date: "2026-10-11",
-        highlights: [
-          "Automatic Most Recent File Loading on Startup: The application now automatically accesses and resumes the most recently opened knowledge base file from IndexedDB on startup, falling back seamlessly to the file switch/selection landing screen if not found or unavailable.",
-          "Dynamic Prompt Candidate Pool Derived from List View: Theme prompt synthesis now pulls candidate notes directly from whatever entries are visible in the note list view (accounting for active entry type filters, taxonomies, and search queries) rather than the global library.",
-          "Updated Prompt Note Card Accents & Styling: Prompt theme entries, badges, and card borders updated to fluoro green (#10e567).",
-          "Main Accent Color Refresh: Updated brand button and accent color to energetic red-orange (#e73624), paired with matching SVG brain favicon.",
-          "Top Navigation Layout Refinement: Moved document Back and Forward history buttons into the top padding zone adjacent to the Settings gear toggle."
-        ]
-      },
-      {
-        version: "v2.7.7",
-        date: "2026-10-10",
-        highlights: [
-          "Centered Dismissable Warning Modals: Replaced the top content warning/error banner with a centered dismissable modal dialog with backdrop blur, clean typography, and a direct new-tab link to the Readme system manual."
-        ]
-      },
-      {
-        version: "v2.7.6",
-        date: "2026-10-10",
-        highlights: [
-          "Exclude Welcome Note from Entry Counts & Prompt Synthesis: The sample starter welcome note (`#1`) is excluded from library note counts, entry type tallies, and theme prompt thresholds. Only actual user-created notes contribute to the 2-entry minimum required for synthesis.",
-          "Updated Welcome Note Content: Modernized the starter note content to document the top view toggles, magic wand assistant trigger, non-destructive file syncing, and Gemini task model defaults."
-        ]
-      },
-      {
-        version: "v2.7.5",
-        date: "2026-10-10",
-        highlights: [
-          "Default AI Model Updated to Gemini Flash-Lite Latest: Configured `gemini-flash-lite-latest` as the default model across all tasks (Quick Metadata, Theme Prompts, and AI Assistant), reducing latency and token overhead while allowing users to increase capacity to Pro or standard Flash as needed.",
-          "Minimum Entry Requirement for Prompt Synthesis: The 'Generate Prompt' button is now cleanly hidden until the library contains at least 2 entries, ensuring meaningful synthesis and comparison."
-        ]
-      },
-      {
-        version: "v2.7.4",
-        date: "2026-10-09",
-        highlights: [
-          "Unified Top View Toggles & Content Settings Toggle: Positioned the Settings gear toggle in the top padding zone directly above the Content view, docking dynamically with the Library and Notes List view toggles.",
-          "Magic Wand AI Assistant Toggle: The AI Assistant view toggle is docked in the top right with an intuitive magic wand icon (`fa-wand-magic-sparkles`), while removing redundant assistant text buttons from content headers.",
-          "Taxonomy Footer Workspace Controls: Placed the library name, live sync indicator, and library options dropdown menu at the bottom of the taxonomy view sidebar for convenient, uncluttered access."
-        ]
-      },
-      {
-        version: "v2.7.3",
-        date: "2026-10-09",
-        highlights: [
-          "Interactive Inline References in Generated Prompts: When the AI prompt generator references previous notes or loose ends, it now embeds inline references using [[kb-ref:ID]] syntax. Rendered across the draft card, reader views, and focus mode, these badges reveal instant summary popovers on hover and open full note previews on click."
-        ]
-      },
-      {
-        version: "v2.7.2",
-        date: "2026-10-09",
-        highlights: [
-          "Refined Dark Mode Active Note Contrast: Adjusted the active note card background in dark mode from pure black (#000000) to a subtle shade darker than the background canvas (#101010), creating a more natural inset depth."
-        ]
-      },
-      {
-        version: "v2.7.1",
-        date: "2026-10-09",
-        highlights: [
-          "External Stylesheet Extraction: Extracted 445 lines of CSS styling from brain/index.html into a dedicated standalone stylesheet (brain/style.css), reducing HTML payload, enhancing browser caching, and improving code maintainability."
-        ]
-      },
-      {
-        version: "v2.7.0",
-        date: "2026-10-09",
-        highlights: [
-          "Subfolder Reorganization: Relocated the Brain application and documentation into its dedicated '/brain/' directory (/brain/index.html and /brain/readme.html), establishing clean modular routing and root portfolio linking."
-        ]
-      },
-      {
-        version: "v2.6.8",
-        date: "2026-10-09",
-        highlights: [
-          "Taxonomy & Entry-Type Separation: Prevented auto-generated categories and tags from colliding with entry types (e.g. notes, videos/media, web, prompts, pdfs). Added negative prompt constraints and strict post-generation filtering to keep categories and tags focused on subject matter rather than format."
-        ]
-      },
-      {
-        version: "v2.6.7",
-        date: "2026-10-09",
-        highlights: [
-          "Clean Library Indicator: Streamlined the workspace title in the top-right controls to display purely as text without a button background, border, or shadow, reflecting its role as a clear informational status label."
-        ]
-      },
-      {
-        version: "v2.6.6",
-        date: "2026-10-09",
-        highlights: [
-          "Persistent Top-Right Workspace Controls: Relocated the current library name, settings gear, and workspace options menu to the top-right corner opposite the view toggles, preventing them from being buried when the taxonomy sidebar is collapsed.",
-          "Seamless Content Header: Removed the solid background color from the content view top bar for a clean, unified document reading experience."
-        ]
-      },
-      {
-        version: "v2.6.5",
-        date: "2026-10-08",
-        highlights: [
-          "Search Clear Action: Added an inline cancel/clear icon (and Escape key shortcut) to the note search field that dynamically appears whenever search text is present, allowing one-click instant clearing."
-        ]
-      },
-      {
-        version: "v2.6.4",
-        date: "2026-10-08",
-        highlights: [
-          "Latest Model Aliases Filter: When fetching models from Google AI Studio in Settings, only 'latest' alias models (e.g. gemini-flash-latest, gemini-pro-latest, gemini-1.5-flash-latest) are returned, eliminating deprecated snapshots and version clutter."
-        ]
-      },
-      {
-        version: "v2.6.3",
-        date: "2026-10-07",
-        highlights: [
-          "Floating View Toggles in Top Padding: Sidebar toggles for the Library (taxonomies) and Notes list are now absolutely positioned inside the 50px top padding zone above each respective view.",
-          "Dynamic Left-Screen Docking on Collapse: When either view is collapsed, its toggle button smoothly transitions to the left edge of the screen, providing persistent, easy one-click retoggling without crowding the document reader toolbar."
-        ]
-      },
-      {
-        version: "v2.6.2",
-        date: "2026-10-07",
-        highlights: [
-          "Enhanced Column Contrast: In light mode, the middle note list view features a clean white background, while the left taxonomy view and content view use an off-white background.",
-          "Theme-Adaptive Active Card Elevation: Selected note cards elevate onto pure black in dark mode (#000000) and crisp white in light mode (#ffffff) with a 1px colored accent border matching their entry type, contrasting cleanly against inactive note cards."
-        ]
-      },
-      {
-        version: "v2.6.1",
-        date: "2026-10-07",
-        highlights: [
-          "Pinned Note Double Thickness Border: Pinned note cards now feature a distinct double-thickness (8px) left border, providing an immediate visual distinction in the notes list."
-        ]
-      },
-      {
-        version: "v2.6.0",
-        date: "2026-10-07",
-        highlights: [
-          "Task-Specific Model Routing: Dedicated AI models can now be assigned to Quick Metadata (titles, summaries, takeaways, auto-tags), Theme Prompts, and the AI Assistant copilot.",
-          "Live Model Discovery via API: Dynamically fetch active generative models directly from Google AI Studio with one click, showing real-time account model access.",
-          "Resilient Medium Fallback: Clean fallback to current medium-speed model (gemini-2.5-flash) while strictly honoring user selections across reloads and file saves."
-        ]
-      },
-      {
-        version: "v2.5.5",
-        date: "2026-10-07",
-        highlights: [
-          "Taxonomy-Scoped Theme Prompts: Generating a prompt now strictly references entries matching active taxonomy filters (projects, categories, tags), allowing focused thematic questions within specific domains like music or research.",
-          "Automatic Taxonomy Inheritance: Notes created via 'Write' from a scoped prompt automatically inherit the active projects, categories, and tags.",
-          "Scoped Prompt UI Indicators: The Generate Prompt button and draft card dynamically display the active taxonomy scope."
-        ]
-      },
-      {
-        version: "v2.5.4",
-        date: "2026-10-07",
-        highlights: [
-          "Persistent View Visibility: View visibility states (Library, Notes list, AI Assistant) are now saved directly into the knowledge base file and restored automatically upon opening.",
-          "Preserved Layout on Note Selection: Removed automatic closing of the AI Assistant when browsing or selecting notes, keeping the user's chosen view arrangement persistent across note transitions."
-        ]
-      },
-      {
-        version: "v2.5.3",
-        date: "2026-10-07",
-        highlights: [
-          "Responsive Prompt Layout: Prompts and answer summaries dynamically transition from side-by-side to vertical stacking whenever note width collapses below 580px.",
-          "Container-Aware Breakpoints: Added container queries on the note reader container so prompt layout responds to the actual available note width regardless of viewport dimensions."
-        ]
-      },
-      {
-        version: "v2.5.2",
-        date: "2026-10-07",
-        highlights: [
-          "Smooth View Transitions: Implemented animated width and position transitions (300ms ease-in-out) across Library, Notes list, and AI Assistant views so adjacent columns smoothly glide into place when panels open or close.",
-          "Persistent State Preservation: Retained panel DOM structures during collapse to preserve scroll positions and active view state seamlessly."
-        ]
-      },
-      {
-        version: "v2.5.1",
-        date: "2026-10-07",
-        highlights: [
-          "Persistent View Header Toggles: Added persistent Library and Notes toggle icons in the main content header for seamless sidebar expansion and collapse.",
-          "Header Toolbar Cleanup: Removed individual chevron collapse buttons from the Library and Notes headers to streamline toolbar layouts."
-        ]
-      },
-      {
-        version: "v2.5.0",
-        date: "2026-10-07",
-        highlights: [
-          "Inline Entry Editing: Removed separate full-page edit mode and Edit button in favor of unified inline double-click editing across all fields.",
-          "Margin Auto-Generate Actions: Added round refresh icons hanging into the right margin for auto-generating titles, summaries, takeaways, and taxonomies.",
-          "In-Place Taxonomy Editor: Clicking taxonomy badges directly opens the taxonomy and tags editor in place."
-        ]
-      },
-      {
-        version: "v2.4.0",
-        date: "2026-10-07",
-        highlights: [
-          "Taxonomy Deletion: Added capability to delete categories, tags, and projects across all notes directly from the sidebar.",
-          "Taxonomy Hover Action: Hovering over any taxonomy item reveals a delete button hanging into the left padding without shifting list alignment."
-        ]
-      },
-      {
-        version: "v2.3.0",
-        date: "2026-10-04",
-        highlights: [
-          "Non-Destructive Multi-Device Sync: Implemented read-before-write 3-way entry merging, 60-day tombstone tracking for deletions, and conflict copy preservation ([Conflict Copy]) to prevent overwrites across multiple computers.",
-          "Dirty-State Guard: Stale background tabs and idle computers no longer write over newer disk updates.",
-          "Live Background & Focus Sync: Automatically detects and pulls remote file updates on focus or visibility change without manual reload.",
-          "Type Soloing: Shift-clicking any type badge (Notes, Prompts, Media, Web, PDFs) untoggles all others, soloing that specific type.",
-          "AI Prompt Weighting: Shifted theme prompt generation to prioritize manual yellow notes first, previous prompt reflections second, and external sources as supporting context, considering notes across all time while favoring the last 4 months.",
-          "Version & Documentation: Added persistent version display, separate standalone documentation (brain-readme.html), and removed legacy visual theme options from Settings."
-        ]
-      },
-      {
-        version: "v2.2.1",
-        date: "2026-09-30",
-        highlights: [
-          "Notes are now automatically saved whenever clicked away from, navigated away from, or when Focus Mode is exited (via Esc, backdrop click, or close button), not just when manually clicking Save.",
-          "Added periodic background disk & IndexedDB auto-saving every 15 seconds regardless of user activity.",
-          "Automatic sync triggers on window visibility changes and page unloads.",
-          "Added AI Theme Prompt Generator: juxtaposes recurring themes and loose ends from the last 4 months while ignoring executive summaries of previous prompts, gives prompt notes their own distinct Orange color, and features a 'Write' action that opens straight into Focus Mode with the question displayed above the editor.",
-          "Moved color-coded entry type toggles into the Taxonomy view above Projects (with live counts and 'all types' reset), dynamically filtering taxonomies below, with Tags collapsed by default on initial load.",
-          "Prompt entries now display an Answer Summary alongside the Theme Prompt in the content view, with AI generation specifically tuned to synthesize and summarize the user's answer to the prompt question.",
-          "In the content view, the last edited date is only displayed if it falls on a different day from the created date. When both dates are shown, they are neatly positioned on their own dedicated line above taxonomy badges."
-        ]
-      },
-      {
-        version: "v2.2.0",
-        date: "2026-09-15",
-        highlights: [
-          "Applied visual style from player.html: borderless views and inputs, 50px view padding, 30px entry card spacing.",
-          "Retained entry type colors on note cards as a left stripe (Media: Red, Web: Sky, PDF: Rose, Note: Amber).",
-          "In-app Version Changelog accessible via Settings and Welcome screen.",
-          "Automatic title, category, and tag generation when saving notes lacking metadata.",
-          "Segmented dual-option switch for 'Whole Brain' and 'Current Entry' AI context.",
-          "Segregated Assistant chat history per note and global workspace."
-        ]
-      },
-      {
-        version: "v2.1.0",
-        date: "2026-09-14",
-        highlights: [
-          "Direct File System Access API integration with auto-sync and persistent file handles.",
-          "Keyboard shortcut Cmd+J / Ctrl+J to toggle AI Assistant panel.",
-          "Backlink detection and hover card previews with [[kb-ref:ID]].",
-          "Improved Markdown rendering with syntax highlighting and task checklists."
-        ]
-      },
-      {
-        version: "v2.0.0",
-        date: "2026-09-10",
-        highlights: [
-          "Initial release of local-first KnowledgeBase Brain.",
-          "Theme support: Clean Modern, Neubrutalist, and MS-DOS WordStar styles.",
-          "URL ingestion and automated Gemini AI summarization."
-        ]
-      }
-    ];
+    const APP_VERSION = "v2.8.65";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -858,57 +287,6 @@
       });
     };
 
-    const ChangelogModal = ({ onClose }) => {
-      return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[80] p-[50px]">
-          <div className="bg-[var(--card-bg)] rounded-lg shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden text-left">
-            <div className="flex justify-between items-center p-6 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-[var(--accent)] text-white flex items-center justify-center text-sm font-semibold">
-                  <i className="fa-solid fa-clock-rotate-left"></i>
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-[var(--text-main)]">Release Notes & Changelog</h2>
-                  <p className="text-xs text-[var(--text-muted)] font-mono">Current Version: {APP_VERSION}</p>
-                </div>
-              </div>
-              <button 
-                onClick={onClose} 
-                className="btn-icon"
-                title="Close"
-              >
-                <i className="fa-solid fa-xmark text-lg"></i>
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto space-y-6">
-              {CHANGELOG.map((release, idx) => (
-                <div key={release.version} className="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40 last:border-l-transparent">
-                  <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 ${idx === 0 ? 'bg-[var(--accent)] border-[var(--card-bg)]' : 'bg-[var(--text-muted)] border-[var(--card-bg)]'}`}></div>
-                  <div className="flex items-baseline justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-[var(--text-main)] font-mono">{release.version}</span>
-                      {idx === 0 && (
-                        <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
-                      )}
-                    </div>
-                    <span className="text-xs text-[var(--text-muted)] font-mono">{release.date}</span>
-                  </div>
-                  <ul className="space-y-1.5 text-xs text-[var(--text-muted)]">
-                    {release.highlights.map((item, itemIdx) => (
-                      <li key={itemIdx} className="flex items-start gap-2">
-                        <span className="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
-                        <span className="leading-relaxed text-[var(--text-main)]">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    };
-
     const INITIAL_ENTRY = {
       id: 'sample-1',
       title: 'Welcome to your Knowledge Base',
@@ -1014,7 +392,8 @@
     const getCandidateText = (cand) => {
       if (!cand) return '';
       if (typeof cand === 'string') return cand;
-      const parts = cand.content?.parts || cand.parts;
+      const candidateObj = Array.isArray(cand.candidates) && cand.candidates[0] ? cand.candidates[0] : cand;
+      const parts = candidateObj.content?.parts || candidateObj.parts;
       if (Array.isArray(parts)) {
         const nonThoughtParts = parts.filter(p => p && typeof p.text === 'string' && !p.thought);
         const targetParts = nonThoughtParts.length > 0 ? nonThoughtParts : parts.filter(p => p && typeof p.text === 'string');
@@ -1061,8 +440,8 @@
         } catch (e2) {
           // Extract known fields via regex fallback
           const extracted = {};
-          const titleMatch = t.match(/"title"\s*:\s*"([^"]+)/i);
-          if (titleMatch) extracted.title = titleMatch[1];
+          const titleMatch = t.match(/["']?(?:title|Title|suggestedTitle|suggested_title|headline|name)["']?\s*:\s*["']?([^"',}\n]+)/i);
+          if (titleMatch) extracted.title = titleMatch[1].replace(/^["']+|["']+$/g, '').trim();
           const summaryMatch = t.match(/"summary"\s*:\s*"([\s\S]*?)(?:"|\Z)/i);
           if (summaryMatch) extracted.summary = summaryMatch[1];
           const contentMatch = t.match(/"(?:content|question|prompt|reflection|inquiry)"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
@@ -1207,57 +586,74 @@
       const entries = historyState.present;
 
       const [storedPrompts, setStoredPrompts] = useState([]);
-      const DEFAULT_PROMPT_INSTRUCTIONS = `You are a perceptive intellectual thinking assistant inside the user's personal knowledge base.
-Your goal is to identify an unresolved issue, paradox, or juxtaposition across the user's notes, and formulate the specific question that best allows the user to deeply examine that exact issue.
+      const DEFAULT_PROMPT_INSTRUCTIONS = `You are a perceptive, thoughtful thinking assistant inside the user's personal knowledge base.
+Your task is to isolate a single idea from a note's summary or takeaways, identify an unresolved tension or practical trade-off (either between two notes or within a single note), and generate a concise, conversational reflection prompt.
 
-CORE PRINCIPLE — ORGANIC INQUIRY (NO FORMULAIC QUESTION STEMS):
-- Formulate the question DIRECTLY out of the specific tension, contradiction, or juxtaposition.
-- Do NOT use repetitive, mundane question stems. NEVER default to starting questions with "How do you explain...", "Can you explain...", or "How do you reconcile...".
-- Instead, dive straight into the crux of the collision, unexamined trade-off, or loose end.
+RULES (50 WORDS MAX & CONCEPT ISOLATION):
+1. Length & Concept Isolation (50 words max):
+   - Keep the entire prompt to 50 words or fewer.
+   - Use concept isolation: take ONE single idea from each note (drawn from either its summary or one of its takeaways). Never try to summarize the entire note or bundle multiple takeaways together.
+   - Show how that isolated idea clashes with or complicates the other note's isolated idea (or highlight a tension within a single note). Weave the citations ([[kb-ref:ID]]) in naturally.
+   - End with one sharp, open-ended question that cuts to the heart of that tension.
+2. Conversational & Direct:
+   - Write like a perceptive friend, not an academic or a template.
+   - Use plain, everyday English and active verbs.
+   - Skip dramatic metaphors, clichés ("bridges the gap", "anchor yourself", "hold space"), and armchair psychology.
+3. Self-Contained Context:
+   - State the isolated idea clearly enough that the prompt makes complete sense on its own.
+   - Never drop brand-new facts or unmentioned feelings into the final question if you haven't set them up first.
+4. Synthesize, Don't Parrot:
+   - Connect the ideas naturally in your question without repeating the exact same phrases used in the setup.
+   - Compress the ideas into short, natural summary terms.
+5. Open Exploration:
+   - Ask questions that spark genuine reflection or small experiments, strongly preferring "Why" and "How" over "What" or "Which".
+   - NEVER ask closed Yes/No questions (strictly ban starting questions with auxiliary verbs: "Can...", "Could...", "Is...", "Are...", "Do...", "Does...", "Did...", "Will...", "Would...", "Should...", "Have...", "Has...").
+   - NEVER trap the user in a narrow "Either/Or" choice (e.g. "...or does intentional living demand an overarching horizon?").
 
-HOW TO SHAPE THE QUESTION AROUND THE ISSUE:
-1. COLLISION / JUXTAPOSITION OF TWO FORCES:
-   - When two notes or perspectives pull in opposite directions, ask which force governs the situation, what decides between them, or under what conditions each holds true.
-   - Example style: "In [[kb-ref:187]] lingering regret stalls your momentum, yet in [[kb-ref:116]] you treat hesitation as a necessary filter. Which force is actually dictating your stillness here—the fear of repeating the past, or doubts about the direction forward?"
-2. UNRESOLVED LOOSE END OR SKEPTICISM:
-   - When a note leaves a thread hanging, question whether an initial doubt has proven true or where the boundary lies.
-   - Example style: "You suspected in [[kb-ref:42]] that the overhead of this system would eventually outweigh its benefits. Where has that friction surfaced in practice, and what has kept you from abandoning it?"
-3. HIDDEN ASSUMPTIONS & PARADOXES:
-   - When an argument rests on an unexamined premise, test whether that premise holds under pressure.
-   - Example style: "Does the creative focus you describe in [[kb-ref:89]] truly require complete solitude, or does the solitude simply remove the discomfort of outside judgment?"
-4. ASYMMETRIES OR SELECTIVE STANDARDS:
-   - When standards diverge between topics, ask what makes the rule apply in one domain but fail in another.
-   - Example style: "You apply strict minimalism to your digital workspace [[kb-ref:24]], but embrace deliberate redundancy in your writing process [[kb-ref:71]]. What makes redundancy a liability in the first case but an asset in the second?"
+GROUNDING & NEUTRALITY (MANDATORY):
+- Trust notes at face value: Do not invent psychological motives, projections, or hidden insecurities, and do not reframe boundaries as personal flaws.
+- People & Pronouns: Refer to people by name rather than guessing pronouns unless stated. Ban poetic labels ("mirror", "vessel", "emblem", "archetype").
+- Concrete over jargon: Name actual concrete actions, constraints, and things rather than vague psychological buzzwords ("baseline", "engagement", "numbness", "friction").
 
-STRICT PROHIBITION ON LIFE-COACHING & ACTION TROPES:
-- Absolutely NEVER ask for actions, steps, tasks, habits, moves, routines, or things to do "today" or "tomorrow".
-- NEVER ask:
-  * "What is one tangible action you can anchor yourself in today?"
-  * "What is one small step / action / shift / thing you can take..."
-  * "What is one thing you can do today..."
-  * "How might you..." / "In what ways can you..."
-  * "What would it look like if..."
-  * "What is holding you back from..."
-  * "Take a moment to reflect / ask yourself..."
-- The user is using this system to think, analyze, and examine their thoughts—NOT for behavioral coaching, productivity to-dos, or therapy.
+FORBIDDEN PATTERNS:
+- Do NOT exceed 50 words.
+- Do NOT bundle multiple takeaways from a note—isolate ONE specific concept per note.
+- Do NOT start questions with "Which", or default to "What" when "Why" or "How" digs deeper into the underlying tension or mechanics.
+- Do NOT repeat exact phrases from the setup in the final question (synthesize into natural summary terms).
+- Do NOT ask closed questions starting with auxiliary verbs ("Can...", "Could...", "Is...", "Are...", "Do...", "Does...", "Will...", "Would...", "Should...").
+- Do NOT ask Either/Or trap questions (e.g. "Can X do Y, or does A demand B?").
+- Do NOT drop unintroduced concepts or abstract philosophical jargon into the question.
+- Do NOT use rigid prescribed formulas or canned question stems ("How do you explain...", "Can you explain...", "How do you reconcile...").
+- Do NOT use metaphors or clichés ("bridges the gap", "anchor yourself").
+- Do NOT psychoanalyze or invent hidden insecurities, projections, or motives.
+- Do NOT reframe boundaries as personal flaws or defensiveness.
+- Do NOT guess gender pronouns for people (use their name).
+- Do NOT use poetic labels ("emblem", "mirror", "vessel", "archetype").
+- Do NOT look at previous prompts for reference, structure, or vocabulary (only evaluate the provided note summaries and takeaways).
 
-CLEAR, CONCISE & NATURAL:
-- Use plain, sharp, conversational English. Avoid jargon, flowery rhetoric, or filler preambles.
-- Keep the entire prompt brief (around 30–60 words): state the context in one concise sentence, then ask the tailored question.
-- Cite referenced notes using inline [[kb-ref:ID]] tags.
-- Do not repeat previous prompts.
+EXAMPLES OF EXCELLENT PROMPTS (UNDER 50 WORDS):
+Example 1 (Two Notes - 41 words):
+In [[kb-ref:187]], you block three morning hours strictly for deep writing. However, [[kb-ref:116]] shows that urgent client requests keep interrupting that window and scattering your focus. How do you protect your morning writing block while handling critical client requests on time?
+
+Example 2 (Two Notes - 36 words):
+In [[kb-ref:91]], spontaneous daily activities give you immediate energy. Yet [[kb-ref:95]] notes that without a clear long-term goal, your larger projects stall out. Why does daily enjoyment fail to translate into sustained progress on your long-term goals?
+
+Example 3 (Single Note - 30 words):
+In [[kb-ref:89]], you notice that a cluttered desk makes you skip your evening workouts and reading. How can you reset your workspace before the mess drains your motivation to start?
 
 OUTPUT FORMAT:
 Respond with valid JSON ONLY matching this structure:
 {
   "title": "A short 3-5 word direct title",
-  "content": "A direct, sharp question (approx 30-60 words) emerging organically from the issue or juxtaposition, strictly free of canned stems ('how do you explain') and free of coaching action tropes, with inline [[kb-ref:ID]] tags."
+  "content": "A conversational prompt (50 words max) isolating one concept per note, weaving [[kb-ref:ID]] citations naturally, and ending with one sharp open-ended question starting with Why or How."
 }`;
 
       const DEFAULT_PROMPT_CONFIG = {
-        temperature: 0.7,
+        dateRangeMonths: 2,
+        poolSize: 10,
+        temperature: 1.0,
         model: '',
-        maxNotes: 35
+        maxNotes: 10
       };
       const [promptConfig, setPromptConfig] = useState(() => {
         try {
@@ -1265,6 +661,8 @@ Respond with valid JSON ONLY matching this structure:
           if (saved) {
             const parsed = JSON.parse(saved);
             return {
+              dateRangeMonths: typeof parsed.dateRangeMonths === 'number' ? parsed.dateRangeMonths : DEFAULT_PROMPT_CONFIG.dateRangeMonths,
+              poolSize: typeof parsed.poolSize === 'number' ? parsed.poolSize : DEFAULT_PROMPT_CONFIG.poolSize,
               temperature: typeof parsed.temperature === 'number' ? parsed.temperature : DEFAULT_PROMPT_CONFIG.temperature,
               model: typeof parsed.model === 'string' ? parsed.model : DEFAULT_PROMPT_CONFIG.model,
               maxNotes: typeof parsed.maxNotes === 'number' ? parsed.maxNotes : DEFAULT_PROMPT_CONFIG.maxNotes
@@ -1348,7 +746,6 @@ Respond with valid JSON ONLY matching this structure:
       const [theme, setTheme] = useState('default');
       
       const [showKeyModal, setShowKeyModal] = useState(false);
-      const [showChangelog, setShowChangelog] = useState(false);
       const [tempKeys, setTempKeys] = useState([]);
       const [tempModel, setTempModel] = useState(DEFAULT_MODEL);
       const [tempTaskModels, setTempTaskModels] = useState({
@@ -1403,11 +800,10 @@ Respond with valid JSON ONLY matching this structure:
         const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
         const needsSummary = !currentEntry?.summary || (currentEntry?.fullContent || '').trim() !== finalContent;
         const hasTaxonomies = ((currentEntry?.categories?.length || 0) > 0) || ((currentEntry?.tags?.length || 0) > 0) || ((currentEntry?.projects?.length || 0) > 0);
-        const isInitialGen = isUntitled || (!currentEntry?.summary && !hasTaxonomies);
-        const needsTaxonomies = isInitialGen;
+        const hasTakeaways = Array.isArray(currentEntry?.shortVersion) && currentEntry.shortVersion.length > 0;
+        const isInitialGen = isUntitled || (!currentEntry?.summary && !hasTaxonomies) || !hasTakeaways;
 
-        if (isUntitled || needsSummary || needsTaxonomies) {
-          autoGeneratedMetaIdsRef.current.add(id);
+        if (isInitialGen || needsSummary) {
           // Sync staged data so saveNote has the latest textarea content
           if (editDataRef.current) {
             editDataRef.current[id] = {
@@ -1606,12 +1002,19 @@ Respond with valid JSON ONLY matching this structure:
 
       useEffect(() => { editingEntriesRef.current = editingEntries; }, [editingEntries]);
       useEffect(() => { editDataRef.current = editData; }, [editData]);
+      const assistantChatsRef = useRef(assistantChats);
+      useEffect(() => { assistantChatsRef.current = assistantChats; }, [assistantChats]);
+
       useEffect(() => { 
         activeSingleEntryRef.current = activeSingleEntry; 
-        if (activeSingleEntry && isAiChatEntry(activeSingleEntry)) {
+        if (!activeSingleEntry || isAiChatEntry(activeSingleEntry)) {
           setIsAssistantOpen(false);
+        } else {
+          const entryMsgs = (assistantChatsRef.current && assistantChatsRef.current[activeSingleEntry.id]) || [];
+          const hasEntryChat = Array.isArray(entryMsgs) && entryMsgs.some(m => m && m.text && String(m.text).trim());
+          setIsAssistantOpen(hasEntryChat);
         }
-      }, [activeSingleEntry]);
+      }, [activeSingleEntry?.id]);
       useEffect(() => { isContentFocusedRef.current = isContentFocused; }, [isContentFocused]);
       useEffect(() => { entriesRef.current = entries; }, [entries]);
 
@@ -2036,6 +1439,8 @@ Respond with valid JSON ONLY matching this structure:
 
         let loadedPromptConfig = { ...DEFAULT_PROMPT_CONFIG };
         if (data && data.promptConfig && typeof data.promptConfig === 'object') {
+          if (typeof data.promptConfig.dateRangeMonths === 'number') loadedPromptConfig.dateRangeMonths = data.promptConfig.dateRangeMonths;
+          if (typeof data.promptConfig.poolSize === 'number') loadedPromptConfig.poolSize = data.promptConfig.poolSize;
           if (typeof data.promptConfig.temperature === 'number') loadedPromptConfig.temperature = data.promptConfig.temperature;
           if (typeof data.promptConfig.model === 'string') loadedPromptConfig.model = data.promptConfig.model;
           if (typeof data.promptConfig.maxNotes === 'number') loadedPromptConfig.maxNotes = data.promptConfig.maxNotes;
@@ -2499,7 +1904,6 @@ Respond with valid JSON ONLY matching this structure:
             if (!isDirtyRef.current && merged.layout) {
               setIsLeftSidebarOpen(merged.layout.isLeftSidebarOpen);
               setIsListSidebarOpen(merged.layout.isListSidebarOpen);
-              setIsAssistantOpen(merged.layout.isAssistantOpen);
             }
 
             lastSyncTimeRef.current = file.lastModified;
@@ -2693,13 +2097,16 @@ Respond with valid JSON ONLY matching this structure:
           });
           setTheme(migrated.theme);
           setAssistantChats(loadedChats);
+          assistantChatsRef.current = loadedChats;
           setArchivedAssistantChats(migrated.archivedAssistantChats || { workspace: [] });
           setExpandedArchivedChatIds([]);
           if (migrated.layout) {
             setIsLeftSidebarOpen(migrated.layout.isLeftSidebarOpen);
             setIsListSidebarOpen(migrated.layout.isListSidebarOpen);
-            setIsAssistantOpen(migrated.layout.isAssistantOpen);
           }
+          const initialEntryMsgs = (initialEntryCandidate && loadedChats[initialEntryCandidate.id]) || [];
+          const initialHasEntryChat = Array.isArray(initialEntryMsgs) && initialEntryMsgs.some(m => m && m.text && String(m.text).trim());
+          setIsAssistantOpen(initialHasEntryChat);
           
           setFileHandle(handle);
           setFileName(file.name);
@@ -3252,23 +2659,29 @@ Respond with valid JSON ONLY matching this structure:
           references: [],
           pinned: false
         };
+        entriesRef.current = [newEntry, ...(entriesRef.current || [])];
         setEntries(prev => [newEntry, ...prev]);
         setNewlyCreatedEntryId(newId);
         selectEntryWithHistory([newId]);
+        const initialEditObj = {
+          title: 'Untitled Note',
+          summary: '',
+          shortVersion: '',
+          fullContent: '',
+          categories: [...activeCategories],
+          tags: [...activeTags],
+          projects: [...activeProjects],
+          sourceUrl: '',
+          references: []
+        };
+        if (editDataRef.current) {
+          editDataRef.current = { ...editDataRef.current, [newId]: initialEditObj };
+        }
         setEditData(prev => ({
           ...prev,
-          [newId]: {
-            title: 'Untitled Note',
-            summary: '',
-            shortVersion: '',
-            fullContent: '',
-            categories: [...activeCategories],
-            tags: [...activeTags],
-            projects: [...activeProjects],
-            sourceUrl: '',
-            references: []
-          }
+          [newId]: initialEditObj
         }));
+        editingEntriesRef.current = { ...(editingEntriesRef.current || {}), [newId]: true };
         setEditingEntries(prev => ({ ...prev, [newId]: true }));
       };
 
@@ -3303,17 +2716,23 @@ Respond with valid JSON ONLY matching this structure:
         };
 
         skipDefocusOnSelectRef.current = true;
+        entriesRef.current = [newEntry, ...(entriesRef.current || [])];
         setEntries(prev => [newEntry, ...prev]);
         setSelectedEntryIds([newId]);
         setNavHistory(prev => [[newId], ...prev]);
         setNavIndex(0);
+        const initialPromptEditObj = {
+          ...newEntry,
+          fullContent: ''
+        };
+        if (editDataRef.current) {
+          editDataRef.current = { ...editDataRef.current, [newId]: initialPromptEditObj };
+        }
         setEditData(prev => ({
           ...prev,
-          [newId]: {
-            ...newEntry,
-            fullContent: ''
-          }
+          [newId]: initialPromptEditObj
         }));
+        editingEntriesRef.current = { ...(editingEntriesRef.current || {}), [newId]: true };
         setEditingEntries(prev => ({ ...prev, [newId]: true }));
         setPromptState(prev => ({ ...prev, draft: null }));
         if (window.innerWidth < 1024 && typeof setIsListSidebarOpen === 'function') {
@@ -3354,87 +2773,79 @@ Respond with valid JSON ONLY matching this structure:
 
       // Check if only aiChat is deselected among entry types (default state)
       const standardNonChatTypes = ENTRY_TYPES.filter(t => t.id !== 'aiChat').map(t => t.id);
-      const isOnlyAiChatDeselected = standardNonChatTypes.every(tid => activeTypeFilters.includes(tid));
-      const hasCustomTypeFilter = !isOnlyAiChatDeselected && activeTypeFilters.length > 0 && activeTypeFilters.length < ENTRY_TYPES.length;
+      const selectedNonChatTypeObjs = ENTRY_TYPES.filter(t => t.id !== 'aiChat' && activeTypeFilters.includes(t.id));
+      const isAllNonChatTypesSelected = standardNonChatTypes.every(tid => activeTypeFilters.includes(tid));
+      const isOnlyAiChatDeselected = isAllNonChatTypesSelected;
+      const hasCustomTypeFilter = !isAllNonChatTypesSelected && selectedNonChatTypeObjs.length > 0;
 
       // Descriptive summary of active list view filters (taxonomies, search, and type filters)
       const activeFilterParts = [
         ...activeTaxonomyList,
         searchQuery ? `"${searchQuery}"` : null,
-        hasCustomTypeFilter ? activeTypeFilters.join('/') : null
+        hasCustomTypeFilter ? selectedNonChatTypeObjs.map(t => t.label).join('/') : null
       ].filter(Boolean);
       const activeListScopeSummary = activeFilterParts.length > 0
         ? (activeFilterParts.length <= 2 ? activeFilterParts.join(', ') : `${activeFilterParts.slice(0, 2).join(', ')} +${activeFilterParts.length - 2}`)
         : '';
 
+      // Dynamic scope label & title for Whole Brain AI Chat based on current selected types and taxonomies
+      const activeBrainChatScopeLabel = activeListScopeSummary || 'Whole Brain';
+      const activeBrainChatTitle = activeListScopeSummary ? `${activeListScopeSummary} AI Chat` : 'Whole Brain AI Chat';
+
+      const formatPromptDateRangeLabel = (months) => {
+        const m = Number(months) || 2;
+        if (m > 24) return 'All Time';
+        if (m === 1) return 'Last 1 month';
+        if (m === 12) return 'Last 1 year (12 mos)';
+        if (m === 24) return 'Last 2 years (24 mos)';
+        return `Last ${m} months`;
+      };
+
+      const formatPromptPoolSizeLabel = (size) => {
+        const s = Number(size) || 10;
+        if (s > 50) return 'All';
+        return `${s} notes`;
+      };
+
+      const isEntryWithinPromptDateRange = (entry, months, nowTs = Date.now()) => {
+        const m = Number(months) || 2;
+        if (m > 24) return true; // All Time
+        const cutoff = nowTs - (m * 30.4375 * 24 * 60 * 60 * 1000);
+        const entryTime = Math.max(Number(entry?.createdAt) || 0, Number(entry?.updatedAt) || 0);
+        if (!entryTime) return true;
+        return entryTime >= cutoff;
+      };
+
       const generatePromptNote = async () => {
         setPromptState({ isGenerating: true, draft: null });
         try {
           const now = Date.now();
-          const fourMonthsAgo = now - (120 * 24 * 60 * 60 * 1000);
+          const rangeMonths = Number(promptConfig?.dateRangeMonths) || 2;
+          const rangeLabel = formatPromptDateRangeLabel(rangeMonths);
+          const poolSizeVal = Number(promptConfig?.poolSize) || 10;
           
-          // Potential pool: whatever entries are currently shown in the entry list view (filtered by type, taxonomy, or search)
-          // Strictly excludes the welcome starter note, AI chat archives, and notes lacking a summary or key takeaways
-          const scopedEntries = filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e));
+          // Potential pool: entries currently shown in the entry list view (filtered by active entry types, taxonomy, or search)
+          // AND within the configured date range timeframe (default: 2 months)
+          const baseFilteredPool = filteredEntries.filter(e => !isWelcomeEntry(e) && hasSummaryOrTakeaways(e));
+          const scopedEntries = baseFilteredPool.filter(e => isEntryWithinPromptDateRange(e, rangeMonths, now));
 
-          if (scopedEntries.length < 2) {
-            if (activeListScopeSummary) {
-              throw new Error(`At least 2 summarized non-chat notes visible in the list are required to generate a theme prompt. Only ${scopedEntries.length} found with an executive summary or key takeaways matching filter(s) [${activeListScopeSummary}].`);
+          if (scopedEntries.length < 1) {
+            if (baseFilteredPool.length > 0 && rangeMonths <= 24) {
+              throw new Error(`No summarized notes found within the ${rangeLabel.toLowerCase()} timeframe${activeListScopeSummary ? ` matching [${activeListScopeSummary}]` : ''}. Open Prompt Settings (sliders icon) and widen the Date Range slider (or set to All Time).`);
+            } else if (activeListScopeSummary) {
+              throw new Error(`At least 1 summarized note visible in the list is required to generate a prompt. None found with an executive summary or key takeaways matching filter(s) [${activeListScopeSummary}].`);
             } else {
-              throw new Error("At least 2 notes with an executive summary or key takeaways (excluding AI chat archives) are required in the knowledge base to synthesize themes and loose ends.");
+              throw new Error("At least 1 note with an executive summary or key takeaways matching your selected entry types is required to generate prompts.");
             }
           }
 
-          // 1. Sort scoped entries chronologically (newest first by updatedAt or createdAt)
-          const sortedEntries = [...scopedEntries].sort((a, b) => {
-            const timeA = Number(a.updatedAt) || Number(a.createdAt) || 0;
-            const timeB = Number(b.updatedAt) || Number(b.createdAt) || 0;
-            return timeB - timeA;
-          });
-
-          // 2. Partition into recent window (last 4 months) and older history
-          const recentEntries = sortedEntries.filter(e => {
-            const time = Number(e.updatedAt) || Number(e.createdAt) || now;
-            return time >= fourMonthsAgo;
-          });
-          const olderEntries = sortedEntries.filter(e => {
-            const time = Number(e.updatedAt) || Number(e.createdAt) || now;
-            return time < fourMonthsAgo;
-          });
-
-          // Target number of candidate notes directly from user setting (default: 35)
-          const targetTotal = Math.max(2, promptConfig.maxNotes || 35);
-
-          let selectedNotes = [];
-          const chosenIds = new Set();
-          const addNotes = (notes) => {
-            notes.forEach(n => {
-              if (n && !chosenIds.has(n.id) && selectedNotes.length < targetTotal) {
-                chosenIds.add(n.id);
-                selectedNotes.push(n);
-              }
-            });
-          };
-
-          // Prioritize the user's most recent notes in chronological order (newest first):
-          // Manual notes (yellow) first, followed by previous prompt reflections (green), then background context
-          const recManual = recentEntries.filter(e => getEntryType(e) === 'note');
-          const recPrompt = recentEntries.filter(e => getEntryType(e) === 'prompt');
-          const recContext = recentEntries.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e));
-
-          addNotes(recManual);
-          if (selectedNotes.length < targetTotal) addNotes(recPrompt);
-          if (selectedNotes.length < targetTotal) addNotes(recContext);
-
-          // If the recent window has fewer notes than targetTotal, seamlessly top up with earlier notes in chronological order
-          if (selectedNotes.length < targetTotal) {
-            const oldManual = olderEntries.filter(e => getEntryType(e) === 'note');
-            const oldPrompt = olderEntries.filter(e => getEntryType(e) === 'prompt');
-            const oldContext = olderEntries.filter(e => (getEntryType(e) === 'web' || getEntryType(e) === 'media') && !isAiChatEntry(e));
-            addNotes(oldManual);
-            if (selectedNotes.length < targetTotal) addNotes(oldPrompt);
-            if (selectedNotes.length < targetTotal) addNotes(oldContext);
+          // Select up to poolSizeVal random notes (or all if poolSizeVal > 50) with equal weighting from the available summarized notes pool
+          const shuffledScoped = [...scopedEntries];
+          for (let i = shuffledScoped.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledScoped[i], shuffledScoped[j]] = [shuffledScoped[j], shuffledScoped[i]];
           }
+          const selectedNotes = poolSizeVal > 50 ? shuffledScoped : shuffledScoped.slice(0, poolSizeVal);
 
           if (selectedNotes.length === 0) {
             throw new Error("No notes found in current list view to analyze.");
@@ -3448,15 +2859,8 @@ Respond with valid JSON ONLY matching this structure:
             return;
           }
 
-          const promptModel = promptConfig.model || taskModels.prompts || DEFAULT_MODEL;
-          const promptTemperature = (typeof promptConfig.temperature === 'number' && !isNaN(promptConfig.temperature))
-            ? promptConfig.temperature
-            : 0.7;
-
-          const pastPromptsList = storedPrompts.length > 0
-            ? "\n\nPREVIOUSLY GENERATED PROMPTS (DO NOT REPEAT OR CLOSELY RETREAD ANY OF THESE THEMES OR QUESTIONS):\n" +
-              storedPrompts.slice(-30).map((p, i) => `${i + 1}. [${p.title}]: ${p.content || p.question}`).join('\n')
-            : "";
+          const promptModel = taskModels.prompts || DEFAULT_MODEL;
+          const promptTemperature = 1.0;
 
           const filterScopeParts = [
             activeProjects.length > 0 ? `Projects: ${activeProjects.join(', ')}` : '',
@@ -3470,143 +2874,41 @@ Respond with valid JSON ONLY matching this structure:
             ? `\n\nACTIVE FILTER FOCUS:\nAll provided notes belong to the user's active list view filters (${filterScopeParts.join(' | ')}). Ground your reflection question exclusively in the context, themes, and goals of these filtered notes.\n`
             : '';
 
-          // Extract recently referenced note IDs and themes from past prompts to prevent repetition
-          const recentReferencedIds = new Set();
-          const recentThemes = [];
-          storedPrompts.slice(-10).forEach(p => {
-            if (Array.isArray(p.noteIds)) p.noteIds.forEach(id => recentReferencedIds.add(String(id)));
-            if (p.content) {
-              const matches = p.content.matchAll(/\[\[kb-ref:([^\]]+)\]\]/g);
-              for (const m of matches) recentReferencedIds.add(m[1].trim());
-            }
-            if (p.title && !['Theme Prompt', 'Theme Reflection'].includes(p.title)) {
-              recentThemes.push(p.title);
-            }
-          });
-
-          // Partition selected candidates into unexplored vs already explored in recent prompts
-          const unexploredCandidates = selectedNotes.filter(n => !recentReferencedIds.has(String(n.id)) && !recentReferencedIds.has(String(n.numericId)));
-          const exploredCandidates = selectedNotes.filter(n => recentReferencedIds.has(String(n.id)) || recentReferencedIds.has(String(n.numericId)));
-          const orderedCandidates = [...unexploredCandidates, ...exploredCandidates];
-
           // =============================================================
-          // ROUND 1: EFFICIENT NOTE SELECTION (Scouting candidate pool)
+          // SINGLE-PASS CONCEPT ISOLATION SYNTHESIS (UP TO 10 NOTES)
           // =============================================================
-          let chosenNotes = [];
-          let focusTheme = '';
-
-          if (selectedNotes.length <= 3) {
-            chosenNotes = selectedNotes;
-          } else {
-            const candidateProfiles = orderedCandidates.map(e => {
-              const time = Number(e.createdAt) || Number(e.updatedAt) || now;
-              const dateStr = new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-              const type = getEntryType(e);
-              const roleLabel = type === 'note' ? 'Manual Note' : (type === 'prompt' ? 'Prompt Reflection' : `External ${type.toUpperCase()}`);
-              const summary = e.summary ? `Summary: ${e.summary}` : '';
-              const takeaways = Array.isArray(e.shortVersion) && e.shortVersion.length ? `Takeaways: ${e.shortVersion.join('; ')}` : '';
-              const descriptor = [summary, takeaways].filter(Boolean).join(' | ');
-              const isRecentTag = recentReferencedIds.has(String(e.id)) || recentReferencedIds.has(String(e.numericId)) ? ' [Recently Paired]' : '';
-              return `[ID: ${e.id}] [Ref: ${e.numericId}] "${e.title || 'Untitled'}" (${roleLabel} | ${dateStr}${isRecentTag}) - ${descriptor}`;
-            }).join('\n');
-
-            const diversityNotice = recentReferencedIds.size > 0
-              ? `CRITICAL NOVELTY REQUIREMENT:
-The user has recently generated prompts exploring notes ${Array.from(recentReferencedIds).slice(-6).map(id => `[ID: ${id}]`).join(', ')} (Recent Themes: "${recentThemes.slice(-3).join('", "') || 'recent reflections'}").
-You MUST explore a NEW, UNEXAMINED angle and select a DIFFERENT pair of candidate notes. Prioritize candidate notes from the top of the index below that have not been paired yet.\n\n`
-              : '';
-
-            const scoutingPrompt = `You are an intellectual research scout analyzing a personal knowledge base index containing the user's candidate notes.
-${diversityNotice}Identify 2 to 3 notes from the index below that contain the most compelling unresolved contradiction, tension, paradox, or collision of ideas between them. Do NOT select the same note pairs that were recently explored.
-
-${pastPromptsList ? pastPromptsList + '\n\n' : ''}Candidate Notes Index:
-${candidateProfiles}
-
-Respond with valid JSON ONLY matching this structure:
-{
-  "theme": "A concise 1-2 sentence description of the specific conceptual friction, paradox, or unresolved question connecting these notes",
-  "selectedIds": ["id-1", "id-2"]
-}`;
-
-            try {
-              const round1Payload = {
-                contents: [{ parts: [{ text: scoutingPrompt }] }],
-                generationConfig: {
-                  responseMimeType: 'application/json',
-                  responseSchema: {
-                    type: "OBJECT",
-                    properties: {
-                      theme: { type: "STRING", description: "A concise 1-2 sentence description of the specific conceptual friction or question" },
-                      selectedIds: {
-                        type: "ARRAY",
-                        items: { type: "STRING" },
-                        description: "2 to 3 note IDs or numeric references"
-                      }
-                    },
-                    required: ["theme", "selectedIds"]
-                  },
-                  temperature: promptTemperature,
-                  maxOutputTokens: 8192
-                }
-              };
-              const round1Res = await callGemini(activeKey, round1Payload, promptModel);
-              const round1Parsed = parseAIJson(getCandidateText(round1Res.candidates?.[0]));
-              if (round1Parsed && Array.isArray(round1Parsed.selectedIds) && round1Parsed.selectedIds.length >= 2) {
-                const matched = round1Parsed.selectedIds.map(id => {
-                  const cleanId = String(id).replace(/^\[*kb-ref:/i, '').replace(/\]*$/, '').trim();
-                  return scopedEntries.find(e => e.id === cleanId || String(e.numericId) === cleanId);
-                }).filter(Boolean);
-                if (matched.length >= 2) {
-                  chosenNotes = matched;
-                  focusTheme = round1Parsed.theme || '';
-                }
-              }
-            } catch (r1Err) {
-              console.warn("Round 1 scouting fallback:", r1Err);
-            }
-
-            if (chosenNotes.length < 2) {
-              chosenNotes = (unexploredCandidates.length >= 2 ? unexploredCandidates : selectedNotes).slice(0, 3);
-            }
-          }
-
-          // =============================================================
-          // ROUND 2: DEEP SYNTHESIS & REASONING (WITH COMPLETE FULL NOTES)
-          // =============================================================
-          const completeNotesText = chosenNotes.map(e => {
+          const candidateNotesText = selectedNotes.map(e => {
             const time = Number(e.createdAt) || Number(e.updatedAt) || now;
             const dateStr = new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            const type = getEntryType(e);
-            const roleLabel = type === 'note' ? 'Manual Note - Yellow' : (type === 'prompt' ? 'Previous Prompt Reflection - Green' : `External Reference - ${type.toUpperCase()}`);
             const summaryPart = e.summary ? `\nSummary: ${e.summary}` : '';
-            const takeawaysPart = Array.isArray(e.shortVersion) && e.shortVersion.length ? `\nTakeaways: ${e.shortVersion.join('; ')}` : '';
-            const fullBody = (e.fullContent && e.fullContent.trim()) ? e.fullContent.trim() : (e.summary || 'No text content available.');
-            
-            return `=== NOTE [[kb-ref:${e.id}]] [Ref ID: ${e.numericId}] "${e.title || 'Untitled'}" (${roleLabel} | ${dateStr}) ===${summaryPart}${takeawaysPart}\n\nCOMPLETE UNABRIDGED NOTE CONTENT:\n"""\n${fullBody}\n"""`;
+            const takeawaysList = Array.isArray(e.shortVersion) && e.shortVersion.length
+              ? `\nTakeaways:\n${e.shortVersion.map((t) => `  - ${t}`).join('\n')}`
+              : '';
+            const fallbackPart = (!summaryPart && !takeawaysList) ? `\nSummary: ${e.title || 'Untitled note'}` : '';
+
+            return `=== NOTE [[kb-ref:${e.id}]] [Ref ID: ${e.numericId}] "${e.title || 'Untitled'}" (${dateStr}) ===${summaryPart}${takeawaysList}${fallbackPart}`;
           }).join('\n\n' + '='.repeat(50) + '\n\n');
 
-          let round2Context = completeNotesText;
-          if (focusTheme) {
-            round2Context += `\n\nIDENTIFIED THEMATIC CRUX / UNRESOLVED FRICTION:\n${focusTheme}`;
-          }
-          round2Context += `\n\nTASK:\nDerive a sharp, organic inquiry question (30-60 words) and a concise 3-5 word title directly exploring the unresolved tension or paradox across these notes. Return valid JSON containing "title" and "content".`;
+          const promptRequestText = `${candidateNotesText}\n\nTASK:\nReview the candidate notes above (up to 10 randomly sampled notes from the user's knowledge base, showing only their Summary and Takeaways). Select 1 or 2 notes where isolating ONE single idea from each note (whether from its Summary or a single Takeaway) reveals an interesting tension, contradiction, or practical trade-off, and write a concise, conversational reflection prompt adhering strictly to these rules:
+
+1. Length & Concept Isolation (50 words max):
+   - Keep the entire prompt to 50 words or fewer.
+   - Use concept isolation: take ONE single idea from a note (or ONE single idea from each of 2 notes) drawn from either its Summary or one Takeaway, and show how they clash or complicate each other (or highlight an internal tension within a single note). Do NOT summarize the whole note or combine multiple takeaways. Weave the exact citation tag(s) (e.g. [[kb-ref:ID]]) in naturally.
+   - End with one sharp, open-ended question that cuts to the heart of that tension.
+2. Conversational & Direct: Write like a perceptive friend, not an academic or a template. Use plain, everyday English and active verbs. Skip dramatic metaphors, clichés ("bridges the gap", "anchor yourself", "hold space"), and armchair psychology.
+3. Self-Contained Context: State the isolated idea clearly so the prompt makes complete sense on its own. Never drop brand-new facts or unmentioned feelings into the final question if you haven't set them up first.
+4. Synthesize, Don't Parrot: Connect the ideas naturally in your question without repeating the exact same phrases used in the setup. Compress ideas into natural summary terms.
+5. Open Exploration: Ask questions that spark genuine reflection or small experiments, strongly preferring "Why" and "How" over "What" or "Which". NEVER start the question with closed auxiliary verbs ("Can", "Could", "Is", "Are", "Do", "Does", "Did", "Will", "Would", "Should", "Have", "Has") and NEVER ask Either/Or trap choices.
+
+Respond with valid JSON containing "title" (3-5 words) and "content" (50 words max ending with a Why or How question).`;
 
           let systemPrompt = DEFAULT_PROMPT_INSTRUCTIONS;
-          if (!systemPrompt.includes('CORE PRINCIPLE — ORGANIC INQUIRY')) {
-            systemPrompt += `\n\nCORE PRINCIPLE — ORGANIC INQUIRY (NO FORMULAIC QUESTION STEMS):\nFormulate the question DIRECTLY out of the specific tension, contradiction, or juxtaposition. NEVER use formulaic, repetitive stems like "How do you explain...", "Can you explain...", or "How do you reconcile...". Derive the question specifically from the unresolved issue (e.g. Which force dictates the outcome? Where does this premise break down? What makes the rule apply in one domain but not another?). Absolutely NO action/coaching tropes (e.g. NEVER ask for actions, steps, or things to do today).\n`;
-          }
           if (filterFocusInstruction && !systemPrompt.includes('ACTIVE FILTER FOCUS:')) {
             systemPrompt += filterFocusInstruction;
           }
-          if (pastPromptsList && !systemPrompt.includes('PREVIOUSLY GENERATED PROMPTS')) {
-            systemPrompt += pastPromptsList;
-          }
-          if (!systemPrompt.toLowerCase().includes('json')) {
-            systemPrompt += `\n\nOUTPUT FORMAT:\nRespond with valid JSON ONLY matching this structure:\n{\n  "title": "A short 3-5 word direct title",\n  "content": "A direct, sharp question (approx 30-60 words) emerging organically from the issue or juxtaposition, strictly free of canned stems ('how do you explain') and free of coaching action tropes, with inline [[kb-ref:ID]] tags for any referenced entries."\n}`;
-          }
 
           const payload = {
-            contents: [{ parts: [{ text: round2Context }] }],
+            contents: [{ parts: [{ text: promptRequestText }] }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: {
               responseMimeType: 'application/json',
@@ -3614,7 +2916,7 @@ Respond with valid JSON ONLY matching this structure:
                 type: "OBJECT",
                 properties: {
                   title: { type: "STRING", description: "A concise 3-5 word direct title capturing the essence of the inquiry" },
-                  content: { type: "STRING", description: "A direct, sharp question (approx 30-60 words) derived organically from the unresolved tension or paradox, referencing notes via [[kb-ref:ID]]" }
+                  content: { type: "STRING", description: "A conversational reflection prompt (50 words maximum) using concept isolation: take ONE single idea from 1 or 2 notes' summary or takeaway, weave citations ([[kb-ref:ID]]) in naturally, synthesize without parroting, and end with one sharp open-ended question starting with Why or How (strongly preferred over What or Which)." }
                 },
                 required: ["title", "content"]
               },
@@ -3657,104 +2959,22 @@ Respond with valid JSON ONLY matching this structure:
             if (tMatch) promptTitle = tMatch[1].trim();
           }
           if (!promptTitle) {
-            promptTitle = focusTheme ? focusTheme.split(/[:.—]/)[0].trim().slice(0, 35) : "Theme Reflection";
+            promptTitle = "Theme Reflection";
           }
 
           // Strip any truncated or unclosed reference shortcode at the end (e.g. [[kb-ref:entry or [[kb-ref:)
           promptContent = promptContent.replace(/\[\[kb-ref:[^\]]*$/i, '').trim();
 
-          const containsForbiddenPattern = (text) => {
-            if (!text) return false;
-            const hasActionTrope = /\b(tangible\s+action|action\s+you\s+can|anchor\s+(yourself|in)|one\s+(small|tangible|practical|concrete|simple)?\s*(action|step|thing|shift|move|habit|practice)|what\s+(action|step)|(can|will|should)\s+you\s+(do|take|anchor)\s+today|today\s*\?|anchor\s+in\s+today|what\s+is\s+one\b.*(today|step|action|shift))\b/i.test(text);
-            const hasCannedStem = /\b(how\s+do\s+you\s+explain|can\s+you\s+explain|how\s+would\s+you\s+explain|how\s+do\s+you\s+reconcile)\b/i.test(text);
-            return hasActionTrope || hasCannedStem;
-          };
-
-          if (containsForbiddenPattern(promptContent)) {
-            try {
-              const repairPayload = {
-                contents: [{ parts: [{ text: `The following reflection question is formulaic or contains clichés: "${promptContent}".\n\nRewrite it into valid JSON so that the question is constructed directly and organically out of the specific tension, paradox, or juxtaposition described.\nCRITICAL RULES:\n- NEVER use canned stems like "How do you explain...", "Can you explain...", or "How do you reconcile...".\n- NEVER ask for tangible actions, steps, habits, or things to do today.\n- Identify the specific crux or unresolved conflict and formulate the inquiry from that exact dynamic.\n{\n  "title": "${promptTitle || 'Theme Reflection'}",\n  "content": "..."\n}` }] }],
-                systemInstruction: { parts: [{ text: "You are an analytical editor refining intellectual inquiry questions. Derive questions organically from the specific conflict, contradiction, or friction. Never use boilerplate question stems ('How do you explain') or coaching/action clichés." }] },
-                generationConfig: {
-                  responseMimeType: 'application/json',
-                  responseSchema: {
-                    type: "OBJECT",
-                    properties: {
-                      title: { type: "STRING" },
-                      content: { type: "STRING" }
-                    },
-                    required: ["title", "content"]
-                  },
-                  temperature: Math.min(promptTemperature, 0.4),
-                  maxOutputTokens: 4096
-                }
-              };
-              const repJson = await callGemini(activeKey, repairPayload, promptModel);
-              const repText = getCandidateText(repJson.candidates?.[0]);
-              const repParsed = parseAIJson(repText);
-              const repContent = (repParsed?.content || repParsed?.question || "").trim();
-              if (repContent && !containsForbiddenPattern(repContent)) {
-                promptContent = repContent;
-                if (repParsed.title) promptTitle = repParsed.title.trim();
-              }
-            } catch (repErr) {
-              console.warn("Prompt repair fallback error:", repErr);
-            }
-          }
-
-          if (containsForbiddenPattern(promptContent)) {
-            const stripped = promptContent.replace(/,\s*(?:what\s+is\s+one\b.*|what\s+action\b.*|how\s+can\s+you\s+anchor\b.*)\?*$/i, '').trim();
-            if (stripped.length >= 20) {
-              promptContent = stripped;
-            }
-            promptContent = promptContent
-              .replace(/\bhow\s+do\s+you\s+explain\s+the\s+relationship\s+between\b/gi, 'What governs the tension between')
-              .replace(/\bhow\s+do\s+you\s+explain\b/gi, 'What dynamic drives')
-              .replace(/\bhow\s+do\s+you\s+reconcile\b/gi, 'Where does the boundary fall between')
-              .replace(/\bcan\s+you\s+explain\b/gi, 'What reveals');
-          }
-
-          // Strip any truncated or unclosed reference shortcode at the end
-          promptContent = promptContent.replace(/\[\[kb-ref:[^\]]*$/i, '').trim();
-          if (promptContent && !/[?.!]$/.test(promptContent)) {
-            promptContent += '?';
-          }
-
-          // Strict Safety Guard: Never present an empty prompt card
-          if (!promptContent || promptContent.length < 15) {
-            if (focusTheme) {
-              promptContent = `Where does the friction between these ideas lead: ${focusTheme}?`;
-            } else if (chosenNotes.length >= 2) {
-              const refTags = chosenNotes.map(n => `[[kb-ref:${n.id}]]`).join(' and ');
-              promptContent = `What is the underlying tension connecting ${refTags}, and which principle decides between them?`;
-            } else {
-              throw new Error("AI generated an empty prompt response. Please click 'Generate Prompt' again.");
-            }
+          if (!promptContent) {
+            throw new Error("AI generated an empty prompt response. Please click 'Generate Prompt' again.");
           }
           
-          const newPromptRecord = {
-            id: 'prompt-' + Date.now(),
-            title: promptTitle || "Theme Prompt",
-            content: promptContent,
-            noteIds: chosenNotes.map(n => n.id),
-            createdAt: Date.now()
-          };
-
-          // Store generated prompt so it is never repeated
-          setStoredPrompts(prev => {
-            const updated = [...prev, newPromptRecord];
-            if (typeof idbKeyval !== 'undefined') {
-              idbKeyval.set('kb_stored_prompts', updated).catch(() => {});
-            }
-            return updated;
-          });
-
           setPromptState({
             isGenerating: false,
             draft: {
-              title: newPromptRecord.title,
-              fullContent: newPromptRecord.content,
-              summary: newPromptRecord.content,
+              title: promptTitle,
+              fullContent: promptContent,
+              summary: promptContent,
               projects: [...activeProjects],
               categories: activeCategories.filter(c => !isEntryTypeTaxonomy(c)),
               tags: activeTags.filter(t => !isEntryTypeTaxonomy(t))
@@ -3812,10 +3032,39 @@ Respond with valid JSON ONLY matching this structure:
             type: "STRING",
             description: "Concise title, strictly 3 to 6 words maximum. Never include quotes, explanations, preambles, or summaries."
           },
-          apply: (parsed, currentEntry, updates) => {
-            const candidate = (parsed && typeof parsed === 'object' && parsed.title) ? parsed.title : (typeof parsed === 'string' ? parsed : null);
+          apply: (parsed, currentEntry, updates, contentToAnalyze, rawText = '') => {
+            let candidate = null;
+            if (parsed && typeof parsed === 'object') {
+              candidate = parsed.title || parsed.Title || parsed.suggestedTitle || parsed.suggested_title || parsed.noteTitle || parsed.note_title || parsed.name || parsed.headline || parsed.heading;
+              if (!candidate && Array.isArray(parsed)) {
+                candidate = parsed[0]?.title || parsed[0]?.Title || parsed[0];
+              }
+            } else if (typeof parsed === 'string' && parsed.trim()) {
+              candidate = parsed.trim();
+            }
+            let finalTitle = null;
             if (candidate && typeof candidate === 'string' && candidate.trim()) {
-              updates.title = cleanTitle(candidate.trim());
+              const cleaned = cleanTitle(candidate.trim());
+              if (cleaned && cleaned !== 'Untitled Note') {
+                finalTitle = cleaned;
+              }
+            }
+            if (!finalTitle && rawText) {
+              const tm = rawText.match(/["']?(?:title|Title|suggestedTitle|suggested_title|noteTitle|note_title|headline|heading|name)["']?\s*:\s*["']([^"'\n]+)["']/i);
+              if (tm) {
+                const cleaned = cleanTitle(tm[1].trim());
+                if (cleaned && cleaned !== 'Untitled Note') finalTitle = cleaned;
+              }
+            }
+            if (!finalTitle && contentToAnalyze) {
+              const firstLine = contentToAnalyze.split('\n').map(l => l.replace(/^#+\s*/, '').trim()).find(l => l.length >= 3);
+              if (firstLine) {
+                const cleaned = cleanTitle(firstLine);
+                if (cleaned && cleaned !== 'Untitled Note') finalTitle = cleaned;
+              }
+            }
+            if (finalTitle) {
+              updates.title = finalTitle;
             }
           }
         },
@@ -3834,7 +3083,12 @@ Respond with valid JSON ONLY matching this structure:
             description: "Concise executive summary, strictly no longer than 100 words and proportional to content length."
           },
           apply: (parsed, currentEntry, updates, contentToAnalyze) => {
-            const candidate = (parsed && typeof parsed === 'object' && parsed.summary) ? parsed.summary : (typeof parsed === 'string' ? parsed : null);
+            let candidate = null;
+            if (parsed && typeof parsed === 'object') {
+              candidate = parsed.summary || parsed.Summary || parsed.tldr || parsed.executive_summary;
+            } else if (typeof parsed === 'string' && parsed.trim()) {
+              candidate = parsed.trim();
+            }
             if (candidate && typeof candidate === 'string' && candidate.trim()) {
               updates.summary = cleanExecutiveSummary(candidate.trim(), contentToAnalyze);
             }
@@ -3969,14 +3223,9 @@ Respond with valid JSON ONLY matching this structure:
         const aiPrompt = `Analyze this note and generate the requested metadata:\n${numberedInstructions}\n\n${titleContext}${promptContext}${contentToAnalyze.substring(0, 30000)}`;
 
         const requiredProps = Object.keys(schemaProps);
-        let maxTokens = 800;
-        if (fieldKeys.length === 1 && fieldKeys[0] === 'title') {
-          maxTokens = 300;
-        } else if (fieldKeys.length === 1 && fieldKeys[0] === 'taxonomies') {
-          maxTokens = 600;
-        } else if (fieldKeys.length > 1) {
-          maxTokens = 1000;
-        }
+        // Expand token ceiling to 4096 across all metadata calls so thinking/reasoning models
+        // (e.g. Gemini 2.5 Flash, Gemini 2.5 Pro) never exhaust output limits during internal reasoning.
+        const maxTokens = 4096;
 
         return {
           contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
@@ -3993,18 +3242,19 @@ Respond with valid JSON ONLY matching this structure:
         };
       };
 
-      const applyMetadataResults = (fieldKeys, parsed, entry, contentToAnalyze) => {
+      const applyMetadataResults = (fieldKeys, parsed, entry, contentToAnalyze, rawText = '') => {
         const updates = {};
         fieldKeys.forEach(key => {
           const spec = METADATA_FIELD_SPECS[key];
           if (spec && spec.apply) {
-            spec.apply(parsed, entry, updates, contentToAnalyze);
+            spec.apply(parsed, entry, updates, contentToAnalyze, rawText);
           }
         });
         return updates;
       };
 
       const saveNote = async (id) => {
+        if (savingIdsRef.current.has(id)) return;
         setIsContentFocused(false);
         if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
           const val = contentTextareaRef.current.value;
@@ -4018,8 +3268,8 @@ Respond with valid JSON ONLY matching this structure:
             };
           }
         }
-        const existingEntry = entriesRef.current.find(e => e.id === id);
-        const data = editDataRef.current[id] || editData[id] || existingEntry;
+        const existingEntry = (entriesRef.current || []).find(e => e.id === id) || entries.find(e => e.id === id);
+        const data = (editDataRef.current && editDataRef.current[id]) || editData[id] || existingEntry;
         if (!data) return;
 
         // If manual note is untitled and content is empty, delete it on save/defocus
@@ -4037,7 +3287,6 @@ Respond with valid JSON ONLY matching this structure:
           savingIdsRef.current.delete(id);
           return;
         }
-        if (savingIdsRef.current.has(id)) return;
         savingIdsRef.current.add(id);
 
         const rawShortVersion = typeof data.shortVersion === 'string'
@@ -4058,58 +3307,69 @@ Respond with valid JSON ONLY matching this structure:
           updatedAt: Date.now()
         };
 
+        entriesRef.current = (entriesRef.current || []).map(e => e.id === id ? { ...e, ...initialSavedEntry } : e);
         setEntries(prev => prev.map(e => e.id === id ? { ...e, ...initialSavedEntry } : e));
+        editingEntriesRef.current = { ...(editingEntriesRef.current || {}) };
+        delete editingEntriesRef.current[id];
         setEditingEntries(prev => { const n = { ...prev }; delete n[id]; return n; });
         setEditData(prev => { const n = { ...prev }; delete n[id]; return n; });
         if (editDataRef.current) { delete editDataRef.current[id]; }
-        savingIdsRef.current.delete(id);
 
-        // Auto-generate title, summary, and taxonomies when user stops editing
-        if (isAiChatEntry(initialSavedEntry)) return;
+        try {
+          // Auto-generate title, summary, takeaways, and taxonomies when user stops editing
+          if (isAiChatEntry(initialSavedEntry)) return;
 
-        const existingTitle = (initialSavedEntry.title || '').trim();
-        const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
-        const contentChanged = Boolean(!existingEntry || (existingEntry.fullContent || '').trim() !== (initialSavedEntry.fullContent || '').trim());
-        const needsTitle = isUntitled;
-        const needsSummary = !initialSavedEntry.summary || contentChanged;
-        const hasTaxonomies = (Array.isArray(initialSavedEntry.categories) && initialSavedEntry.categories.length > 0) ||
-                              (Array.isArray(initialSavedEntry.tags) && initialSavedEntry.tags.length > 0) ||
-                              (Array.isArray(initialSavedEntry.projects) && initialSavedEntry.projects.length > 0);
-        const isInitialGen = isUntitled || (!existingEntry?.summary && !initialSavedEntry.summary) || (!hasTaxonomies && !autoGeneratedMetaIdsRef.current.has(id));
-        const needsTaxonomies = isInitialGen;
+          const existingTitle = (initialSavedEntry.title || '').trim();
+          const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
+          const userManuallyRenamedTitle = !isUntitled && existingEntry && (existingEntry.title || '').trim() !== existingTitle && !/^untitled(\s+note)?(\s*#?\d+)?$/i.test((existingEntry.title || '').trim());
+          const contentChanged = Boolean(!existingEntry || (existingEntry.fullContent || '').trim() !== (initialSavedEntry.fullContent || '').trim());
+          const hasTaxonomies = (Array.isArray(initialSavedEntry.categories) && initialSavedEntry.categories.length > 0) ||
+                                (Array.isArray(initialSavedEntry.tags) && initialSavedEntry.tags.length > 0) ||
+                                (Array.isArray(initialSavedEntry.projects) && initialSavedEntry.projects.length > 0);
+          const hasTakeaways = Array.isArray(initialSavedEntry.shortVersion) && initialSavedEntry.shortVersion.length > 0;
+          const isInitialGen = !autoGeneratedMetaIdsRef.current.has(id) && (isUntitled || (!existingEntry?.summary && !initialSavedEntry.summary) || !hasTaxonomies || !hasTakeaways);
+          const needsTitle = isUntitled || (isInitialGen && !userManuallyRenamedTitle);
+          const needsSummary = !initialSavedEntry.summary || contentChanged;
+          const needsTaxonomies = isInitialGen || (!hasTaxonomies && !autoGeneratedMetaIdsRef.current.has(id));
+          const needsTakeaways = isInitialGen || (!hasTakeaways && !autoGeneratedMetaIdsRef.current.has(id));
 
-        let liveContent = '';
-        if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
-          liveContent = contentTextareaRef.current.value || '';
-        }
-        const contentToAnalyze = (liveContent || initialSavedEntry.fullContent || initialSavedEntry.summary || '').trim();
+          let liveContent = '';
+          if (contentTextareaRef.current && activeSingleEntryRef.current?.id === id) {
+            liveContent = contentTextareaRef.current.value || '';
+          }
+          const contentToAnalyze = (liveContent || initialSavedEntry.fullContent || initialSavedEntry.summary || '').trim();
 
-        if ((needsTitle || needsSummary || needsTaxonomies) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
-          autoGeneratedMetaIdsRef.current.add(id);
-          setIsAnalyzing(true);
-          setGeneratingField('metadata');
-          try {
-            const requestedFields = [];
-            if (needsTitle) requestedFields.push('title');
-            if (needsSummary) requestedFields.push('summary');
-            if (needsTaxonomies) requestedFields.push('taxonomies');
+          if ((needsTitle || needsSummary || needsTaxonomies || needsTakeaways) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
+            autoGeneratedMetaIdsRef.current.add(id);
+            setIsAnalyzing(true);
+            setGeneratingField('metadata');
+            try {
+              const requestedFields = [];
+              if (needsTitle) requestedFields.push('title');
+              if (needsSummary) requestedFields.push('summary');
+              if (needsTakeaways) requestedFields.push('takeaways');
+              if (needsTaxonomies) requestedFields.push('taxonomies');
 
-            const payload = buildMetadataPayload(requestedFields, initialSavedEntry, contentToAnalyze, { allProjects, allCategories, allTags });
-            const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-            const parsed = parseAIJson(result.candidates?.[0]);
-            if (parsed) {
-              const updates = applyMetadataResults(requestedFields, parsed, initialSavedEntry, contentToAnalyze);
+              const payload = buildMetadataPayload(requestedFields, initialSavedEntry, contentToAnalyze, { allProjects, allCategories, allTags });
+              const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+              const rawCandidate = result?.candidates?.[0];
+              const rawText = getCandidateText(rawCandidate || result);
+              const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
+              const updates = applyMetadataResults(requestedFields, parsed, initialSavedEntry, contentToAnalyze, rawText);
               if (Object.keys(updates).length > 0) {
+                entriesRef.current = (entriesRef.current || []).map(e => e.id === id ? { ...e, ...updates, updatedAt: Date.now() } : e);
                 setEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates, updatedAt: Date.now() } : e));
               }
+            } catch (err) {
+              console.error("Auto-generation of title/summary/takeaways/taxonomies failed:", err);
+              setError("Metadata auto-generation: " + err.message);
+            } finally {
+              setIsAnalyzing(false);
+              setGeneratingField(null);
             }
-          } catch (err) {
-            console.error("Auto-generation of title/summary/taxonomies failed:", err);
-            setError("Metadata auto-generation: " + err.message);
-          } finally {
-            setIsAnalyzing(false);
-            setGeneratingField(null);
           }
+        } finally {
+          savingIdsRef.current.delete(id);
         }
       };
       saveNoteRef.current = saveNote;
@@ -4223,14 +3483,54 @@ Respond with valid JSON ONLY matching this structure:
           const entry = getEntryForAnalysis(id);
           if (!entry) throw new Error("Note not found.");
           const noteContent = getEntryContentForAnalysis(id, entry);
-          if (!noteContent) throw new Error("No note content available to generate a title.");
+          if (!noteContent && !entry.promptQuestion && !entry.summary) {
+            throw new Error("No note content available to generate a title.");
+          }
+          const contentToAnalyze = noteContent || entry.summary || entry.promptQuestion || '';
 
-          const payload = buildMetadataPayload(['title'], entry, noteContent, { allProjects, allCategories, allTags });
+          const payload = buildMetadataPayload(['title'], entry, contentToAnalyze, { allProjects, allCategories, allTags });
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const parsed = parseAIJson(result.candidates?.[0]);
-          const updates = applyMetadataResults(['title'], parsed, entry, noteContent);
-          if (updates.title) {
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, title: updates.title, updatedAt: Date.now() } : e));
+          const rawCandidate = result?.candidates?.[0];
+          const rawText = getCandidateText(rawCandidate || result);
+          let parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
+
+          const updates = applyMetadataResults(['title'], parsed, entry, contentToAnalyze);
+
+          let finalTitle = updates.title || null;
+
+          // Multi-layer resilient fallback if parsed title wasn't cleanly extracted
+          if (!finalTitle && rawText) {
+            const tm = rawText.match(/["']?(?:title|Title|suggestedTitle|suggested_title|headline|name)["']?\s*:\s*["']?([^"',}\n]+)/i);
+            if (tm) {
+              const cleaned = cleanTitle(tm[1].replace(/^["']+|["']+$/g, '').trim());
+              if (cleaned && cleaned !== 'Untitled Note') finalTitle = cleaned;
+            }
+          }
+          if (!finalTitle && rawText) {
+            const headMatch = rawText.match(/^(?:#+\s*|(?:suggested\s+)?title\s*:\s*)(.+)$/im);
+            if (headMatch) {
+              const cleaned = cleanTitle(headMatch[1].trim());
+              if (cleaned && cleaned !== 'Untitled Note') finalTitle = cleaned;
+            }
+          }
+          if (!finalTitle && rawText) {
+            const cleanRaw = rawText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+            if (cleanRaw && !cleanRaw.startsWith('{') && cleanRaw.length < 100) {
+              const cleaned = cleanTitle(cleanRaw);
+              if (cleaned && cleaned !== 'Untitled Note') finalTitle = cleaned;
+            }
+          }
+
+          // Content-derived fallback so user is never stranded with an error if the AI returned unusable output
+          if (!finalTitle || finalTitle === 'Untitled Note') {
+            const firstLine = contentToAnalyze.split('\n').map(l => l.replace(/^#+\s*/, '').trim()).find(l => l.length >= 3);
+            if (firstLine) {
+              finalTitle = cleanTitle(firstLine);
+            }
+          }
+
+          if (finalTitle && finalTitle !== 'Untitled Note') {
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, title: finalTitle, updatedAt: Date.now() } : e));
           } else {
             throw new Error("The AI did not return a valid title.");
           }
@@ -4250,14 +3550,28 @@ Respond with valid JSON ONLY matching this structure:
           const entry = getEntryForAnalysis(id);
           if (!entry) throw new Error("Note not found.");
           const noteContent = getEntryContentForAnalysis(id, entry);
-          if (!noteContent && !entry.promptQuestion) throw new Error("No note content available to summarize.");
+          if (!noteContent && !entry.promptQuestion && !entry.summary) {
+            throw new Error("No note content available to summarize.");
+          }
+          const contentToAnalyze = noteContent || entry.summary || entry.promptQuestion || '';
 
-          const payload = buildMetadataPayload(['summary'], entry, noteContent, { allProjects, allCategories, allTags });
+          const payload = buildMetadataPayload(['summary'], entry, contentToAnalyze, { allProjects, allCategories, allTags });
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const parsed = parseAIJson(result.candidates?.[0]);
-          const updates = applyMetadataResults(['summary'], parsed, entry, noteContent);
-          if (updates.summary) {
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: updates.summary, updatedAt: Date.now() } : e));
+          const rawCandidate = result?.candidates?.[0];
+          const rawText = getCandidateText(rawCandidate || result);
+          const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
+          const updates = applyMetadataResults(['summary'], parsed, entry, contentToAnalyze);
+
+          let finalSummary = updates.summary || null;
+          if (!finalSummary && rawText) {
+            const sm = rawText.match(/"(?:summary|Summary|tldr|executive_summary)"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
+            if (sm) {
+              finalSummary = cleanExecutiveSummary(sm[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim(), contentToAnalyze);
+            }
+          }
+
+          if (finalSummary) {
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, summary: finalSummary, updatedAt: Date.now() } : e));
           } else {
             throw new Error("The AI did not return a valid summary. Please try again.");
           }
@@ -4279,12 +3593,17 @@ Respond with valid JSON ONLY matching this structure:
           const entry = getEntryForAnalysis(id);
           if (!entry) throw new Error("Note not found.");
           const noteContent = getEntryContentForAnalysis(id, entry);
-          if (!noteContent) throw new Error("No note content available to extract takeaways from.");
+          if (!noteContent && !entry.promptQuestion && !entry.summary) {
+            throw new Error("No note content available to extract takeaways from.");
+          }
+          const contentToAnalyze = noteContent || entry.summary || entry.promptQuestion || '';
 
-          const payload = buildMetadataPayload(['takeaways'], entry, noteContent, { allProjects, allCategories, allTags });
+          const payload = buildMetadataPayload(['takeaways'], entry, contentToAnalyze, { allProjects, allCategories, allTags });
           const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
-          const parsed = parseAIJson(result.candidates?.[0]);
-          const updates = applyMetadataResults(['takeaways'], parsed, entry, noteContent);
+          const rawCandidate = result?.candidates?.[0];
+          const rawText = getCandidateText(rawCandidate || result);
+          const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
+          const updates = applyMetadataResults(['takeaways'], parsed, entry, contentToAnalyze);
           if (updates.shortVersion && updates.shortVersion.length > 0) {
             setEntries(prev => prev.map(e => e.id === id ? { ...e, shortVersion: updates.shortVersion, updatedAt: Date.now() } : e));
           } else {
@@ -4666,67 +3985,9 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
               ]
             }));
           } else {
-            const candidateSummaries = entries.map(e => `[kb-ref:${e.id}] (Title: ${e.title}) - ${e.summary || e.fullContent?.substring(0, 150) || ''}`).join('\n');
-
-            const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
-            const pass1Payload = {
-              contents: [{ role: 'user', parts: [{ text: `User query: "${queryText}"\n\nIdentify up to 5 note IDs that are most relevant to answering this query comprehensively. Return ONLY a JSON array of strings (e.g. ["${entries[0]?.id || 'entry-1'}"]). If none apply, return [].\n\nAvailable Notes:\n${candidateSummaries}` }] }],
-              generationConfig: { temperature: 0.1 }
-            };
-
-            let neededIds = [];
-            try {
-              const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
-              neededIds = parseAIJson(pass1Res.candidates?.[0]);
-              if (!Array.isArray(neededIds)) neededIds = [];
-            } catch(e) {
-              console.warn("Pass 1 routing fallback:", e);
-            }
-
-            const fullContextEntries = entries.filter(e => neededIds.includes(e.id));
-            let contextText = `Primary Relevant Notes:\n\n`;
-            if (fullContextEntries.length > 0) {
-              contextText += fullContextEntries.map(e => `--- [kb-ref:${e.id}] Title: ${e.title} ---\n${e.fullContent || e.summary}`).join('\n\n');
-            } else {
-              contextText += entries.slice(0, 15).map(e => `--- [kb-ref:${e.id}] Title: ${e.title} ---\n${e.summary}`).join('\n\n');
-            }
-
-            const pass2Payload = {
-              contents: [
-                ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
-                { role: 'user', parts: [{ text: queryText }] }
-              ],
-              generationConfig: { temperature: 0.3 },
-              systemInstruction: {
-                parts: [{
-                  text: `You are an overarching Knowledge Base Assistant synthesizing information across the user's entire notes archive.
-
-CONVERSATIONAL & CONCISE WRITING RULES:
-- Length: Under 50 words unless requested or necessary. Default to short.
-- Be concise, conversational, and direct. Go a step at a time.
-- Avoid spilling large amounts of text unless specifically requested.
-- Delete unnecessary words. Cut everything that doesn't add value.
-- Prefer short words. Use simple language over complex terms.
-- Stick to the active voice. It’s direct and impactful.
-- Avoid tired phrases. No clichés, similes, or metaphors.
-- Use plain English. Swap jargon and technical terms for everyday words.
-- Zero hyperbole. Stay honest. Avoid exaggeration.
-- No filler or prefaces. Skip "basically," "so," and introductory fluff.
-- Short, declarative sentences. One idea per sentence.
-- Use contractions. It keeps the tone natural.
-- Emojis in headings. Use them in headers to stay scannable, not the body.
-- Citations: Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
-- Format cleanly in Markdown.
-
-Context:\n${contextText}`
-                }]
-              }
-            };
-
-            const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
-            const candidate = result.candidates?.[0];
-            const parts = candidate?.content?.parts || [];
-            const replyText = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
+            const candidateNotes = getWholeBrainCandidateNotes();
+            const activeAssistantModel = taskModels.assistant || model || DEFAULT_MODEL;
+            const replyText = await runWholeBrainQuery(queryText, currentHistory, candidateNotes, activeAssistantModel);
 
             setAssistantChats(prev => ({
               ...prev,
@@ -4798,39 +4059,245 @@ Context:\n${contextText}`
         setTimeout(() => setActionFeedback(null), 1500);
       };
 
+      // Filter-scoped Whole Brain candidate pool & single-pass / on-demand escalation engine
+      const getWholeBrainCandidateNotes = (excludeId = null) => {
+        // Draw candidate pool from currently selected entry types and active taxonomy/search filters (just like generatePromptNote),
+        // strictly requiring an executive summary (e.summary) and NEVER feeding previous AI Chat sessions into context (!isAiChatEntry(e)).
+        let pool = filteredEntries.filter(e =>
+          !isWelcomeEntry(e) &&
+          !isAiChatEntry(e) &&
+          e.id !== excludeId &&
+          Boolean(e.summary && String(e.summary).trim())
+        );
+
+        // Edge case: if the user solo-selected 'aiChat' in the entry type filter bar so non-chat notes are hidden,
+        // fall back to non-chat entries matching the active taxonomy & search filters that have a summary.
+        if (pool.length === 0 && activeTypeFilters.every(t => t === 'aiChat')) {
+          pool = entries.filter(entry => {
+            if (!entry || isWelcomeEntry(entry) || isAiChatEntry(entry) || entry.id === excludeId) return false;
+            if (!entry.summary || !String(entry.summary).trim()) return false;
+            const matchesProject = activeProjects.length === 0 || (Array.isArray(entry.projects) && entry.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
+            const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
+            const matchesTag = activeTags.length === 0 || (Array.isArray(entry.tags) && entry.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
+            const searchLower = searchQuery.toLowerCase();
+            const matchesSearch = !searchQuery ||
+              (entry.title && entry.title.toLowerCase().includes(searchLower)) ||
+              (entry.summary && entry.summary.toLowerCase().includes(searchLower)) ||
+              (entry.fullContent && entry.fullContent.toLowerCase().includes(searchLower));
+            return matchesProject && matchesCat && matchesTag && matchesSearch;
+          });
+        }
+
+        return pool;
+      };
+
+      const WHOLE_BRAIN_WRITING_RULES = `CONVERSATIONAL & CONCISE WRITING RULES:
+- Length: Under 50 words unless requested or necessary. Default to short.
+- Be concise, conversational, and direct. Go a step at a time.
+- Avoid spilling large amounts of text unless specifically requested.
+- Delete unnecessary words. Cut everything that doesn't add value.
+- Prefer short words. Use simple language over complex terms.
+- Stick to the active voice. It’s direct and impactful.
+- Avoid tired phrases. No clichés, similes, or metaphors.
+- Use plain English. Swap jargon and technical terms for everyday words.
+- Zero hyperbole. Stay honest. Avoid exaggeration.
+- No filler or prefaces. Skip "basically," "so," and introductory fluff.
+- Short, declarative sentences. One idea per sentence.
+- Use contractions. It keeps the tone natural.
+- Emojis in headings. Use them in headers to stay scannable, not the body.
+- Citations: Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
+- Format cleanly in Markdown.`;
+
+      const runWholeBrainQuery = async (queryText, recentMsgs, candidateNotes, activeAssistantModel) => {
+        const filterScopeParts = [
+          activeProjects.length > 0 ? `Projects: ${activeProjects.join(', ')}` : '',
+          activeCategories.length > 0 ? `Categories: ${activeCategories.join(', ')}` : '',
+          activeTags.length > 0 ? `Tags: ${activeTags.map(t => '#' + t).join(', ')}` : '',
+          searchQuery ? `Search query: "${searchQuery}"` : '',
+          hasCustomTypeFilter ? `Selected Types: ${selectedNonChatTypeObjs.map(t => t.label).join(', ')}` : ''
+        ].filter(Boolean);
+
+        const scopeBanner = filterScopeParts.length > 0
+          ? `Active Filter Scope: ${filterScopeParts.join(' | ')} (${candidateNotes.length} matching summarized notes in pool)`
+          : `Active Pool: All selected entry types (${candidateNotes.length} summarized notes in pool)`;
+
+        if (candidateNotes.length === 0) {
+          return `No summarized notes match your currently selected entry types and taxonomy filters (${scopeBanner}).`;
+        }
+
+        // Send ALL matching summaries through without any artificial count limit (user controls scope via type/taxonomy selections)
+        const candidateSummaries = candidateNotes.map(e => {
+          const cleanSum = String(e.summary || '').trim();
+          const hasTakeawaysFlag = Array.isArray(e.shortVersion) && e.shortVersion.length > 0;
+          const hasContentFlag = Boolean(e.fullContent && String(e.fullContent).trim());
+          const availMeta = [hasTakeawaysFlag ? 'takeaways' : null, hasContentFlag ? 'content' : null].filter(Boolean).join(', ');
+          return `[kb-ref:${e.id}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum}`;
+        }).join('\n');
+
+        // Pass 1: Single-Pass Direct Synthesis OR On-Demand Escalation
+        // If summaries suffice, the model writes "directReply" immediately (1 API call total).
+        // If deeper takeaways or full content are required for specific notes, it requests them via "takeawayIds" / "contentIds" and leaves "directReply" empty.
+        let directReply = '';
+        let takeawayIds = [];
+        let contentIds = [];
+
+        const pass1SystemText = `You are an overarching Knowledge Base Assistant synthesizing information across the user's selected notes pool (${scopeBanner}).
+Your base context is strictly limited to the Executive Summaries below (all ${candidateNotes.length} matching notes in the user's current type/taxonomy selection are included).
+
+DECISION & EFFICIENCY PROTOCOL:
+1. IF SUMMARIES SUFFICE: If you can answer the user's query accurately using the Executive Summaries alone, write your complete Markdown response in "directReply" (following the writing rules below) and return empty arrays [] for "takeawayIds" and "contentIds".
+2. IF DEEPER DETAIL IS REQUIRED: Only if the summaries lack specific details needed to answer the query:
+   - Prefer requesting Key Takeaways first: put the needed note IDs in "takeawayIds".
+   - Only request Full Content if full body text is strictly needed: put the needed note IDs in "contentIds".
+   - When requesting any "takeawayIds" or "contentIds", leave "directReply" as an empty string "".
+
+${WHOLE_BRAIN_WRITING_RULES}
+
+Available Note Summaries (${candidateNotes.length} notes):
+${candidateSummaries}`;
+
+        const pass1Payload = {
+          contents: [
+            ...(recentMsgs || []).slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+            { role: 'user', parts: [{ text: queryText }] }
+          ],
+          systemInstruction: {
+            parts: [{ text: pass1SystemText }]
+          },
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                directReply: {
+                  type: "STRING",
+                  description: "Your final Markdown answer citing [[kb-ref:ID]] if the Executive Summaries alone are sufficient. Leave empty string if requesting takeawayIds or contentIds."
+                },
+                takeawayIds: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "Note IDs whose Key Takeaways (shortVersion) are needed on demand. Empty array if directReply is provided."
+                },
+                contentIds: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "Note IDs whose Full Content (fullContent) is needed on demand. Empty array if directReply is provided."
+                }
+              },
+              required: ["directReply", "takeawayIds", "contentIds"]
+            },
+            temperature: 0.3
+          }
+        };
+
+        try {
+          const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
+          const parsedP1 = parseAIJson(pass1Res.candidates?.[0]);
+          if (parsedP1 && typeof parsedP1 === 'object' && !Array.isArray(parsedP1)) {
+            if (typeof parsedP1.directReply === 'string') directReply = parsedP1.directReply.trim();
+            if (Array.isArray(parsedP1.takeawayIds)) takeawayIds = parsedP1.takeawayIds;
+            if (Array.isArray(parsedP1.contentIds)) contentIds = parsedP1.contentIds;
+          }
+        } catch (p1Err) {
+          console.warn("Pass 1 single-pass/escalation fallback:", p1Err);
+        }
+
+        const requestedSet = new Set([...takeawayIds, ...contentIds]);
+
+        // Fast path: If Pass 1 answered directly and didn't request any valid note expansions, return immediately (1 API call total!)
+        const matchedNotes = candidateNotes.filter(e => requestedSet.has(e.id));
+        if (directReply && matchedNotes.length === 0) {
+          return directReply;
+        }
+
+        // Pass 2 (only triggered when specific notes' Takeaways or Full Content were requested on demand):
+        // Send ONLY the requested notes (their summary + requested takeaways and/or full content) rather than re-sending the entire pool of summaries!
+        const expandedBlocks = (matchedNotes.length > 0 ? matchedNotes : candidateNotes).map(e => {
+          const wantTakeaways = takeawayIds.includes(e.id);
+          const wantContent = contentIds.includes(e.id);
+          const parts = [
+            `--- [kb-ref:${e.id}] (Ref #${e.numericId || '?'}) Title: "${e.title || 'Untitled'}" ---`,
+            `Executive Summary: ${e.summary}`
+          ];
+          if (wantTakeaways && Array.isArray(e.shortVersion) && e.shortVersion.length > 0) {
+            parts.push(`Key Takeaways:\n${e.shortVersion.map(t => `- ${t}`).join('\n')}`);
+          }
+          if (wantContent && e.fullContent && String(e.fullContent).trim()) {
+            parts.push(`Full Content:\n${String(e.fullContent).trim()}`);
+          }
+          return parts.join('\n');
+        });
+
+        const pass2Payload = {
+          contents: [
+            ...(recentMsgs || []).slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+            { role: 'user', parts: [{ text: queryText }] }
+          ],
+          generationConfig: { temperature: 0.3 },
+          systemInstruction: {
+            parts: [{
+              text: `You are an overarching Knowledge Base Assistant synthesizing information from the user's selected notes (${scopeBanner}).
+
+${WHOLE_BRAIN_WRITING_RULES}
+
+Requested Note Details (Summaries + On-Demand Takeaways/Content):
+${expandedBlocks.join('\n\n')}`
+            }]
+          }
+        };
+
+        const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
+        const candidate = result.candidates?.[0];
+        const parts = candidate?.content?.parts || [];
+        return parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || directReply || "No response received.";
+      };
+
       // Full-Width Whole Brain AI Chat Functions
       const startWholeBrainChat = (targetChatId = null) => {
-        if (targetChatId) {
+        const resolvedChatId = typeof targetChatId === 'string' ? targetChatId : null;
+        if (resolvedChatId) {
           setActiveTypeFilters(prev => prev.includes('aiChat') ? prev : [...prev, 'aiChat']);
-          selectEntryWithHistory([targetChatId]);
+          selectEntryWithHistory([resolvedChatId]);
           setIsAssistantOpen(false);
           return;
         }
 
-        // If current note is already an empty AI Chat, simply remain on it
+        // Always auto-select 'aiChat' entry type when opening/starting Whole Brain Chat
+        setActiveTypeFilters(prev => prev.includes('aiChat') ? prev : [...prev, 'aiChat']);
+
+        // If current note is already an empty AI Chat, update its title/taxonomies to match current filter scope and remain on it
         if (activeSingleEntry && isAiChatEntry(activeSingleEntry)) {
           const msgs = activeSingleEntry.chatMessages || [];
           if (msgs.length === 0) {
+            const scopedDefaultTitle = activeListScopeSummary ? `${activeListScopeSummary} AI Chat` : 'Whole Brain AI Chat';
+            setEntries(prev => prev.map(e => e.id === activeSingleEntry.id ? {
+              ...e,
+              title: scopedDefaultTitle,
+              projects: [...activeProjects],
+              categories: activeCategories.length > 0 ? [...activeCategories] : ['ai chat'],
+              tags: activeTags.length > 0 ? [...activeTags] : ['ai-chat']
+            } : e));
             setIsAssistantOpen(false);
             return;
           }
         }
 
-        // Create new placeholder AI Chat entry so it exists immediately as its own entity
+        // Create new placeholder AI Chat entry named after current selected types & taxonomies
         const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
         const newId = 'entry-' + Date.now();
+        const scopedDefaultTitle = activeListScopeSummary ? `${activeListScopeSummary} AI Chat` : 'Whole Brain AI Chat';
         const placeholderEntry = {
           id: newId,
           type: 'aiChat',
-          title: 'New AI Chat',
+          title: scopedDefaultTitle,
           numericId: nextNumericId,
-          summary: 'Whole Brain AI conversation session.',
+          summary: `${activeBrainChatScopeLabel} AI conversation session.`,
           shortVersion: [],
           fullContent: '',
           chatMessages: [],
-          categories: ['ai chat'],
-          tags: ['ai-chat'],
-          projects: [],
+          categories: activeCategories.length > 0 ? [...activeCategories] : ['ai chat'],
+          tags: activeTags.length > 0 ? [...activeTags] : ['ai-chat'],
+          projects: [...activeProjects],
           createdAt: Date.now(),
           updatedAt: Date.now(),
           sourceUrl: null,
@@ -4838,8 +4305,6 @@ Context:\n${contextText}`
           pinned: false
         };
 
-        // Enable aiChat in type filters so the placeholder is visible in the list
-        setActiveTypeFilters(prev => prev.includes('aiChat') ? prev : [...prev, 'aiChat']);
         setEntries(prev => [placeholderEntry, ...prev]);
         setNewlyCreatedEntryId(newId);
         selectEntryWithHistory([newId]);
@@ -4871,10 +4336,13 @@ Context:\n${contextText}`
 
         const updatedMsgs = [...existingMsgs, userMsg];
 
-        // Auto-name title if title is default
+        // Auto-name title based on current types/taxonomies + query if title is default
         const curTitle = activeSingleEntry.title || '';
-        const isDefault = !curTitle || curTitle === 'New AI Chat' || curTitle === 'Untitled Note' || curTitle === 'AI Chat Session';
-        const newTitle = isDefault ? (queryText.length > 50 ? queryText.substring(0, 50) + '...' : queryText) : curTitle;
+        const isDefault = !curTitle || curTitle === 'New AI Chat' || curTitle === 'Whole Brain AI Chat' || curTitle === 'Untitled Note' || curTitle === 'AI Chat Session' || curTitle.endsWith(' AI Chat');
+        const shortQuery = queryText.length > 42 ? queryText.substring(0, 42) + '...' : queryText;
+        const newTitle = isDefault
+          ? (activeListScopeSummary ? `[${activeListScopeSummary}] ${shortQuery}` : shortQuery)
+          : curTitle;
 
         setEntries(prev => prev.map(e => e.id === targetId ? {
           ...e,
@@ -4884,70 +4352,9 @@ Context:\n${contextText}`
         } : e));
 
         try {
-          const candidateNotes = entries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e));
-          const candidateSummaries = candidateNotes.map(e => `[kb-ref:${e.id}] (Title: ${e.title}) - ${e.summary || e.fullContent?.substring(0, 150) || ''}`).join('\n');
-
+          const candidateNotes = getWholeBrainCandidateNotes(targetId);
           const activeAssistantModel = taskModels.assistant || model || DEFAULT_MODEL;
-
-          let neededIds = [];
-          if (candidateNotes.length > 0) {
-            const pass1Payload = {
-              contents: [{ role: 'user', parts: [{ text: `User query: "${queryText}"\n\nIdentify up to 5 note IDs that are most relevant to answering this query comprehensively. Return ONLY a JSON array of strings (e.g. ["${candidateNotes[0]?.id || 'entry-1'}"]). If none apply, return [].\n\nAvailable Notes:\n${candidateSummaries}` }] }],
-              generationConfig: { temperature: 0.1 }
-            };
-            try {
-              const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
-              neededIds = parseAIJson(pass1Res.candidates?.[0]);
-              if (!Array.isArray(neededIds)) neededIds = [];
-            } catch (p1Err) {
-              console.warn("Pass 1 routing fallback:", p1Err);
-            }
-          }
-
-          const fullContextEntries = candidateNotes.filter(e => neededIds.includes(e.id));
-          let contextText = `Primary Relevant Notes:\n\n`;
-          if (fullContextEntries.length > 0) {
-            contextText += fullContextEntries.map(e => `--- [kb-ref:${e.id}] Title: ${e.title} ---\n${e.fullContent || e.summary}`).join('\n\n');
-          } else {
-            contextText += candidateNotes.slice(0, 15).map(e => `--- [kb-ref:${e.id}] Title: ${e.title} ---\n${e.summary || e.fullContent?.substring(0, 300) || ''}`).join('\n\n');
-          }
-
-          const pass2Payload = {
-            contents: [
-              ...updatedMsgs.slice(-8).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
-              { role: 'user', parts: [{ text: queryText }] }
-            ],
-            generationConfig: { temperature: 0.3 },
-            systemInstruction: {
-              parts: [{
-                text: `You are an overarching Knowledge Base Assistant synthesizing information across the user's entire notes archive.
-
-CONVERSATIONAL & CONCISE WRITING RULES:
-- Length: Under 50 words unless requested or necessary. Default to short.
-- Be concise, conversational, and direct. Go a step at a time.
-- Avoid spilling large amounts of text unless specifically requested.
-- Delete unnecessary words. Cut everything that doesn't add value.
-- Prefer short words. Use simple language over complex terms.
-- Stick to the active voice. It’s direct and impactful.
-- Avoid tired phrases. No clichés, similes, or metaphors.
-- Use plain English. Swap jargon and technical terms for everyday words.
-- Zero hyperbole. Stay honest. Avoid exaggeration.
-- No filler or prefaces. Skip "basically," "so," and introductory fluff.
-- Short, declarative sentences. One idea per sentence.
-- Use contractions. It keeps the tone natural.
-- Emojis in headings. Use them in headers to stay scannable, not the body.
-- Citations: Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
-- Format cleanly in Markdown.
-
-Context:\n${contextText}`
-              }]
-            }
-          };
-
-          const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
-          const candidate = result.candidates?.[0];
-          const parts = candidate?.content?.parts || [];
-          const replyText = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
+          const replyText = await runWholeBrainQuery(queryText, existingMsgs, candidateNotes, activeAssistantModel);
 
           const modelMsg = {
             id: 'msg-' + (Date.now() + 1),
@@ -5077,17 +4484,16 @@ Context:\n${contextText}`
                   <a href="readme.html" target="_blank" rel="noopener noreferrer" className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-file-lines mr-2"></i> Documentation (Readme)
                   </a>
-                  <button onClick={() => setShowChangelog(true)} className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
+                  <a href="changelog.html" target="_blank" rel="noopener noreferrer" className="w-full py-1.5 px-4 text-[var(--text-muted)] hover:text-[var(--accent)] text-xs font-mono transition-colors flex items-center justify-center">
                     <i className="fa-solid fa-clock-rotate-left mr-2"></i> Release Notes & Changelog
-                  </button>
+                  </a>
                 </div>
               </div>
-              <p onClick={() => setShowChangelog(true)} className="mt-6 text-[11px] text-[var(--text-muted)] font-mono tracking-wider cursor-pointer hover:text-[var(--accent)] transition-colors" title="View Changelog">
+              <a href="changelog.html" target="_blank" rel="noopener noreferrer" className="mt-6 inline-block text-[11px] text-[var(--text-muted)] font-mono tracking-wider cursor-pointer hover:text-[var(--accent)] transition-colors" title="View Changelog">
                 {APP_VERSION} &bull; Changelog
-              </p>
+              </a>
               {error && <p className="mt-4 text-xs text-[var(--danger)] bg-[var(--danger)]/10 p-2 rounded">{error}</p>}
             </div>
-            {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
           </div>
         );
       }
@@ -5340,9 +4746,9 @@ Context:\n${contextText}`
                     <a href="readme.html" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
                       <i className="fa-solid fa-file-lines mr-1.5"></i> Readme
                     </a>
-                    <button type="button" onClick={() => { setShowKeyModal(false); setShowChangelog(true); }} className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center cursor-pointer">
+                    <a href="changelog.html" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
                       <i className="fa-solid fa-clock-rotate-left mr-1.5"></i> Changelog
-                    </button>
+                    </a>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setShowKeyModal(false)} className="btn-secondary text-xs">Cancel</button>
@@ -5352,9 +4758,6 @@ Context:\n${contextText}`
               </div>
             </div>
           )}
-
-          {/* CHANGELOG MODAL */}
-          {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
 
           {/* WARNING / ERROR MODAL */}
           {error && (
@@ -6019,10 +5422,12 @@ Context:\n${contextText}`
                   <button 
                     type="button"
                     onClick={() => startWholeBrainChat()} 
-                    className="h-8 px-2.5 text-xs rounded border border-[#a855f7]/40 bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7] hover:text-white transition-colors flex items-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0" 
-                    title="Start new Whole Brain AI Chat"
+                    className="h-8 px-3 text-xs rounded bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors flex items-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0 shadow-xs" 
+                    title={`Start new ${activeBrainChatTitle}`}
                   >
-                    <i className="fa-solid fa-comment-dots text-xs"></i> Chat
+                    <i className="fa-solid fa-plus text-[10px]"></i>
+                    <i className="fa-solid fa-comment-dots text-xs"></i>
+                    <span>Chat</span>
                   </button>
                 </div>
 
@@ -6077,150 +5482,117 @@ Context:\n${contextText}`
               {/* Note Cards List: 30px margin between cards */}
               <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
                 
-                {/* PROMPT NOTE SECTION (Only visible when at least 2 summarized non-chat notes exist in visible list view) */}
-                {filteredEntries.filter(e => !isWelcomeEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e)).length >= 2 && !promptState.draft && !promptState.isGenerating && (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={generatePromptNote} 
-                        className="flex-1 p-3.5 rounded-md border-2 border-dashed border-[#10e567] text-[var(--text-main)] hover:bg-[#10e567]/10 hover:text-[var(--text-main)] transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
-                        title={activeListScopeSummary ? `Generate prompt analyzing notes matching: ${activeListScopeSummary}` : "Generate prompt analyzing notes currently visible in the list view"}
-                      >
-                        <i className="fa-solid fa-wand-magic-sparkles text-[#10e567]"></i> <span className="text-[var(--text-main)]">Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsPromptConfigOpen(prev => !prev)}
-                        className={`p-3.5 w-12 rounded-md border-2 border-dashed transition-colors font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center cursor-pointer ${isPromptConfigOpen ? 'border-[#10e567] bg-[#10e567]/20 text-[#10e567]' : 'border-[#10e567] text-[#10e567] hover:bg-[#10e567]/10'}`}
-                        title="Prompt Generation Settings (Creativity, Model, Note Limits)"
-                        aria-label="Prompt Generation Settings"
-                      >
-                        <i className="fa-solid fa-gear text-sm"></i>
-                      </button>
-                    </div>
-
-                    {isPromptConfigOpen && (
-                      <div className="p-4 rounded-md border-2 border-dashed border-[#10e567]/60 bg-[var(--card-bg)] shadow-[var(--track-card-shadow)] space-y-4 animate-entry-fade">
-                        <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
-                          <div className="flex items-center gap-2 text-xs font-bold font-mono text-[var(--text-main)]">
-                            <i className="fa-solid fa-sliders text-[#10e567]"></i>
-                            <span>Prompt Generation Settings</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setIsPromptConfigOpen(false)}
-                            className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 text-xs cursor-pointer"
-                            title="Close settings"
-                          >
-                            <i className="fa-solid fa-xmark"></i>
-                          </button>
-                        </div>
-
-                        {/* Creativity (Temperature) Slider */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-mono">
-                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
-                              <i className="fa-solid fa-fire text-amber-500 text-[10px]"></i> Creativity Level
-                            </label>
-                            <span className="text-[#10e567] font-bold">
-                              {Number(promptConfig.temperature ?? 0.7).toFixed(2)}
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={promptConfig.temperature ?? 0.7}
-                            onChange={e => setPromptConfig(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
-                            className="w-full accent-[#10e567] cursor-pointer"
-                          />
-                          <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
-                            <span>0.0 (Precise / Factual)</span>
-                            <span>0.7 (Default)</span>
-                            <span>1.0 (Creative)</span>
-                          </div>
-                        </div>
-
-                        {/* Gemini Model Dropdown */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-mono">
-                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
-                              <i className="fa-solid fa-microchip text-purple-400 text-[10px]"></i> Gemini Model
-                            </label>
-                            <span className="text-[10px] text-[var(--text-muted)] font-mono truncate max-w-[180px]">
-                              {promptConfig.model ? promptConfig.model : `Default (${taskModels.prompts || DEFAULT_MODEL})`}
-                            </span>
-                          </div>
-                          <select
-                            value={promptConfig.model || ''}
-                            onChange={e => setPromptConfig(prev => ({ ...prev, model: e.target.value }))}
-                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[#10e567] focus:outline-none"
-                          >
-                            <option value="">Default ({taskModels.prompts || DEFAULT_MODEL})</option>
-                            {(availableModels.length > 0 ? availableModels : [
-                              { id: 'gemini-flash-lite-latest', displayName: 'Gemini Flash Lite (Latest)' },
-                              { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash' },
-                              { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro' }
-                            ]).map(m => (
-                              <option key={m.id} value={m.id}>
-                                {m.displayName || m.id} {m.id === (taskModels.prompts || DEFAULT_MODEL) ? '(Workspace Default)' : ''}
-                              </option>
-                            ))}
-                            {promptConfig.model && !(availableModels.length > 0 ? availableModels : []).some(m => m.id === promptConfig.model) && promptConfig.model !== 'gemini-flash-lite-latest' && promptConfig.model !== 'gemini-2.5-flash' && promptConfig.model !== 'gemini-2.5-pro' && (
-                              <option value={promptConfig.model}>{promptConfig.model} (custom)</option>
-                            )}
-                          </select>
-                        </div>
-
-                        {/* Number of Recent Notes Slider */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-mono">
-                            <label className="text-[var(--text-main)] font-semibold flex items-center gap-1.5">
-                              <i className="fa-solid fa-clock-rotate-left text-sky-400 text-[10px]"></i> Number of Recent Notes
-                            </label>
-                            <span className="text-[#10e567] font-bold">
-                              {promptConfig.maxNotes ?? 35} notes
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min="5"
-                            max="60"
-                            step="1"
-                            value={promptConfig.maxNotes ?? 35}
-                            onChange={e => setPromptConfig(prev => ({ ...prev, maxNotes: parseInt(e.target.value, 10) }))}
-                            className="w-full accent-[#10e567] cursor-pointer"
-                          />
-                          <div className="flex justify-between text-[10px] text-[var(--text-muted)] font-mono">
-                            <span>5 (Focused)</span>
-                            <span>35 (Default)</span>
-                            <span>60 (Broad)</span>
-                          </div>
-                        </div>
-
-                        {/* Reset to Defaults & Done Buttons */}
-                        <div className="pt-2 flex items-center justify-between border-t border-[var(--border)]">
-                          <button
-                            type="button"
-                            onClick={() => setPromptConfig({ ...DEFAULT_PROMPT_CONFIG })}
-                            className="text-xs text-[var(--text-muted)] hover:text-[#10e567] flex items-center gap-1.5 font-mono cursor-pointer transition-colors"
-                            title="Reset creativity, model, and note limits to defaults"
-                          >
-                            <i className="fa-solid fa-rotate-left text-[10px]"></i> Reset to Defaults
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsPromptConfigOpen(false)}
-                            className="text-xs bg-[#10e567] text-neutral-900 font-bold px-3 py-1 rounded font-mono hover:bg-[#00c853] transition-colors cursor-pointer"
-                          >
-                            Done
-                          </button>
-                        </div>
+                {/* PROMPT NOTE SECTION (Visible when at least 1 summarized note matching selected entry types exists in visible list view) */}
+                {filteredEntries.filter(e => !isWelcomeEntry(e) && hasSummaryOrTakeaways(e)).length >= 1 && !promptState.draft && !promptState.isGenerating && (() => {
+                  const rangeMonths = Number(promptConfig?.dateRangeMonths) || 2;
+                  const rangeLabel = formatPromptDateRangeLabel(rangeMonths);
+                  const rawPoolSize = Number(promptConfig?.poolSize) || 10;
+                  const poolSizeSliderVal = rawPoolSize > 50 ? 55 : Math.min(50, Math.max(5, Math.round(rawPoolSize / 5) * 5));
+                  const poolSizeLabel = formatPromptPoolSizeLabel(poolSizeSliderVal);
+                  const matchingTimeframeCount = filteredEntries.filter(e => !isWelcomeEntry(e) && hasSummaryOrTakeaways(e) && isEntryWithinPromptDateRange(e, rangeMonths)).length;
+                  const effectiveSampleCount = poolSizeSliderVal > 50 ? matchingTimeframeCount : Math.min(matchingTimeframeCount, poolSizeSliderVal);
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex gap-2 items-stretch">
+                        <button 
+                          type="button"
+                          onClick={generatePromptNote} 
+                          className="flex-1 p-3.5 rounded-md border-2 border-dashed border-[#10e567] text-[var(--text-main)] hover:bg-[#10e567]/10 hover:text-[var(--text-main)] transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
+                          title={activeListScopeSummary ? `Generate prompt analyzing notes matching: ${activeListScopeSummary} (${rangeLabel}, Pool: ${poolSizeLabel})` : `Generate prompt analyzing notes from ${rangeLabel} (Pool: ${poolSizeLabel})`}
+                        >
+                          <i className="fa-solid fa-wand-magic-sparkles text-[#10e567]"></i>
+                          <span className="text-[var(--text-main)]">
+                            Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsPromptConfigOpen(prev => !prev)}
+                          className={`px-3.5 rounded-md border-2 border-dashed transition-colors flex items-center justify-center cursor-pointer shadow-[var(--track-card-shadow)] ${
+                            isPromptConfigOpen
+                              ? 'border-[#10e567] bg-[#10e567]/15 text-[#10e567]'
+                              : 'border-[#10e567]/60 text-[var(--text-muted)] hover:border-[#10e567] hover:text-[#10e567] hover:bg-[#10e567]/10'
+                          }`}
+                          title={`Prompt Settings • Timeframe: ${rangeLabel} • Pool Size: ${poolSizeLabel} (${effectiveSampleCount}/${matchingTimeframeCount} eligible notes)`}
+                          aria-label="Prompt Generation Settings"
+                        >
+                          <i className="fa-solid fa-sliders text-xs"></i>
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {isPromptConfigOpen && (
+                        <div className="p-3.5 rounded-md bg-[var(--card-bg)] border border-[#10e567]/40 shadow-[var(--track-card-shadow)] space-y-3.5 font-mono text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#10e567] flex items-center gap-1.5">
+                              <i className="fa-solid fa-sliders text-[10px]"></i> Prompt Pool Settings
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPromptConfig(prev => ({ ...prev, dateRangeMonths: 2, poolSize: 10 }))}
+                              className="text-[10px] text-[var(--text-muted)] hover:text-[#10e567] underline cursor-pointer"
+                              title="Reset date range (2 months) and pool size (10 notes) to defaults"
+                            >
+                              Reset Defaults
+                            </button>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="text-[var(--text-muted)]">Date Range</span>
+                              <span className="font-semibold text-[var(--text-main)]">
+                                {rangeLabel} <span className="text-[10px] text-[var(--text-muted)] font-normal">({matchingTimeframeCount} eligible {matchingTimeframeCount === 1 ? 'note' : 'notes'})</span>
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min="1"
+                              max="25"
+                              step="1"
+                              value={rangeMonths}
+                              onChange={(e) => setPromptConfig(prev => ({ ...prev, dateRangeMonths: Number(e.target.value) }))}
+                              className="w-full accent-[#10e567] cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+                              <span>1 mo</span>
+                              <span>2 mos</span>
+                              <span>6 mos</span>
+                              <span>1 yr</span>
+                              <span>2 yrs</span>
+                              <span>All Time</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5 pt-2 border-t border-[var(--border)]">
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span className="text-[var(--text-muted)]">Pool Size</span>
+                              <span className="font-semibold text-[var(--text-main)]">
+                                {poolSizeLabel} <span className="text-[10px] text-[var(--text-muted)] font-normal">({effectiveSampleCount} sampled)</span>
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min="5"
+                              max="55"
+                              step="5"
+                              value={poolSizeSliderVal}
+                              onChange={(e) => setPromptConfig(prev => ({ ...prev, poolSize: Number(e.target.value) }))}
+                              className="w-full accent-[#10e567] cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+                              <span>5</span>
+                              <span>10</span>
+                              <span>20</span>
+                              <span>30</span>
+                              <span>40</span>
+                              <span>50</span>
+                              <span>All</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {promptState.isGenerating && (
                   <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[#10e567]/60 text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
                     <i className="fa-solid fa-spinner fa-spin text-[#10e567]"></i> {activeListScopeSummary ? `Finding themes in ${activeListScopeSummary}...` : 'Finding themes and loose ends across visible notes...'}
@@ -6460,17 +5832,17 @@ Context:\n${contextText}`
                         <div className="flex justify-between items-center gap-3">
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <span className="w-8 h-8 rounded bg-[#a855f7]/15 text-[#a855f7] flex items-center justify-center font-bold text-sm shrink-0">
-                              <i className="fa-solid fa-brain"></i>
+                              <i className="fa-solid fa-comment-dots"></i>
                             </span>
                             <div className="min-w-0 flex-1">
                               <EditableText 
                                 key={`title-${activeSingleEntry.id}`}
                                 tag="h1"
                                 className="text-xl lg:text-2xl font-mono font-bold text-[var(--text-main)] tracking-tight leading-tight truncate cursor-text" 
-                                text={activeSingleEntry.title || 'Whole Brain AI Chat'} 
+                                text={activeSingleEntry.title || activeBrainChatTitle} 
                                 onSave={(newText) => {
                                   const targetId = activeSingleEntry.id;
-                                  setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText.trim() || 'Whole Brain AI Chat', updatedAt: Date.now() } : e));
+                                  setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText.trim() || activeBrainChatTitle, updatedAt: Date.now() } : e));
                                 }} 
                               />
                             </div>
@@ -6481,7 +5853,7 @@ Context:\n${contextText}`
                             <button
                               type="button"
                               onClick={() => setShowChatSummary(prev => !prev)}
-                              className={`h-7 px-2.5 rounded text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer border ${showChatSummary ? 'bg-[var(--accent)] text-white border-[var(--accent)]' : 'bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-main)]'}`}
+                              className={`h-7 px-2.5 rounded text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer border ${showChatSummary ? 'bg-[#a855f7] text-white border-[#a855f7]' : 'bg-[#a855f7]/10 text-[#a855f7] border-[#a855f7]/30 hover:bg-[#a855f7]/20'}`}
                               title="Toggle Session Summary & Takeaways"
                             >
                               <i className="fa-solid fa-circle-info text-[11px]"></i>
@@ -6490,9 +5862,9 @@ Context:\n${contextText}`
 
                             <button
                               type="button"
-                              onClick={startWholeBrainChat}
-                              className="btn-primary h-7 px-3 text-xs flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
-                              title="Start fresh Whole Brain chat"
+                              onClick={() => startWholeBrainChat()}
+                              className="h-7 px-3 rounded text-xs bg-[#a855f7] hover:bg-[#9333ea] text-white font-semibold transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
+                              title={`Start fresh ${activeBrainChatTitle}`}
                             >
                               <i className="fa-solid fa-plus text-[10px]"></i>
                               <span>New Chat</span>
@@ -6513,7 +5885,10 @@ Context:\n${contextText}`
                         <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-[var(--text-muted)]">
                           <span className="font-semibold text-[#a855f7]">#{activeSingleEntry.numericId}</span>
                           <span>•</span>
-                          <span className="badge text-[10px] bg-[#a855f7]/10 text-[#a855f7] border-[#a855f7]/30">Whole Brain</span>
+                          <span className="badge text-[10px] bg-[#a855f7]/10 text-[#a855f7] border-[#a855f7]/30">
+                            <i className="fa-solid fa-comment-dots text-[9px] mr-1"></i>
+                            {activeBrainChatScopeLabel}
+                          </span>
                           <span>•</span>
                           <span>Created {createdDateStr}</span>
                           <span>•</span>
@@ -6526,16 +5901,16 @@ Context:\n${contextText}`
 
                         {/* Expandable Session Summary & Key Takeaways Panel */}
                         {showChatSummary && (
-                          <div className="p-3.5 rounded bg-[var(--card-bg)] border border-[var(--border)] space-y-3 font-mono shadow-xs mt-2">
+                          <div className="p-3.5 rounded bg-[var(--card-bg)] border border-[#a855f7]/30 space-y-3 font-mono shadow-xs mt-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] flex items-center gap-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#a855f7] flex items-center gap-1">
                                 <i className="fa-solid fa-lightbulb"></i> Executive Summary
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleGenerateTLDR(activeSingleEntry.id)}
                                 disabled={isAnalyzing}
-                                className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                                className="text-[10px] text-[#a855f7] hover:underline flex items-center gap-1 cursor-pointer"
                                 title="Auto-generate summary from chat transcript"
                               >
                                 <i className={`fa-solid fa-rotate-right ${isAnalyzing && generatingField === 'summary' ? 'animate-spin' : ''}`}></i>
@@ -6556,13 +5931,13 @@ Context:\n${contextText}`
                             />
                             <div className="pt-2 border-t border-[var(--border)]/40 flex justify-between items-center">
                               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1">
-                                <i className="fa-solid fa-list-check text-[var(--accent)]"></i> Key Takeaways
+                                <i className="fa-solid fa-list-check text-[#a855f7]"></i> Key Takeaways
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
                                 disabled={isAnalyzing}
-                                className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                                className="text-[10px] text-[#a855f7] hover:underline flex items-center gap-1 cursor-pointer"
                                 title="Auto-extract takeaways from chat transcript"
                               >
                                 <i className={`fa-solid fa-rotate-right ${isAnalyzing && generatingField === 'takeaways' ? 'animate-spin' : ''}`}></i>
@@ -6573,7 +5948,7 @@ Context:\n${contextText}`
                               <ul className="space-y-1 text-xs text-[var(--text-main)]">
                                 {activeSingleEntry.shortVersion.map((pt, idx) => (
                                   <li key={idx} className="flex items-start gap-1.5">
-                                    <span className="text-[var(--accent)] font-bold">•</span>
+                                    <span className="text-[#a855f7] font-bold">•</span>
                                     <span>{pt}</span>
                                   </li>
                                 ))}
@@ -6596,42 +5971,48 @@ Context:\n${contextText}`
                         {currentChatMessages.length === 0 ? (
                           <div className="h-full flex flex-col items-center justify-center text-center text-[var(--text-muted)] py-12 px-4 space-y-4 max-w-lg mx-auto">
                             <div className="w-14 h-14 rounded-full bg-[#a855f7]/15 text-[#a855f7] flex items-center justify-center text-2xl shadow-sm">
-                              <i className="fa-solid fa-brain"></i>
+                              <i className="fa-solid fa-comment-dots"></i>
                             </div>
                             <div>
-                              <h3 className="text-base font-bold text-[var(--text-main)]">Whole Brain AI Chat</h3>
+                              <h3 className="text-base font-bold text-[var(--text-main)]">{activeBrainChatTitle}</h3>
                               <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">
-                                This chat synthesizes ideas across your entire knowledge base. Ask questions, compare themes, uncover contradictions, or request cross-cutting outlines.
+                                {activeListScopeSummary
+                                  ? `Synthesizing ideas across all notes matching your active selection (${activeListScopeSummary}). Ask questions, compare themes, or uncover contradictions.`
+                                  : `Synthesizing ideas across all selected entry types in your knowledge base. Ask questions, compare themes, uncover contradictions, or request cross-cutting outlines.`}
                               </p>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full pt-2">
                               <button 
                                 type="button" 
-                                onClick={() => handleSendWholeBrainMessage("Synthesize the key recurring themes and ideas across all my notes.")}
-                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                                onClick={() => handleSendWholeBrainMessage("Synthesize the key recurring themes and ideas across these notes.")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[#a855f7]/10 border border-[#a855f7]/25 hover:border-[#a855f7]/50 text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer flex items-center gap-2"
                               >
-                                ⚡ <span className="font-semibold">Synthesize key themes</span>
+                                <i className="fa-solid fa-bolt text-[#a855f7] text-xs shrink-0"></i>
+                                <span className="font-semibold">Synthesize key themes</span>
                               </button>
                               <button 
                                 type="button" 
-                                onClick={() => handleSendWholeBrainMessage("What are the most interesting open questions or gaps across my notes?")}
-                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                                onClick={() => handleSendWholeBrainMessage("What are the most interesting open questions or gaps across these notes?")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[#a855f7]/10 border border-[#a855f7]/25 hover:border-[#a855f7]/50 text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer flex items-center gap-2"
                               >
-                                🔍 <span className="font-semibold">Find open questions</span>
+                                <i className="fa-solid fa-magnifying-glass text-[#a855f7] text-xs shrink-0"></i>
+                                <span className="font-semibold">Find open questions</span>
                               </button>
                               <button 
                                 type="button" 
-                                onClick={() => handleSendWholeBrainMessage("Recommend surprising connections or parallels between my recent notes.")}
-                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                                onClick={() => handleSendWholeBrainMessage("Recommend surprising connections or parallels between these notes.")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[#a855f7]/10 border border-[#a855f7]/25 hover:border-[#a855f7]/50 text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer flex items-center gap-2"
                               >
-                                🔗 <span className="font-semibold">Discover connections</span>
+                                <i className="fa-solid fa-diagram-project text-[#a855f7] text-xs shrink-0"></i>
+                                <span className="font-semibold">Discover connections</span>
                               </button>
                               <button 
                                 type="button" 
-                                onClick={() => handleSendWholeBrainMessage("Give me a comprehensive index of the main topics in this knowledge base.")}
-                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer"
+                                onClick={() => handleSendWholeBrainMessage("Give me a comprehensive index of the main topics in these notes.")}
+                                className="p-2.5 rounded bg-[var(--card-bg)] hover:bg-[#a855f7]/10 border border-[#a855f7]/25 hover:border-[#a855f7]/50 text-left text-[11px] transition-colors text-[var(--text-main)] shadow-xs cursor-pointer flex items-center gap-2"
                               >
-                                📚 <span className="font-semibold">Index main topics</span>
+                                <i className="fa-solid fa-layer-group text-[#a855f7] text-xs shrink-0"></i>
+                                <span className="font-semibold">Index main topics</span>
                               </button>
                             </div>
                           </div>
@@ -6656,7 +6037,7 @@ Context:\n${contextText}`
                                         <button 
                                           type="button" 
                                           onClick={() => copyMessage(msg.id || mIdx, msg.text)} 
-                                          className="hover:text-[var(--accent)] flex items-center gap-1 cursor-pointer"
+                                          className="hover:text-[#a855f7] flex items-center gap-1 cursor-pointer"
                                         >
                                           <i className="fa-regular fa-copy"></i>
                                           <span>{actionFeedback?.msgId === (msg.id || mIdx) && actionFeedback.type === 'copy' ? 'Copied!' : 'Copy'}</span>
@@ -6675,7 +6056,7 @@ Context:\n${contextText}`
                               <div className="flex justify-start">
                                 <div className="bg-[var(--card-bg)] text-[var(--text-muted)] rounded p-3 text-xs flex items-center gap-2 shadow-xs font-mono">
                                   <i className="fa-solid fa-spinner fa-spin text-[#a855f7]"></i>
-                                  <span>Synthesizing across whole knowledge base...</span>
+                                  <span>Synthesizing across {activeBrainChatScopeLabel}...</span>
                                 </div>
                               </div>
                             )}
@@ -6702,7 +6083,7 @@ Context:\n${contextText}`
                                 }
                               }} 
                               rows="2" 
-                              placeholder="Ask across your whole knowledge base... (Enter to send, Shift+Enter for newline)" 
+                              placeholder={`Ask across ${activeBrainChatScopeLabel}... (Enter to send, Shift+Enter for newline)`} 
                               className="w-full pl-4 pr-12 py-3 text-xs bg-[var(--card-bg)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded border border-[var(--border)] focus:border-[#a855f7] outline-none resize-none font-mono shadow-xs" 
                               disabled={isAssistantThinking}
                             />
@@ -7094,7 +6475,7 @@ Context:\n${contextText}`
                           className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
                           title="Auto-generate key takeaways"
                         >
-                          <i className={`fa-solid fa-rotate-right text-[10px] ${(isAnalyzing && generatingField === 'takeaways') ? 'animate-spin' : ''}`}></i> refresh
+                          <i className={`fa-solid fa-rotate-right text-[10px] ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i> refresh
                         </button>
                         <button
                           type="button"
@@ -7166,11 +6547,11 @@ Context:\n${contextText}`
                       type="button"
                       onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
                       disabled={isAnalyzing}
-                      className={`absolute left-full ml-3 top-5 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.shortVersion || activeSingleEntry.shortVersion.length === 0) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && generatingField === 'takeaways') ? 'opacity-100' : ''}`}
+                      className={`absolute left-full ml-3 top-5 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.shortVersion || activeSingleEntry.shortVersion.length === 0) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
                       title="Auto-generate key takeaways"
                       aria-label="Auto-generate key takeaways"
                     >
-                      <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && generatingField === 'takeaways') ? 'animate-spin' : ''}`}></i>
+                      <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
                     </button>
                   </div>
 
@@ -7379,11 +6760,11 @@ Context:\n${contextText}`
                   <button 
                     type="button"
                     onClick={() => startWholeBrainChat()} 
-                    className="py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1.5 text-[var(--text-muted)] hover:text-[#a855f7] hover:bg-[var(--card-bg)] cursor-pointer"
-                    title="Open full-width Whole Brain Chat in main view"
+                    className="py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1.5 text-[#a855f7] hover:bg-[#a855f7]/15 cursor-pointer truncate"
+                    title={`Open full-width ${activeBrainChatTitle} in main view`}
                   >
-                    <i className="fa-solid fa-brain text-[10px]"></i>
-                    <span>Whole Brain</span>
+                    <i className="fa-solid fa-comment-dots text-[10px] shrink-0"></i>
+                    <span className="truncate">{activeBrainChatScopeLabel}</span>
                   </button>
 
                   <button 

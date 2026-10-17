@@ -1,7 +1,7 @@
 # Ali Brain • System Manual & Architecture
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.40** • [Online App](index.html) • [HTML Documentation](readme.html)
+> Current Version: **v2.8.65** • [Online App](index.html) • [HTML Documentation](readme.html) • [Changelog](changelog.html)
 
 ---
 
@@ -68,8 +68,8 @@ The document editor delivers a seamless, in-place writing and curation workflow:
 
 - **Double-Click Inline Editing:** Double-click any field — Title, Executive Summary, Answer Summary, or Takeaways — to edit it directly in place. Edits commit automatically on blur or <kbd>Enter</kbd>.
 - **Targeted Field Generators & Auto-Metadata:** Independent refresh buttons beside each section trigger Gemini AI to re-extract or suggest content for only that specific field (Title, Taxonomy, Summary, or Key Takeaways) without affecting the rest of the document.
-- **Automatic Metadata Generation:** When a user finishes editing a note (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes a descriptive title (if untitled), a substantive executive summary, and contextual domain taxonomies (projects, categories, tags) in the background. Key takeaways are generated on-demand when the user clicks the refresh action.
-- **Unified Instruction Registry (Single Source of Truth):** Both single-field margin refresh actions and combined initial background auto-generation derive from a centralized, DRY definition registry (`METADATA_FIELD_SPECS`). Field instructions, JSON schema property definitions, token budgets (300 for titles, 600 for taxonomies, 800 for summaries/takeaways, and 1000 for combined synthesis), and sanitizers are defined in one place, ensuring 100% prompt consistency and eliminating prompt drift across individual and combined generations.
+- **Automatic All-Fields Initial Metadata Generation:** When a user saves a note's content edit for the first time (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes **all metadata fields in a single pass**—generating a descriptive Title, an Executive Summary, Key Takeaways (`shortVersion`), and contextual domain Taxonomies (projects, categories, tags) together.
+- **Unified Instruction Registry (Single Source of Truth):** Both single-field margin refresh actions and combined initial background auto-generation derive from a centralized, DRY definition registry (`METADATA_FIELD_SPECS`). Field instructions, JSON schema property definitions, and sanitizers are defined in one place, ensuring 100% prompt consistency and eliminating prompt drift across individual and combined generations.
 - **In-Place Taxonomy Editor:** Clicking the taxonomy badges in the note header opens an inline manager to add new tags, remove existing tags, or trigger AI auto-tagging.
 - **Distraction-Free Focus Mode:** Double-clicking note content or clicking Edit opens an inline textarea editor with a visible Focus Mode link. Activating Focus Mode launches a centered distraction-free writing window. Exiting Focus Mode (via <kbd>Escape</kbd>, backdrop click, or close button) immediately finishes editing, saves all changes, and returns to the rendered Markdown reader view.
 
@@ -81,42 +81,36 @@ The ingestion pipeline transforms raw web links, multimedia URLs, and pasted tex
 
 - **Web Article Scraping:** Strips navigation bars, advertisements, cookie notices, and scripts using `turndown` to capture clean article text and formatting.
 - **Media Embedding:** Automatically recognizes YouTube and Vimeo links to embed a responsive media player alongside synchronized note-taking capabilities.
-- **Direct Substance Metadata Extraction:** Automatically synthesizes a concise title, a substantive executive summary (2–3 informative sentences articulating context, core arguments, and takeaways without throat-clearing preambles), and contextual domain taxonomies.
+- **Direct Substance Metadata Extraction:** Automatically synthesizes a concise title, a substantive executive summary (1–2 informative sentences articulating context, core arguments, and takeaways without throat-clearing preambles), 3–5 insightful key takeaways, and contextual domain taxonomies in one go. Powered by a 4,096-token ceiling and multi-layer extraction fallbacks to guarantee uninterrupted completion across reasoning models (Gemini 2.5 Flash / Pro).
 
 ---
 
 ## 6. Gemini AI Synthesis & Theme Prompt Generator
 
-The Theme Prompt Generator acts as an autonomous intellectual sparring partner. By analyzing themes, contradictions, and loose ends across your knowledge base, it generates thought-provoking reflection questions that prompt you to write new notes and deepen your understanding:
+The Theme Prompt Generator analyzes your notes to surface connections, contradictions, and open questions that prompt new reflection notes:
 
-- **Synthesis Hierarchy:**
-  1. *Primary Topics (Highest Weight):* Manual notes receive the highest priority, grounding questions in your original ideas and personal reflections.
-  2. *Secondary Topics:* Previous prompt responses explore how your perspective has evolved over time.
-  3. *Supporting Context:* Ingested external materials (Web, Media, PDF) provide background references.
-- **Temporal Weighting:** Evaluates your complete knowledge base across all time, giving ~65% priority to notes created or modified in the last 4 months.
-- **Configurable Prompt Settings:**
-  - *Creativity Level (Temperature):* Slider from `0.0` (factual and precise) to `1.0` (exploratory and divergent), defaulting to `0.7`. Strictly governs temperature end-to-end across Round 1 scouting, Round 2 deep reasoning synthesis, and repair loops.
-  - *Gemini Model Assignment:* Select model override or inherit workspace default.
-  - *Number of Recent Notes:* Slider adjusting candidate pool size from `5` to `60` notes (default: `35`). Notes are selected strictly in chronological order (newest first), ensuring your freshest manual notes and reflections are prioritized before filling remaining slots with earlier history.
-  - *Reset to Defaults:* Master one-click restore for temperature, model, and candidate note limits.
-- **Summarized Entry Prerequisite & Exclusion:** Notes lacking both an executive summary and key takeaways are strictly excluded from the reflection prompt candidate pool and button prerequisites, guaranteeing only analyzed and structured notes are evaluated.
-- **Two-Pass Synthesis & Complete Unabridged Notes:** Reflection prompts are generated via a two-round architecture: Round 1 scans candidate note profiles (titles, timestamps, roles, summaries, and key takeaways) to scout and isolate the core contradiction or paradox between 2–3 notes. Round 2 injects the 100% complete, unabridged content of those chosen notes into the deep reasoning prompt, ensuring full context awareness and eliminating mid-sentence character truncation glitches.
-- **Organic Issue-Driven Inquiry Engine (No Formulaic Question Stems):** Prompt synthesis strictly bans formulaic, repetitive question stems (such as *"How do you explain..."*, *"Can you explain..."*, or *"How do you reconcile..."*) as well as all action-oriented, advice-seeking, or life-coaching questions (e.g. *"What is one tangible action you can anchor yourself in today?"*, *"What is one small step / action / shift..."*, *"How might you..."*). Instead, questions are constructed organically and directly out of the specific tension, contradiction, loose end, or juxtaposition identified across the notes (e.g., examining which force governs a collision, where a premise breaks down under pressure, or what allows opposing standards to coexist). Features runtime pattern detection, analytical repair loops, and deterministic fallback rephrasing to guarantee deep, organic intellectual inquiry.
-- **Mandatory JSON Schema Contracts & 8,192 Token Reasoning Budget:** Enforces strict `responseSchema` definitions with required `title` and `content` properties across prompt synthesis and repair calls, backed by an expanded 8,192-token ceiling to prevent reasoning models (like `gemini-pro-latest` and `gemini-2.5-pro`) from truncating questions mid-sentence when thinking tokens consume generation budgets.
-- **Candidate Pool Novelty & Anti-Repetition Engine:** In Round 1 scouting, candidate notes are dynamically partitioned so unexamined notes appear at the top of the candidate index, while previously paired notes are deprioritized. Enforces explicit novelty constraints to prevent models (like `gemini-flash-lite-latest`) from repeatedly retreading the same note pairs.
+- **Filter-Scoped Candidate Pool:** Draws with equal weight from whatever notes are currently visible in your list (based on active Entry Types, Projects, Categories, Tags, and Search filters) that have an Executive Summary or Key Takeaways.
+- **Prompt Pool Settings (Sliders Icon):** Clicking the sliders icon beside **Generate Prompt** opens two pool controls:
+  - **Date Range (`dateRangeMonths`):** Defaults to **2 months** (adjustable from `1` to `24` months, or **All Time**). Restricts the pool to notes created or updated within that timeframe.
+  - **Pool Size (`poolSize`):** Defaults to **10 notes** (adjustable from `5` to `50` in steps of 5, with the final step set to **All**). Controls how many eligible notes are randomly sampled (or all sent when set to **All**) in the request.
+- **Single-Pass Synthesis:** Sends only the **Title**, **Date**, **Executive Summary**, and **Key Takeaways** of the sampled notes in a single API call. The model isolates one specific idea from 1 or 2 notes, links them with `[[kb-ref:ID]]` citations, and asks one open-ended "Why" or "How" reflection question (capped at 50 words).
+- **Model & Default Temperature (`1.0`):** Uses the Theme Prompts model configured in Settings (`taskModels.prompts`) with a fixed default temperature of `1.0` (Google's recommended default for Gemini 2.5 reasoning models and associative synthesis across disparate ideas).
 
 ---
 
 ## 7. Unified AI Assistant & Chat Modes
 
-The integrated AI Assistant provides conversational intelligence directly alongside your notes:
+The AI Assistant lets you chat with either a single open note or your broader knowledge base:
 
-- **Current Entry Mode:** Injects the active note's full text, summary, takeaways, and source link alongside the summaries and takeaways of up to 10 same-category/project notes. Hosted in the right collapsible drawer.
-- **Full-Width Whole Brain AI View:** Uses two-pass retrieval that scans one-line note summaries across the library to identify relevant entries, then injects the complete text of the top 5 matching notes for synthesis. Replaces the main view with a dedicated, borderless AI Chat interface.
-- **Non-Destructive Archival & Natural Continuation:** Every message exchange is stored non-destructively directly on the active AI Chat entry. When you select an archived AI chat from the notes list, its entire conversational transcript is restored.
-- **Auto-Focus on AI Chat Creation:** Creating a new Whole Brain AI chat session or navigating to an AI chat entry automatically focuses the chat input field.
-- **Strict Assistant Drawer Segregation:** When in Whole Brain chat, the drawer is collapsed, keyboard shortcuts (<kbd>Cmd+J</kbd> / <kbd>Cmd+L</kbd> / <kbd>Ctrl+J</kbd>) are ignored, and the assistant drawer toggle is cleanly removed from the DOM.
-- **Concise & Conversational Response Rules:** Capped at 50 words by default (and strict 100-word ceiling unless requested otherwise), calibrated at temperature 0.3, active voice, plain English, and clean source citations via `[[kb-ref:ID]]`.
+- **Current Entry Chat (Right Drawer):**
+  - **Context:** Sends the active note's full text, summary, takeaways, and source URL, plus summaries and takeaways of up to 10 related notes in the same category or project.
+  - **Auto-Close & Auto-Reopen:** Switching notes automatically closes the drawer if the new note has no prior chat, and automatically re-opens it if the note already has a saved conversation (`assistantChats[entry.id]`). Toggle manually anytime with <kbd>Cmd+J</kbd> / <kbd>Ctrl+J</kbd>.
+- **Whole Brain / Scoped AI Chat (Full-Width Purple View):**
+  - **Dynamic Scope & Naming:** Named automatically after your active Entry Type and Taxonomy filters (e.g., `Whole Brain AI Chat` or `Project: X AI Chat`).
+  - **Uncapped Summaries First, Details On Demand:** Sends **all** matching note **Executive Summaries** (`summary`) with no artificial count limit—you control the scope via your type and taxonomy selections. If summaries are enough to answer, the AI replies in a **single pass** (`directReply`). If deeper detail is required, it automatically fetches **Key Takeaways** (`takeawayIds`) or **Full Content** (`contentIds`) for specific notes in a second pass.
+  - **Auto-Selected Type & Excluded Prior Chats:** Clicking the purple **Chat** / **New Chat** button automatically enables the `AI Chat` entry type in the list so your chat sessions are visible, while strictly excluding previous `AI Chat` entries from being fed into context for new chats.
+  - **Persistent & Self-Cleaning:** Conversations save automatically to their `AI Chat` entry and resume when clicked. Empty chats that you navigate away from without sending a message are pruned automatically.
+- **Response Style & Temperature (`0.3`):** Uses a focused temperature of `0.3` for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline `[[kb-ref:ID]]` source citations.
 
 ---
 
@@ -181,4 +175,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.40** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.65** • Local-First Autonomous Knowledge Base*
