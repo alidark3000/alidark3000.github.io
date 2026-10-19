@@ -1,7 +1,7 @@
 # Ali Brain • System Manual & Architecture
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.65** • [Online App](index.html) • [HTML Documentation](readme.html) • [Changelog](changelog.html)
+> Current Version: **v2.8.69** • [Online App](index.html) • [HTML Documentation](readme.html) • [Changelog](changelog.html)
 
 ---
 
@@ -26,6 +26,7 @@ Ali Brain is an autonomous, serverless personal knowledge management system that
 
 - **Single JSON Database File:** All entries, generated prompt questions, prompt reflection answers, taxonomies, assistant chat histories, and deletion tombstones are stored in a single JSON file on your computer.
 - **IndexedDB Persistence:** File handles are retained via `idb-keyval` so you can resume your active workspace upon reload without picking the file again. An automatic backup snapshot is also written to IndexedDB on every save.
+- **Safari Local File Sync Bridge (Fallback for Non-Chromium Browsers):** When the browser supports the native File System Access API (Chrome, Edge, Brave), Brain reads and writes directly to your local `.json` file. When `window.showOpenFilePicker` is unavailable (such as in Safari), Brain automatically activates a local file bridge client (`127.0.0.1:8765`) paired with a one-time downloadable macOS setup archive ([`Enable-Safari-Sync.zip`](Enable-Safari-Sync.zip) → [`Enable-Safari-Sync.command`](Enable-Safari-Sync.command)). Running the script installs a lightweight local Python LaunchAgent (`~/.alibrain/bridge.py`) that provides native macOS file pickers, in-place auto-saving, startup auto-resume, and 3-way external change polling in Safari.
 - **Privacy by Default:** Zero telemetry, zero analytics, zero external database servers. Communication occurs solely between your browser and the Google Gemini API when using AI features.
 
 ---
@@ -93,7 +94,7 @@ The Theme Prompt Generator analyzes your notes to surface connections, contradic
 - **Prompt Pool Settings (Sliders Icon):** Clicking the sliders icon beside **Generate Prompt** opens two pool controls:
   - **Date Range (`dateRangeMonths`):** Defaults to **2 months** (adjustable from `1` to `24` months, or **All Time**). Restricts the pool to notes created or updated within that timeframe.
   - **Pool Size (`poolSize`):** Defaults to **10 notes** (adjustable from `5` to `50` in steps of 5, with the final step set to **All**). Controls how many eligible notes are randomly sampled (or all sent when set to **All**) in the request.
-- **Single-Pass Synthesis:** Sends only the **Title**, **Date**, **Executive Summary**, and **Key Takeaways** of the sampled notes in a single API call. The model isolates one specific idea from 1 or 2 notes, links them with `[[kb-ref:ID]]` citations, and asks one open-ended "Why" or "How" reflection question (capped at 50 words).
+- **Single-Pass Synthesis & In-Place Refresh:** Sends only the **Title**, **Date**, **Executive Summary**, and **Key Takeaways** of the sampled notes in a single API call. The model isolates one specific idea from 1 or 2 notes, links them with `[[kb-ref:ID]]` citations, and asks one open-ended "Why" or "How" reflection question (capped at 50 words). A refresh icon (`fa-rotate-right`) sits next to the **Write** button on generated prompt cards to roll a new prompt in place without dismissing first.
 - **Model & Default Temperature (`1.0`):** Uses the Theme Prompts model configured in Settings (`taskModels.prompts`) with a fixed default temperature of `1.0` (Google's recommended default for Gemini 2.5 reasoning models and associative synthesis across disparate ideas).
 
 ---
@@ -110,6 +111,8 @@ The AI Assistant lets you chat with either a single open note or your broader kn
   - **Uncapped Summaries First, Details On Demand:** Sends **all** matching note **Executive Summaries** (`summary`) with no artificial count limit—you control the scope via your type and taxonomy selections. If summaries are enough to answer, the AI replies in a **single pass** (`directReply`). If deeper detail is required, it automatically fetches **Key Takeaways** (`takeawayIds`) or **Full Content** (`contentIds`) for specific notes in a second pass.
   - **Auto-Selected Type & Excluded Prior Chats:** Clicking the purple **Chat** / **New Chat** button automatically enables the `AI Chat` entry type in the list so your chat sessions are visible, while strictly excluding previous `AI Chat` entries from being fed into context for new chats.
   - **Persistent & Self-Cleaning:** Conversations save automatically to their `AI Chat` entry and resume when clicked. Empty chats that you navigate away from without sending a message are pruned automatically.
+  - **In-Place Taxonomy Editing:** Includes an interactive taxonomy row directly below the metadata subtitle. Clicking anywhere on the row opens the standard in-place taxonomy editor to assign or remove Projects, Categories, and Tags (or auto-generate tags via Gemini) for the chat session.
+- **Cumulative Input & Output Token Tracking:** Both the full-width **AI Chat** header and the **Current Entry AI Assistant** drawer header display a live `Tokens In: X | Out: Y` counter that records and increments prompt input tokens and generated output tokens (`usageMetadata.promptTokenCount` and `candidatesTokenCount` / `thoughtsTokenCount`) across every turn (including two-pass escalations).
 - **Response Style & Temperature (`0.3`):** Uses a focused temperature of `0.3` for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline `[[kb-ref:ID]]` source citations.
 
 ---
@@ -175,4 +178,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.65** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.67** • Local-First Autonomous Knowledge Base*

@@ -80,7 +80,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; Changelog</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.65</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.69</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="readme.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -105,21 +105,37 @@
   <!-- Timeline -->
   <main class="space-y-8 text-sm">
 
-    <!-- v2.8.65 (Current Active Series) -->
+    <!-- v2.8.69 (Current Active Series) -->
     <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
       <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--accent)] border-[var(--bg-main)]"></div>
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.65</h2>
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.69</h2>
           <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
         </div>
-        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-17</span>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-19</span>
       </div>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
         <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
-            <span><strong class="text-[var(--text-main)]">Single-Pass Theme Prompt Generator &amp; Pool Settings:</strong> Generates concise reflection prompts (50 words max, <code>temperature: 1.0</code>) in a single API call using only candidate note summaries and key takeaways, isolating one concept from 1 or 2 notes and ending with an open-ended "Why" or "How" question. Reinstated the inline Prompt Pool Settings panel with <strong>Date Range</strong> (default 2 months, 1&ndash;24 months or All Time) and <strong>Pool Size</strong> (default 10 notes, 5&ndash;50 or All) sliders.</span>
+            <span><strong class="text-[var(--text-main)]">In-Place Taxonomy Editing for AI Chats:</strong> Added an interactive taxonomy row directly below the metadata subtitle in Whole Brain AI Chats. Clicking any badge or placeholder opens the full in-place taxonomy editor, allowing users to assign or remove projects, categories, and tags directly on AI chat sessions (with full support for auto-tag generation).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Unified Compact Button Height (<code>h-7</code>):</strong> Standardized the entry list action bar (`+ Note`, `+ Chat`, and search input) to match the compact `h-7` height (28px) of the AI Chat view action buttons (`Summary`, `+ New Chat`, delete).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">AI Chat Input &amp; Output Token Tracking:</strong> Added live <code>Tokens In: X | Out: Y</code> badges at the top of both the full-width <strong>AI Chat</strong> header and the <strong>Current Entry AI Assistant</strong> drawer header. Extracts exact prompt and completion token counts from Gemini API <code>usageMetadata</code> (summing across both passes when a chat escalates from summaries to takeaways/content) and persists cumulative session totals on each chat.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Safari Local File Sync Bridge (<code>Enable-Safari-Sync.command</code>):</strong> When the native File System Access API is unavailable (Safari), Brain automatically falls back to a lightweight local macOS file bridge on <code>127.0.0.1:8765</code>. Includes a one-time downloadable <code>Enable-Safari-Sync.command</code> setup script on the Landing screen that installs a Python 3 LaunchAgent (<code>~/.alibrain/bridge.py</code>) for native macOS Finder file pickers, in-place auto-saving, startup auto-resume, and 3-way external change merging.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Single-Pass Theme Prompt Generator, In-Place Refresh &amp; Pool Settings:</strong> Generates concise reflection prompts (50 words max, <code>temperature: 1.0</code>) in a single API call using only candidate note summaries and key takeaways, isolating one concept from 1 or 2 notes and ending with an open-ended "Why" or "How" question. Added a refresh icon next to the <strong>Write</strong> button on generated prompt cards to roll a new prompt in place without dismissing, and reinstated the inline Prompt Pool Settings panel with <strong>Date Range</strong> (default 2 months, 1&ndash;24 months or All Time) and <strong>Pool Size</strong> (default 10 notes, 5&ndash;50 or All) sliders.</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
@@ -351,7 +367,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.65</strong></span>
+      <span>Version <strong>v2.8.69</strong></span>
       <a href="readme.html">System Manual</a>
       <a href="index.html">Back to Brain App</a>
     </div>

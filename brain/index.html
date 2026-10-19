@@ -120,7 +120,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.65";
+    const APP_VERSION = "v2.8.69";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -361,7 +361,96 @@
       return { title: originalTitle, content: markdownContent.substring(0, 50000) }; 
     };
 
+    const SAFARI_BRIDGE_URL = 'http://127.0.0.1:8765';
+    const hasNativeFileSystemAccess = typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function' && typeof window.showSaveFilePicker === 'function';
+
+    async function checkSafariBridgeStatus(filePath = '') {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 1500);
+        const query = filePath ? `?path=${encodeURIComponent(filePath)}` : '';
+        const res = await fetch(`${SAFARI_BRIDGE_URL}/status${query}`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data && data.ok ? data : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function createBridgeFileHandle(filePath, fileName) {
+      const resolvedName = fileName || (filePath ? filePath.split('/').pop() : 'knowledge-base.json');
+      return {
+        isBridgeHandle: true,
+        path: filePath,
+        name: resolvedName,
+        queryPermission: async () => 'granted',
+        requestPermission: async () => 'granted',
+        getFile: async () => {
+          const res = await fetch(`${SAFARI_BRIDGE_URL}/file?path=${encodeURIComponent(filePath)}`);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) {
+            throw new Error(data.error || 'Could not read file from Safari Local Sync Bridge.');
+          }
+          return {
+            name: data.name || resolvedName,
+            path: data.path || filePath,
+            lastModified: data.lastModified || Date.now(),
+            text: async () => (typeof data.content === 'string' ? data.content : '')
+          };
+        },
+        createWritable: async () => {
+          let buffer = '';
+          return {
+            write: async (chunk) => {
+              buffer += typeof chunk === 'string' ? chunk : JSON.stringify(chunk);
+            },
+            close: async () => {
+              const res = await fetch(`${SAFARI_BRIDGE_URL}/file`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: filePath, content: buffer })
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok || !data.ok) {
+                throw new Error(data.error || 'Failed to write file via Safari Local Sync Bridge.');
+              }
+            }
+          };
+        }
+      };
+    }
+
+    function serializeFileHandleForStorage(handle) {
+      if (!handle) return null;
+      if (handle.isBridgeHandle) {
+        return {
+          isBridgeHandle: true,
+          path: handle.path,
+          name: handle.name
+        };
+      }
+      return handle;
+    }
+
+    function hydrateFileHandle(raw) {
+      if (!raw) return null;
+      if (raw.isBridgeHandle && raw.path) {
+        return createBridgeFileHandle(raw.path, raw.name);
+      }
+      return raw;
+    }
+
     async function verifyPermission(fileHandle, readWrite) {
+      if (!fileHandle) return false;
+      if (fileHandle.isBridgeHandle) {
+        const status = await checkSafariBridgeStatus(fileHandle.path);
+        return Boolean(status && status.ok && status.exists);
+      }
       const options = { mode: readWrite ? 'readwrite' : 'read' };
       if ((await fileHandle.queryPermission(options)) === 'granted') return true;
       if ((await fileHandle.requestPermission(options)) === 'granted') return true;
@@ -387,6 +476,39 @@
         throw new Error(`AI rejected the prompt. Reason: ${reason}`);
       }
       return result;
+    };
+
+    const extractUsageTokens = (result, fallbackInputText = '', fallbackOutputText = '') => {
+      const usage = result?.usageMetadata;
+      if (usage && (typeof usage.promptTokenCount === 'number' || typeof usage.candidatesTokenCount === 'number' || typeof usage.totalTokenCount === 'number')) {
+        const inputTokens = Number(usage.promptTokenCount) || 0;
+        const candidatesTokens = Number(usage.candidatesTokenCount) || 0;
+        const thoughtsTokens = Number(usage.thoughtsTokenCount) || 0;
+        const outputTokens = (candidatesTokens + thoughtsTokens) || Math.max(0, (Number(usage.totalTokenCount) || 0) - inputTokens);
+        return { inputTokens, outputTokens };
+      }
+      const estIn = fallbackInputText ? Math.ceil(String(fallbackInputText).length / 4) : 0;
+      const estOut = fallbackOutputText ? Math.ceil(String(fallbackOutputText).length / 4) : 0;
+      return { inputTokens: estIn, outputTokens: estOut };
+    };
+
+    const sumChatTokens = (messages, storedTokenUsage = null) => {
+      let msgIn = 0;
+      let msgOut = 0;
+      if (Array.isArray(messages)) {
+        for (const m of messages) {
+          if (m && typeof m === 'object') {
+            msgIn += Number(m.inputTokens) || 0;
+            msgOut += Number(m.outputTokens) || 0;
+          }
+        }
+      }
+      const storedIn = Number(storedTokenUsage?.inputTokens) || 0;
+      const storedOut = Number(storedTokenUsage?.outputTokens) || 0;
+      return {
+        inputTokens: Math.max(msgIn, storedIn),
+        outputTokens: Math.max(msgOut, storedOut)
+      };
     };
 
     const getCandidateText = (cand) => {
@@ -1278,15 +1400,33 @@ Respond with valid JSON ONLY matching this structure:
         }
       }, [activeSingleEntry?.id, activeSingleEntry?.chatMessages?.length, isAssistantThinking]);
 
+      const [safariBridgeStatus, setSafariBridgeStatus] = useState(hasNativeFileSystemAccess ? 'native' : 'checking');
+      const [copiedBridgeCmd, setCopiedBridgeCmd] = useState(false);
+
       // Initialize workspace from IndexedDB handle (open most recent file on load, fallback to landing screen)
       useEffect(() => {
         let isMounted = true;
-        if (typeof idbKeyval !== 'undefined') {
-          idbKeyval.get('kb_file_handle').then(async handle => {
+        const initWorkspace = async () => {
+          try {
+            let handle = null;
+            if (typeof idbKeyval !== 'undefined') {
+              const rawHandle = await idbKeyval.get('kb_file_handle').catch(() => null);
+              handle = hydrateFileHandle(rawHandle);
+            }
+
+            if (!hasNativeFileSystemAccess) {
+              const bridgeInfo = await checkSafariBridgeStatus(handle?.path || '');
+              if (isMounted) {
+                setSafariBridgeStatus(bridgeInfo ? 'online' : 'offline');
+              }
+              if (!handle && bridgeInfo && bridgeInfo.exists && bridgeInfo.lastPath) {
+                handle = createBridgeFileHandle(bridgeInfo.lastPath, bridgeInfo.lastName);
+              }
+            }
+
             if (!isMounted) return;
             if (handle) {
               setSavedHandle(handle);
-              // Attempt to open the most recent file directly on startup
               try {
                 const loaded = await loadWorkspaceData(handle);
                 if (!loaded && isMounted) {
@@ -1299,11 +1439,15 @@ Respond with valid JSON ONLY matching this structure:
             } else {
               setAppState('landing');
             }
-          }).catch(err => {
-            console.error("IndexedDB error:", err);
+          } catch (err) {
+            console.error("Workspace initialization error:", err);
             if (isMounted) setAppState('landing');
-          });
+          }
+        };
 
+        initWorkspace();
+
+        if (typeof idbKeyval !== 'undefined') {
           idbKeyval.get('kb_stored_prompts').then(p => {
             if (Array.isArray(p) && p.length > 0 && isMounted) {
               setStoredPrompts(p);
@@ -1318,14 +1462,32 @@ Respond with valid JSON ONLY matching this structure:
               }
             }
           }).catch(() => {});
-        } else {
-          setAppState('landing');
         }
 
         return () => {
           isMounted = false;
         };
       }, []);
+
+      // Poll Safari Local File Bridge status while on landing screen so setup completes automatically
+      useEffect(() => {
+        if (hasNativeFileSystemAccess || appState !== 'landing') return;
+        let active = true;
+        const check = async () => {
+          const info = await checkSafariBridgeStatus(savedHandle?.path || '');
+          if (!active) return;
+          setSafariBridgeStatus(info ? 'online' : 'offline');
+          if (!savedHandle && info && info.exists && info.lastPath) {
+            setSavedHandle(createBridgeFileHandle(info.lastPath, info.lastName));
+          }
+        };
+        check();
+        const interval = setInterval(check, 2500);
+        return () => {
+          active = false;
+          clearInterval(interval);
+        };
+      }, [appState, savedHandle]);
 
       // Robust Non-Destructive Auto-Save and Multi-Device Disk Sync
       const isSavingRef = useRef(false);
@@ -2042,8 +2204,9 @@ Respond with valid JSON ONLY matching this structure:
         };
       };
 
-      const loadWorkspaceData = async (handle) => {
+      const loadWorkspaceData = async (rawHandle) => {
         try {
+          const handle = hydrateFileHandle(rawHandle);
           const hasPerm = await verifyPermission(handle, true);
           if (!hasPerm) {
             setAppState('landing');
@@ -2109,6 +2272,7 @@ Respond with valid JSON ONLY matching this structure:
           setIsAssistantOpen(initialHasEntryChat);
           
           setFileHandle(handle);
+          setSavedHandle(handle);
           setFileName(file.name);
           setLastSyncTime(file.lastModified);
           lastSyncTimeRef.current = file.lastModified;
@@ -2117,7 +2281,7 @@ Respond with valid JSON ONLY matching this structure:
           setTimeout(() => { isLoadedRef.current = true; }, 1500);
           
           if (typeof idbKeyval !== 'undefined') {
-            await idbKeyval.set('kb_file_handle', handle);
+            await idbKeyval.set('kb_file_handle', serializeFileHandleForStorage(handle));
           }
           setAppState('workspace');
           return true;
@@ -2132,11 +2296,34 @@ Respond with valid JSON ONLY matching this structure:
       const handleResume = () => loadWorkspaceData(savedHandle);
 
       const handleOpenFile = async () => {
+        setError(null);
         try {
-          if (!window.showOpenFilePicker) throw new Error("File System Access API is not supported in this browser.");
-          const [handle] = await window.showOpenFilePicker({
-            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
-          });
+          if (hasNativeFileSystemAccess) {
+            const [handle] = await window.showOpenFilePicker({
+              types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+            });
+            await loadWorkspaceData(handle);
+            return;
+          }
+
+          const res = await fetch(`${SAFARI_BRIDGE_URL}/pick-open`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ remember: true })
+          }).catch(() => null);
+
+          if (!res) {
+            setSafariBridgeStatus('offline');
+            throw new Error("Safari Local File Sync Bridge is not running yet. Download and run Enable-Safari-Sync.command below first.");
+          }
+
+          const data = await res.json().catch(() => ({}));
+          if (data.cancelled) return;
+          if (!res.ok || !data.ok) {
+            throw new Error(data.error || "Could not open file via Safari Local Sync Bridge.");
+          }
+          setSafariBridgeStatus('online');
+          const handle = createBridgeFileHandle(data.path, data.name);
           await loadWorkspaceData(handle);
         } catch (err) {
           if (err.name !== 'AbortError') setError(`File error: ${err.message}`);
@@ -2144,13 +2331,37 @@ Respond with valid JSON ONLY matching this structure:
       };
 
       const handleNewFile = async () => {
+        setError(null);
         try {
-          if (!window.showSaveFilePicker) throw new Error("File System Access API is not supported in this browser.");
-          const handle = await window.showSaveFilePicker({
-            suggestedName: 'my-knowledge-base.json',
-            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
-          });
+          let handle;
+          if (hasNativeFileSystemAccess) {
+            handle = await window.showSaveFilePicker({
+              suggestedName: 'my-knowledge-base.json',
+              types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+            });
+          } else {
+            const res = await fetch(`${SAFARI_BRIDGE_URL}/pick-save`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ suggestedName: 'my-knowledge-base.json' })
+            }).catch(() => null);
+
+            if (!res) {
+              setSafariBridgeStatus('offline');
+              throw new Error("Safari Local File Sync Bridge is not running yet. Download and run Enable-Safari-Sync.command below first.");
+            }
+
+            const data = await res.json().catch(() => ({}));
+            if (data.cancelled) return;
+            if (!res.ok || !data.ok) {
+              throw new Error(data.error || "Could not create file via Safari Local Sync Bridge.");
+            }
+            setSafariBridgeStatus('online');
+            handle = createBridgeFileHandle(data.path, data.name);
+          }
+
           setFileHandle(handle);
+          setSavedHandle(handle);
           setFileName(handle.name);
           setHistoryState({ past: [], present: [INITIAL_ENTRY] });
           setTombstones({});
@@ -2174,12 +2385,12 @@ Respond with valid JSON ONLY matching this structure:
           const file = await handle.getFile();
           setLastSyncTime(file.lastModified);
           lastSyncTimeRef.current = file.lastModified;
-          isDirtyRef.current = false;
+          isDirtyRef.current = true;
           isLoadedRef.current = false;
           setTimeout(() => { isLoadedRef.current = true; }, 1500);
           
           if (typeof idbKeyval !== 'undefined') {
-            await idbKeyval.set('kb_file_handle', handle);
+            await idbKeyval.set('kb_file_handle', serializeFileHandleForStorage(handle));
           }
           setAppState('workspace');
         } catch (err) {
@@ -2307,10 +2518,38 @@ Respond with valid JSON ONLY matching this structure:
       const handleMergePicker = async () => {
         setMergeStatus(null);
         try {
-          if (window.showOpenFilePicker) {
+          if (hasNativeFileSystemAccess) {
             const [handle] = await window.showOpenFilePicker({
               types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
             });
+            const file = await handle.getFile();
+            const text = await file.text();
+            let data = {};
+            try {
+              data = JSON.parse(text);
+            } catch (pErr) {
+              throw new Error("File is not valid JSON.");
+            }
+            executeLibraryMerge(data, file.name);
+          } else if (safariBridgeStatus === 'online') {
+            const res = await fetch(`${SAFARI_BRIDGE_URL}/pick-open`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ remember: false })
+            }).catch(() => null);
+            if (!res) {
+              if (mergeFileInputRef.current) {
+                mergeFileInputRef.current.value = '';
+                mergeFileInputRef.current.click();
+              }
+              return;
+            }
+            const pickData = await res.json().catch(() => ({}));
+            if (pickData.cancelled) return;
+            if (!res.ok || !pickData.ok) {
+              throw new Error(pickData.error || "Could not open file via Safari Local Sync Bridge.");
+            }
+            const handle = createBridgeFileHandle(pickData.path, pickData.name);
             const file = await handle.getFile();
             const text = await file.text();
             let data = {};
@@ -2817,7 +3056,9 @@ Respond with valid JSON ONLY matching this structure:
       };
 
       const generatePromptNote = async () => {
-        setPromptState({ isGenerating: true, draft: null });
+        if (promptState.isGenerating) return;
+        const previousDraft = promptState.draft;
+        setPromptState(prev => ({ ...prev, isGenerating: true }));
         try {
           const now = Date.now();
           const rangeMonths = Number(promptConfig?.dateRangeMonths) || 2;
@@ -2855,7 +3096,7 @@ Respond with valid JSON ONLY matching this structure:
           if (!activeKey) {
             setShowKeyModal(true);
             setError("Please configure your Gemini API key in Settings first.");
-            setPromptState({ isGenerating: false, draft: null });
+            setPromptState({ isGenerating: false, draft: previousDraft || null });
             return;
           }
 
@@ -2983,7 +3224,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
         } catch (e) {
           console.error("Prompt generation failed:", e);
           setError("Failed to generate prompt note: " + e.message);
-          setPromptState({ isGenerating: false, draft: null });
+          setPromptState({ isGenerating: false, draft: previousDraft || null });
         }
       };
 
@@ -3472,6 +3713,204 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           tags: [...new Set([...(e.tags || []), val])],
           updatedAt: Date.now()
         } : e));
+      };
+
+      const renderTaxonomySection = (entry, { showSourceUrl = true } = {}) => {
+        if (!entry) return null;
+        return (
+          <>
+            {/* In-Place Taxonomy Section */}
+            {isEditingTaxonomy ? (
+              <div className="relative group p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-md space-y-4 font-mono my-2 shadow-[var(--track-card-shadow)]">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)] flex items-center gap-1.5">
+                    <i className="fa-solid fa-tags text-[var(--accent)]"></i> Taxonomy & Tags
+                  </h3>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsEditingTaxonomy(false)} 
+                    className="btn-primary h-6 px-3 text-[11px] font-semibold"
+                  >
+                    Done
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Projects */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-500 uppercase mb-1 flex items-center gap-1">
+                      <i className="fa-solid fa-folder-open text-[10px]"></i> Projects
+                    </label>
+                    <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
+                      {(entry.projects || []).map(p => (
+                        <span key={p} className="badge text-xs">
+                          {p}
+                          <button type="button" onClick={() => removeEntryProject(entry.id, p)} className="hover:text-[var(--danger)] ml-1">
+                            <i className="fa-solid fa-xmark text-[10px]"></i>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <input 
+                      type="text" 
+                      value={taxProjectInput} 
+                      onChange={e => setTaxProjectInput(e.target.value)} 
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addEntryProject(entry.id, taxProjectInput);
+                          setTaxProjectInput('');
+                        }
+                      }} 
+                      placeholder="Add project (Enter)" 
+                      className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                    />
+                  </div>
+
+                  {/* Categories */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[var(--accent)] uppercase mb-1 flex items-center gap-1">
+                      <i className="fa-solid fa-layer-group text-[10px]"></i> Categories
+                    </label>
+                    <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
+                      {(entry.categories || []).map(c => (
+                        <span key={c} className="badge text-xs">
+                          {c}
+                          <button type="button" onClick={() => removeEntryCategory(entry.id, c)} className="hover:text-[var(--danger)] ml-1">
+                            <i className="fa-solid fa-xmark text-[10px]"></i>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <input 
+                      type="text" 
+                      value={taxCatInput} 
+                      onChange={e => setTaxCatInput(e.target.value)} 
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addEntryCategory(entry.id, taxCatInput);
+                          setTaxCatInput('');
+                        }
+                      }} 
+                      placeholder="Add category (Enter)" 
+                      className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                    />
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase mb-1 flex items-center gap-1">
+                      <i className="fa-solid fa-tag text-[10px]"></i> Tags
+                    </label>
+                    <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
+                      {(entry.tags || []).map(t => (
+                        <span key={t} className="badge text-xs">
+                          #{t}
+                          <button type="button" onClick={() => removeEntryTag(entry.id, t)} className="hover:text-[var(--danger)] ml-1">
+                            <i className="fa-solid fa-xmark text-[10px]"></i>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <input 
+                      type="text" 
+                      value={taxTagInput} 
+                      onChange={e => setTaxTagInput(e.target.value)} 
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addEntryTag(entry.id, taxTagInput);
+                          setTaxTagInput('');
+                        }
+                      }} 
+                      placeholder="Add tag (Enter)" 
+                      className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                    />
+                  </div>
+                </div>
+
+                {/* Source URL in taxonomy editor */}
+                {showSourceUrl && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase mb-1">Source URL</label>
+                    <input 
+                      type="text" 
+                      value={entry.sourceUrl || ''} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEntries(prev => prev.map(ent => ent.id === entry.id ? { ...ent, sourceUrl: val || null, updatedAt: Date.now() } : ent));
+                      }} 
+                      placeholder="https://example.com/article" 
+                      className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
+                    />
+                  </div>
+                )}
+
+                {/* Round refresh icon hanging in margin */}
+                <button
+                  type="button"
+                  onClick={() => handleGenerateTaxonomies(entry.id)}
+                  disabled={isAnalyzing}
+                  className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata') ? 'opacity-100' : ''}`}
+                  title="Auto-generate taxonomy & tags"
+                  aria-label="Auto-generate taxonomy & tags"
+                >
+                  <i className={`fa-solid fa-rotate-right text-xs ${isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata') ? 'animate-spin' : ''}`}></i>
+                </button>
+              </div>
+            ) : (
+              <div className="relative group">
+                <div 
+                  onClick={() => setIsEditingTaxonomy(true)}
+                  className="flex flex-wrap items-center gap-2 text-xs font-mono cursor-pointer rounded p-1 -m-1 hover:bg-[var(--bg-hover)] transition-colors"
+                  title="Click to edit taxonomy & tags"
+                >
+                  {Array.isArray(entry.projects) && entry.projects.length > 0 && entry.projects.map(p => (
+                    <span key={p} className="badge text-[11px]">
+                      <i className="fa-solid fa-folder-open text-[10px] text-amber-500"></i>{p}
+                    </span>
+                  ))}
+                  {Array.isArray(entry.categories) && entry.categories.length > 0 && entry.categories.map(c => (
+                    <span key={c} className="badge text-[11px]">{c}</span>
+                  ))}
+                  {Array.isArray(entry.tags) && entry.tags.length > 0 && entry.tags.map(t => (
+                    <span key={t} className="badge text-[11px]">#{t}</span>
+                  ))}
+                  {(!entry.projects?.length && !entry.categories?.length && !entry.tags?.length) && (
+                    <span className="text-[11px] text-[var(--text-muted)] italic flex items-center gap-1.5 py-0.5">
+                      <i className="fa-solid fa-tags text-[10px]"></i> Click to add projects, categories & tags...
+                    </span>
+                  )}
+                  {showSourceUrl && entry.sourceUrl && (
+                    <a 
+                      href={entry.sourceUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      onClick={e => e.stopPropagation()} 
+                      className="ml-auto btn-secondary text-xs px-2.5 py-1"
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square text-[10px] mr-1"></i> View Source
+                    </a>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleGenerateTaxonomies(entry.id);
+                  }}
+                  disabled={isAnalyzing}
+                  className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!entry.projects?.length && !entry.categories?.length && !entry.tags?.length) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
+                  title="Auto-generate taxonomy & tags"
+                  aria-label="Auto-generate taxonomy & tags"
+                >
+                  <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
+                </button>
+              </div>
+            )}
+          </>
+        );
       };
 
       // Focused Note AI Helpers (Margin Refresh Actions)
@@ -3976,24 +4415,41 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
             const candidate = result.candidates?.[0];
             const parts = candidate?.content?.parts || [];
             const replyText = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
+            const { inputTokens, outputTokens } = extractUsageTokens(result, JSON.stringify(payload), replyText);
 
             setAssistantChats(prev => ({
               ...prev,
               [chatKey]: [
                 ...(prev[chatKey] || updatedMessages),
-                { id: 'msg-' + (Date.now() + 1), role: 'model', text: replyText, timestamp: Date.now(), model: activeAssistantModel }
+                {
+                  id: 'msg-' + (Date.now() + 1),
+                  role: 'model',
+                  text: replyText,
+                  timestamp: Date.now(),
+                  model: activeAssistantModel,
+                  inputTokens,
+                  outputTokens
+                }
               ]
             }));
           } else {
             const candidateNotes = getWholeBrainCandidateNotes();
             const activeAssistantModel = taskModels.assistant || model || DEFAULT_MODEL;
-            const replyText = await runWholeBrainQuery(queryText, currentHistory, candidateNotes, activeAssistantModel);
+            const { replyText, inputTokens, outputTokens } = await runWholeBrainQuery(queryText, currentHistory, candidateNotes, activeAssistantModel);
 
             setAssistantChats(prev => ({
               ...prev,
               [chatKey]: [
                 ...(prev[chatKey] || updatedMessages),
-                { id: 'msg-' + (Date.now() + 1), role: 'model', text: replyText, timestamp: Date.now(), model: activeAssistantModel }
+                {
+                  id: 'msg-' + (Date.now() + 1),
+                  role: 'model',
+                  text: replyText,
+                  timestamp: Date.now(),
+                  model: activeAssistantModel,
+                  inputTokens,
+                  outputTokens
+                }
               ]
             }));
           }
@@ -4122,8 +4578,15 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
           : `Active Pool: All selected entry types (${candidateNotes.length} summarized notes in pool)`;
 
         if (candidateNotes.length === 0) {
-          return `No summarized notes match your currently selected entry types and taxonomy filters (${scopeBanner}).`;
+          return {
+            replyText: `No summarized notes match your currently selected entry types and taxonomy filters (${scopeBanner}).`,
+            inputTokens: 0,
+            outputTokens: 0
+          };
         }
+
+        let totalInputTokens = 0;
+        let totalOutputTokens = 0;
 
         // Send ALL matching summaries through without any artificial count limit (user controls scope via type/taxonomy selections)
         const candidateSummaries = candidateNotes.map(e => {
@@ -4192,6 +4655,10 @@ ${candidateSummaries}`;
 
         try {
           const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
+          const p1Tokens = extractUsageTokens(pass1Res, JSON.stringify(pass1Payload), '');
+          totalInputTokens += p1Tokens.inputTokens;
+          totalOutputTokens += p1Tokens.outputTokens;
+
           const parsedP1 = parseAIJson(pass1Res.candidates?.[0]);
           if (parsedP1 && typeof parsedP1 === 'object' && !Array.isArray(parsedP1)) {
             if (typeof parsedP1.directReply === 'string') directReply = parsedP1.directReply.trim();
@@ -4207,7 +4674,11 @@ ${candidateSummaries}`;
         // Fast path: If Pass 1 answered directly and didn't request any valid note expansions, return immediately (1 API call total!)
         const matchedNotes = candidateNotes.filter(e => requestedSet.has(e.id));
         if (directReply && matchedNotes.length === 0) {
-          return directReply;
+          return {
+            replyText: directReply,
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens
+          };
         }
 
         // Pass 2 (only triggered when specific notes' Takeaways or Full Content were requested on demand):
@@ -4249,7 +4720,16 @@ ${expandedBlocks.join('\n\n')}`
         const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
         const candidate = result.candidates?.[0];
         const parts = candidate?.content?.parts || [];
-        return parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || directReply || "No response received.";
+        const finalReply = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || directReply || "No response received.";
+        const p2Tokens = extractUsageTokens(result, JSON.stringify(pass2Payload), finalReply);
+        totalInputTokens += p2Tokens.inputTokens;
+        totalOutputTokens += p2Tokens.outputTokens;
+
+        return {
+          replyText: finalReply,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens
+        };
       };
 
       // Full-Width Whole Brain AI Chat Functions
@@ -4295,6 +4775,7 @@ ${expandedBlocks.join('\n\n')}`
           shortVersion: [],
           fullContent: '',
           chatMessages: [],
+          tokenUsage: { inputTokens: 0, outputTokens: 0 },
           categories: activeCategories.length > 0 ? [...activeCategories] : ['ai chat'],
           tags: activeTags.length > 0 ? [...activeTags] : ['ai-chat'],
           projects: [...activeProjects],
@@ -4354,14 +4835,16 @@ ${expandedBlocks.join('\n\n')}`
         try {
           const candidateNotes = getWholeBrainCandidateNotes(targetId);
           const activeAssistantModel = taskModels.assistant || model || DEFAULT_MODEL;
-          const replyText = await runWholeBrainQuery(queryText, existingMsgs, candidateNotes, activeAssistantModel);
+          const { replyText, inputTokens, outputTokens } = await runWholeBrainQuery(queryText, existingMsgs, candidateNotes, activeAssistantModel);
 
           const modelMsg = {
             id: 'msg-' + (Date.now() + 1),
             role: 'model',
             text: replyText,
             timestamp: Date.now(),
-            model: activeAssistantModel
+            model: activeAssistantModel,
+            inputTokens,
+            outputTokens
           };
 
           const finalMessages = [...updatedMsgs, modelMsg];
@@ -4374,15 +4857,23 @@ ${expandedBlocks.join('\n\n')}`
             : `Archived Whole Brain AI conversation session containing ${finalMessages.length} message exchanges.`;
           const autoTakeaways = userQueries.slice(0, 5).map(q => `Inquiry: ${q.length > 100 ? q.substring(0, 100) + '...' : q}`);
 
-          setEntries(prev => prev.map(e => e.id === targetId ? {
-            ...e,
-            title: newTitle,
-            chatMessages: finalMessages,
-            fullContent: markdownTranscript,
-            summary: e.summary || autoSummary,
-            shortVersion: (Array.isArray(e.shortVersion) && e.shortVersion.length > 0) ? e.shortVersion : autoTakeaways,
-            updatedAt: Date.now()
-          } : e));
+          setEntries(prev => prev.map(e => {
+            if (e.id !== targetId) return e;
+            const prevTotals = sumChatTokens(existingMsgs, e.tokenUsage);
+            return {
+              ...e,
+              title: newTitle,
+              chatMessages: finalMessages,
+              tokenUsage: {
+                inputTokens: prevTotals.inputTokens + (Number(inputTokens) || 0),
+                outputTokens: prevTotals.outputTokens + (Number(outputTokens) || 0)
+              },
+              fullContent: markdownTranscript,
+              summary: e.summary || autoSummary,
+              shortVersion: (Array.isArray(e.shortVersion) && e.shortVersion.length > 0) ? e.shortVersion : autoTakeaways,
+              updatedAt: Date.now()
+            };
+          }));
         } catch (err) {
           const errMsg = {
             id: 'msg-' + (Date.now() + 1),
@@ -4454,16 +4945,103 @@ ${expandedBlocks.join('\n\n')}`
       }
 
       if (appState === 'landing') {
+        const handleDownloadBridgeScript = (e) => {
+          if (e) e.preventDefault();
+          try {
+            const b64 = "UEsDBBQAAAAAAAAAIQBsSRQE4SoAAOEqAAAaAAAARW5hYmxlLVNhZmFyaS1TeW5jLmNvbW1hbmQjIS9iaW4vYmFzaAojID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KIyBBbGkgQnJhaW4g4oCiIFNhZmFyaSBMb2NhbCBGaWxlIFN5bmMgQnJpZGdlIEluc3RhbGxlciAmIExhdW5jaGVyCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQojIEluc3RhbGxzIGEgbGlnaHR3ZWlnaHQgbG9jYWwgZmlsZSBicmlkZ2Ugb24gMTI3LjAuMC4xOjg3NjUgYW5kIHJlZ2lzdGVycwojIGEgbWFjT1MgTGF1bmNoQWdlbnQgc28gU2FmYXJpIGNhbiBvcGVuLCBhdXRvLXNhdmUsIGFuZCAzLXdheSBtZXJnZSBsb2NhbAojIC5qc29uIGtub3dsZWRnZSBiYXNlIGZpbGVzIGluIHBsYWNlIGp1c3QgbGlrZSBDaHJvbWUuCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKc2V0IC1lCgpCUklER0VfRElSPSIkSE9NRS8uYWxpYnJhaW4iCkJSSURHRV9TQ1JJUFQ9IiRCUklER0VfRElSL2JyaWRnZS5weSIKTEFVTkNIX0FHRU5UU19ESVI9IiRIT01FL0xpYnJhcnkvTGF1bmNoQWdlbnRzIgpQTElTVF9QQVRIPSIkTEFVTkNIX0FHRU5UU19ESVIvY29tLmFsaWJyYWluLmJyaWRnZS5wbGlzdCIKUE9SVD04NzY1Cgpta2RpciAtcCAiJEJSSURHRV9ESVIiCm1rZGlyIC1wICIkTEFVTkNIX0FHRU5UU19ESVIiCgpjYXQgPDwgJ0VPRicgPiAiJEJSSURHRV9TQ1JJUFQiCiMhL3Vzci9iaW4vZW52IHB5dGhvbjMKaW1wb3J0IGh0dHAuc2VydmVyCmltcG9ydCBqc29uCmltcG9ydCBvcwppbXBvcnQgc3VicHJvY2VzcwppbXBvcnQgc3lzCmltcG9ydCB1cmxsaWIucGFyc2UKClBPUlQgPSA4NzY1ClNUQVRFX0RJUiA9IG9zLnBhdGguZXhwYW5kdXNlcigifi8uYWxpYnJhaW4iKQpTVEFURV9GSUxFID0gb3MucGF0aC5qb2luKFNUQVRFX0RJUiwgInN0YXRlLmpzb24iKQoKb3MubWFrZWRpcnMoU1RBVEVfRElSLCBleGlzdF9vaz1UcnVlKQoKZGVmIGxvYWRfc3RhdGUoKToKICAgIHRyeToKICAgICAgICBpZiBvcy5wYXRoLmV4aXN0cyhTVEFURV9GSUxFKToKICAgICAgICAgICAgd2l0aCBvcGVuKFNUQVRFX0ZJTEUsICJyIiwgZW5jb2Rpbmc9InV0Zi04IikgYXMgZjoKICAgICAgICAgICAgICAgIHJldHVybiBqc29uLmxvYWQoZikKICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgcGFzcwogICAgcmV0dXJuIHt9CgpkZWYgc2F2ZV9zdGF0ZShzdGF0ZSk6CiAgICB0cnk6CiAgICAgICAgdG1wID0gU1RBVEVfRklMRSArICIudG1wIgogICAgICAgIHdpdGggb3Blbih0bXAsICJ3IiwgZW5jb2Rpbmc9InV0Zi04IikgYXMgZjoKICAgICAgICAgICAganNvbi5kdW1wKHN0YXRlLCBmLCBpbmRlbnQ9MikKICAgICAgICBvcy5yZXBsYWNlKHRtcCwgU1RBVEVfRklMRSkKICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgcGFzcwoKZGVmIHJ1bl9vc2FzY3JpcHQoc2NyaXB0KToKICAgIHByb2MgPSBzdWJwcm9jZXNzLnJ1bigKICAgICAgICBbIi91c3IvYmluL29zYXNjcmlwdCIsICItZSIsIHNjcmlwdF0sCiAgICAgICAgY2FwdHVyZV9vdXRwdXQ9VHJ1ZSwKICAgICAgICB0ZXh0PVRydWUKICAgICkKICAgIGlmIHByb2MucmV0dXJuY29kZSAhPSAwOgogICAgICAgIHJldHVybiBOb25lCiAgICByZXR1cm4gcHJvYy5zdGRvdXQuc3RyaXAoKQoKY2xhc3MgQnJpZGdlSGFuZGxlcihodHRwLnNlcnZlci5CYXNlSFRUUFJlcXVlc3RIYW5kbGVyKToKICAgIGRlZiBsb2dfbWVzc2FnZShzZWxmLCBmb3JtYXQsICphcmdzKToKICAgICAgICBwYXNzCgogICAgZGVmIHNlbmRfY29yc19oZWFkZXJzKHNlbGYpOgogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkFjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbiIsICIqIikKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJBY2Nlc3MtQ29udHJvbC1BbGxvdy1NZXRob2RzIiwgIkdFVCwgUE9TVCwgUFVULCBPUFRJT05TIikKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJBY2Nlc3MtQ29udHJvbC1BbGxvdy1IZWFkZXJzIiwgIkNvbnRlbnQtVHlwZSIpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQWNjZXNzLUNvbnRyb2wtQWxsb3ctUHJpdmF0ZS1OZXR3b3JrIiwgInRydWUiKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNhY2hlLUNvbnRyb2wiLCAibm8tc3RvcmUsIG5vLWNhY2hlLCBtdXN0LXJldmFsaWRhdGUiKQoKICAgIGRlZiBzZW5kX2pzb24oc2VsZiwgZGF0YSwgc3RhdHVzPTIwMCk6CiAgICAgICAgYm9keSA9IGpzb24uZHVtcHMoZGF0YSkuZW5jb2RlKCJ1dGYtOCIpCiAgICAgICAgc2VsZi5zZW5kX3Jlc3BvbnNlKHN0YXR1cykKICAgICAgICBzZWxmLnNlbmRfY29yc19oZWFkZXJzKCkKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJDb250ZW50LVR5cGUiLCAiYXBwbGljYXRpb24vanNvbjsgY2hhcnNldD11dGYtOCIpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVudC1MZW5ndGgiLCBzdHIobGVuKGJvZHkpKSkKICAgICAgICBzZWxmLmVuZF9oZWFkZXJzKCkKICAgICAgICBzZWxmLndmaWxlLndyaXRlKGJvZHkpCgogICAgZGVmIGRvX09QVElPTlMoc2VsZik6CiAgICAgICAgc2VsZi5zZW5kX3Jlc3BvbnNlKDIwNCkKICAgICAgICBzZWxmLnNlbmRfY29yc19oZWFkZXJzKCkKICAgICAgICBzZWxmLmVuZF9oZWFkZXJzKCkKCiAgICBkZWYgZG9fR0VUKHNlbGYpOgogICAgICAgIHBhcnNlZCA9IHVybGxpYi5wYXJzZS51cmxwYXJzZShzZWxmLnBhdGgpCiAgICAgICAgcGFyYW1zID0gdXJsbGliLnBhcnNlLnBhcnNlX3FzKHBhcnNlZC5xdWVyeSkKICAgICAgICBzdGF0ZSA9IGxvYWRfc3RhdGUoKQoKICAgICAgICBpZiBwYXJzZWQucGF0aCA9PSAiL3N0YXR1cyI6CiAgICAgICAgICAgIHRhcmdldF9wYXRoID0gcGFyYW1zLmdldCgicGF0aCIsIFtOb25lXSlbMF0gb3Igc3RhdGUuZ2V0KCJsYXN0UGF0aCIpCiAgICAgICAgICAgIGV4aXN0cyA9IGJvb2wodGFyZ2V0X3BhdGggYW5kIG9zLnBhdGguaXNmaWxlKHRhcmdldF9wYXRoKSkKICAgICAgICAgICAgbXRpbWUgPSBpbnQob3MucGF0aC5nZXRtdGltZSh0YXJnZXRfcGF0aCkgKiAxMDAwKSBpZiBleGlzdHMgZWxzZSAwCiAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsKICAgICAgICAgICAgICAgICJvayI6IFRydWUsCiAgICAgICAgICAgICAgICAidmVyc2lvbiI6ICIxLjAuMCIsCiAgICAgICAgICAgICAgICAibGFzdFBhdGgiOiB0YXJnZXRfcGF0aCBpZiBleGlzdHMgZWxzZSBOb25lLAogICAgICAgICAgICAgICAgImxhc3ROYW1lIjogb3MucGF0aC5iYXNlbmFtZSh0YXJnZXRfcGF0aCkgaWYgZXhpc3RzIGVsc2UgTm9uZSwKICAgICAgICAgICAgICAgICJleGlzdHMiOiBleGlzdHMsCiAgICAgICAgICAgICAgICAibGFzdE1vZGlmaWVkIjogbXRpbWUKICAgICAgICAgICAgfSkKICAgICAgICAgICAgcmV0dXJuCgogICAgICAgIGlmIHBhcnNlZC5wYXRoID09ICIvZmlsZSI6CiAgICAgICAgICAgIHRhcmdldF9wYXRoID0gcGFyYW1zLmdldCgicGF0aCIsIFtOb25lXSlbMF0gb3Igc3RhdGUuZ2V0KCJsYXN0UGF0aCIpCiAgICAgICAgICAgIGlmIG5vdCB0YXJnZXRfcGF0aCBvciBub3Qgb3MucGF0aC5pc2ZpbGUodGFyZ2V0X3BhdGgpOgogICAgICAgICAgICAgICAgc2VsZi5zZW5kX2pzb24oeyJvayI6IEZhbHNlLCAiZXJyb3IiOiAiRmlsZSBub3QgZm91bmQgb24gZGlzay4ifSwgc3RhdHVzPTQwNCkKICAgICAgICAgICAgICAgIHJldHVybgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICB3aXRoIG9wZW4odGFyZ2V0X3BhdGgsICJyIiwgZW5jb2Rpbmc9InV0Zi04IikgYXMgZjoKICAgICAgICAgICAgICAgICAgICBjb250ZW50ID0gZi5yZWFkKCkKICAgICAgICAgICAgICAgIG10aW1lID0gaW50KG9zLnBhdGguZ2V0bXRpbWUodGFyZ2V0X3BhdGgpICogMTAwMCkKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsKICAgICAgICAgICAgICAgICAgICAib2siOiBUcnVlLAogICAgICAgICAgICAgICAgICAgICJwYXRoIjogdGFyZ2V0X3BhdGgsCiAgICAgICAgICAgICAgICAgICAgIm5hbWUiOiBvcy5wYXRoLmJhc2VuYW1lKHRhcmdldF9wYXRoKSwKICAgICAgICAgICAgICAgICAgICAibGFzdE1vZGlmaWVkIjogbXRpbWUsCiAgICAgICAgICAgICAgICAgICAgImNvbnRlbnQiOiBjb250ZW50CiAgICAgICAgICAgICAgICB9KQogICAgICAgICAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgICAgICAgICBzZWxmLnNlbmRfanNvbih7Im9rIjogRmFsc2UsICJlcnJvciI6IHN0cihlKX0sIHN0YXR1cz01MDApCiAgICAgICAgICAgIHJldHVybgoKICAgICAgICBzZWxmLnNlbmRfanNvbih7Im9rIjogRmFsc2UsICJlcnJvciI6ICJOb3QgZm91bmQifSwgc3RhdHVzPTQwNCkKCiAgICBkZWYgZG9fUE9TVChzZWxmKToKICAgICAgICBwYXJzZWQgPSB1cmxsaWIucGFyc2UudXJscGFyc2Uoc2VsZi5wYXRoKQogICAgICAgIGxlbmd0aCA9IGludChzZWxmLmhlYWRlcnMuZ2V0KCJDb250ZW50LUxlbmd0aCIsIDApKQogICAgICAgIHJhd19ib2R5ID0gc2VsZi5yZmlsZS5yZWFkKGxlbmd0aCkuZGVjb2RlKCJ1dGYtOCIpIGlmIGxlbmd0aCA+IDAgZWxzZSAie30iCiAgICAgICAgdHJ5OgogICAgICAgICAgICBib2R5ID0ganNvbi5sb2FkcyhyYXdfYm9keSkgaWYgcmF3X2JvZHkuc3RyaXAoKSBlbHNlIHt9CiAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbjoKICAgICAgICAgICAgYm9keSA9IHt9CgogICAgICAgIGlmIHBhcnNlZC5wYXRoID09ICIvcGljay1vcGVuIjoKICAgICAgICAgICAgcmVtZW1iZXIgPSBib2R5LmdldCgicmVtZW1iZXIiLCBUcnVlKQogICAgICAgICAgICBhcHBsZXNjcmlwdCA9ICcnJwogICAgICAgICAgICB0ZWxsIGFwcGxpY2F0aW9uICJTeXN0ZW0gRXZlbnRzIgogICAgICAgICAgICAgICAgYWN0aXZhdGUKICAgICAgICAgICAgICAgIHNldCB0aGVGaWxlIHRvIGNob29zZSBmaWxlIHdpdGggcHJvbXB0ICJTZWxlY3QgeW91ciBLbm93bGVkZ2UgQmFzZSAoLmpzb24pIGZpbGU6IiBvZiB0eXBlIHsianNvbiIsICJwdWJsaWMuanNvbiJ9CiAgICAgICAgICAgICAgICByZXR1cm4gUE9TSVggcGF0aCBvZiB0aGVGaWxlCiAgICAgICAgICAgIGVuZCB0ZWxsCiAgICAgICAgICAgICcnJwogICAgICAgICAgICBjaG9zZW4gPSBydW5fb3Nhc2NyaXB0KGFwcGxlc2NyaXB0KQogICAgICAgICAgICBpZiBub3QgY2hvc2VuOgogICAgICAgICAgICAgICAgc2VsZi5zZW5kX2pzb24oeyJvayI6IEZhbHNlLCAiY2FuY2VsbGVkIjogVHJ1ZX0pCiAgICAgICAgICAgICAgICByZXR1cm4KICAgICAgICAgICAgY2hvc2VuID0gb3MucGF0aC5hYnNwYXRoKG9zLnBhdGguZXhwYW5kdXNlcihjaG9zZW4pKQogICAgICAgICAgICBpZiBub3Qgb3MucGF0aC5pc2ZpbGUoY2hvc2VuKToKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsib2siOiBGYWxzZSwgImVycm9yIjogIlNlbGVjdGVkIGZpbGUgZG9lcyBub3QgZXhpc3QuIn0sIHN0YXR1cz00MDApCiAgICAgICAgICAgICAgICByZXR1cm4KICAgICAgICAgICAgaWYgcmVtZW1iZXI6CiAgICAgICAgICAgICAgICBzdGF0ZSA9IGxvYWRfc3RhdGUoKQogICAgICAgICAgICAgICAgc3RhdGVbImxhc3RQYXRoIl0gPSBjaG9zZW4KICAgICAgICAgICAgICAgIHNhdmVfc3RhdGUoc3RhdGUpCiAgICAgICAgICAgIG10aW1lID0gaW50KG9zLnBhdGguZ2V0bXRpbWUoY2hvc2VuKSAqIDEwMDApCiAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsKICAgICAgICAgICAgICAgICJvayI6IFRydWUsCiAgICAgICAgICAgICAgICAicGF0aCI6IGNob3NlbiwKICAgICAgICAgICAgICAgICJuYW1lIjogb3MucGF0aC5iYXNlbmFtZShjaG9zZW4pLAogICAgICAgICAgICAgICAgImxhc3RNb2RpZmllZCI6IG10aW1lCiAgICAgICAgICAgIH0pCiAgICAgICAgICAgIHJldHVybgoKICAgICAgICBpZiBwYXJzZWQucGF0aCA9PSAiL3BpY2stc2F2ZSI6CiAgICAgICAgICAgIHN1Z2dlc3RlZCA9IGJvZHkuZ2V0KCJzdWdnZXN0ZWROYW1lIiwgIm15LWtub3dsZWRnZS1iYXNlLmpzb24iKQogICAgICAgICAgICBzYWZlX3N1Z2dlc3RlZCA9IHN1Z2dlc3RlZC5yZXBsYWNlKCciJywgJycpCiAgICAgICAgICAgIGFwcGxlc2NyaXB0ID0gZicnJwogICAgICAgICAgICB0ZWxsIGFwcGxpY2F0aW9uICJTeXN0ZW0gRXZlbnRzIgogICAgICAgICAgICAgICAgYWN0aXZhdGUKICAgICAgICAgICAgICAgIHNldCB0aGVGaWxlIHRvIGNob29zZSBmaWxlIG5hbWUgd2l0aCBwcm9tcHQgIkNyZWF0ZSBOZXcgS25vd2xlZGdlIEJhc2UgKC5qc29uKSBmaWxlOiIgZGVmYXVsdCBuYW1lICJ7c2FmZV9zdWdnZXN0ZWR9IgogICAgICAgICAgICAgICAgcmV0dXJuIFBPU0lYIHBhdGggb2YgdGhlRmlsZQogICAgICAgICAgICBlbmQgdGVsbAogICAgICAgICAgICAnJycKICAgICAgICAgICAgY2hvc2VuID0gcnVuX29zYXNjcmlwdChhcHBsZXNjcmlwdCkKICAgICAgICAgICAgaWYgbm90IGNob3NlbjoKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsib2siOiBGYWxzZSwgImNhbmNlbGxlZCI6IFRydWV9KQogICAgICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgICAgIGNob3NlbiA9IG9zLnBhdGguYWJzcGF0aChvcy5wYXRoLmV4cGFuZHVzZXIoY2hvc2VuKSkKICAgICAgICAgICAgaWYgbm90IGNob3Nlbi5sb3dlcigpLmVuZHN3aXRoKCIuanNvbiIpOgogICAgICAgICAgICAgICAgY2hvc2VuICs9ICIuanNvbiIKICAgICAgICAgICAgdHJ5OgogICAgICAgICAgICAgICAgb3MubWFrZWRpcnMob3MucGF0aC5kaXJuYW1lKGNob3NlbiksIGV4aXN0X29rPVRydWUpCiAgICAgICAgICAgICAgICBpZiBub3Qgb3MucGF0aC5leGlzdHMoY2hvc2VuKToKICAgICAgICAgICAgICAgICAgICB3aXRoIG9wZW4oY2hvc2VuLCAidyIsIGVuY29kaW5nPSJ1dGYtOCIpIGFzIGY6CiAgICAgICAgICAgICAgICAgICAgICAgIGYud3JpdGUoIiIpCiAgICAgICAgICAgICAgICBzdGF0ZSA9IGxvYWRfc3RhdGUoKQogICAgICAgICAgICAgICAgc3RhdGVbImxhc3RQYXRoIl0gPSBjaG9zZW4KICAgICAgICAgICAgICAgIHNhdmVfc3RhdGUoc3RhdGUpCiAgICAgICAgICAgICAgICBtdGltZSA9IGludChvcy5wYXRoLmdldG10aW1lKGNob3NlbikgKiAxMDAwKQogICAgICAgICAgICAgICAgc2VsZi5zZW5kX2pzb24oewogICAgICAgICAgICAgICAgICAgICJvayI6IFRydWUsCiAgICAgICAgICAgICAgICAgICAgInBhdGgiOiBjaG9zZW4sCiAgICAgICAgICAgICAgICAgICAgIm5hbWUiOiBvcy5wYXRoLmJhc2VuYW1lKGNob3NlbiksCiAgICAgICAgICAgICAgICAgICAgImxhc3RNb2RpZmllZCI6IG10aW1lCiAgICAgICAgICAgICAgICB9KQogICAgICAgICAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgICAgICAgICBzZWxmLnNlbmRfanNvbih7Im9rIjogRmFsc2UsICJlcnJvciI6IHN0cihlKX0sIHN0YXR1cz01MDApCiAgICAgICAgICAgIHJldHVybgoKICAgICAgICBpZiBwYXJzZWQucGF0aCA9PSAiL2ZpbGUiOgogICAgICAgICAgICBzdGF0ZSA9IGxvYWRfc3RhdGUoKQogICAgICAgICAgICB0YXJnZXRfcGF0aCA9IGJvZHkuZ2V0KCJwYXRoIikgb3Igc3RhdGUuZ2V0KCJsYXN0UGF0aCIpCiAgICAgICAgICAgIGNvbnRlbnQgPSBib2R5LmdldCgiY29udGVudCIpCiAgICAgICAgICAgIGlmIG5vdCB0YXJnZXRfcGF0aDoKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsib2siOiBGYWxzZSwgImVycm9yIjogIk1pc3NpbmcgZmlsZSBwYXRoLiJ9LCBzdGF0dXM9NDAwKQogICAgICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgICAgIGlmIGNvbnRlbnQgaXMgTm9uZToKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsib2siOiBGYWxzZSwgImVycm9yIjogIk1pc3NpbmcgY29udGVudC4ifSwgc3RhdHVzPTQwMCkKICAgICAgICAgICAgICAgIHJldHVybgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICB0YXJnZXRfcGF0aCA9IG9zLnBhdGguYWJzcGF0aChvcy5wYXRoLmV4cGFuZHVzZXIodGFyZ2V0X3BhdGgpKQogICAgICAgICAgICAgICAgb3MubWFrZWRpcnMob3MucGF0aC5kaXJuYW1lKHRhcmdldF9wYXRoKSwgZXhpc3Rfb2s9VHJ1ZSkKICAgICAgICAgICAgICAgIHRtcF9wYXRoID0gdGFyZ2V0X3BhdGggKyAiLmFsaWJyYWluLnRtcCIKICAgICAgICAgICAgICAgIHdpdGggb3Blbih0bXBfcGF0aCwgInciLCBlbmNvZGluZz0idXRmLTgiKSBhcyBmOgogICAgICAgICAgICAgICAgICAgIGYud3JpdGUoY29udGVudCkKICAgICAgICAgICAgICAgIG9zLnJlcGxhY2UodG1wX3BhdGgsIHRhcmdldF9wYXRoKQogICAgICAgICAgICAgICAgc3RhdGVbImxhc3RQYXRoIl0gPSB0YXJnZXRfcGF0aAogICAgICAgICAgICAgICAgc2F2ZV9zdGF0ZShzdGF0ZSkKICAgICAgICAgICAgICAgIG10aW1lID0gaW50KG9zLnBhdGguZ2V0bXRpbWUodGFyZ2V0X3BhdGgpICogMTAwMCkKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsKICAgICAgICAgICAgICAgICAgICAib2siOiBUcnVlLAogICAgICAgICAgICAgICAgICAgICJwYXRoIjogdGFyZ2V0X3BhdGgsCiAgICAgICAgICAgICAgICAgICAgIm5hbWUiOiBvcy5wYXRoLmJhc2VuYW1lKHRhcmdldF9wYXRoKSwKICAgICAgICAgICAgICAgICAgICAibGFzdE1vZGlmaWVkIjogbXRpbWUKICAgICAgICAgICAgICAgIH0pCiAgICAgICAgICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKHsib2siOiBGYWxzZSwgImVycm9yIjogc3RyKGUpfSwgc3RhdHVzPTUwMCkKICAgICAgICAgICAgcmV0dXJuCgogICAgICAgIHNlbGYuc2VuZF9qc29uKHsib2siOiBGYWxzZSwgImVycm9yIjogIk5vdCBmb3VuZCJ9LCBzdGF0dXM9NDA0KQoKaWYgX19uYW1lX18gPT0gIl9fbWFpbl9fIjoKICAgIHNlcnZlciA9IGh0dHAuc2VydmVyLlRocmVhZGluZ0hUVFBTZXJ2ZXIoKCIxMjcuMC4wLjEiLCBQT1JUKSwgQnJpZGdlSGFuZGxlcikKICAgIHRyeToKICAgICAgICBzZXJ2ZXIuc2VydmVfZm9yZXZlcigpCiAgICBleGNlcHQgS2V5Ym9hcmRJbnRlcnJ1cHQ6CiAgICAgICAgcGFzcwpFT0YKCmNobW9kICt4ICIkQlJJREdFX1NDUklQVCIKClBZVEhPTl9CSU49Ii91c3IvYmluL3B5dGhvbjMiCmlmIFsgISAteCAiJFBZVEhPTl9CSU4iIF07IHRoZW4KICBQWVRIT05fQklOPSIkKGNvbW1hbmQgLXYgcHl0aG9uMykiCmZpCgpXUkFQUEVSX1BBVEg9IiRCUklER0VfRElSL0FsaSBCcmFpbiBMaW5rIgpjYXQgPDwgRU9GID4gIiRXUkFQUEVSX1BBVEgiCiMhL2Jpbi9zaApleGVjICIkUFlUSE9OX0JJTiIgIiRCUklER0VfU0NSSVBUIiAiXCRAIgpFT0YKY2htb2QgK3ggIiRXUkFQUEVSX1BBVEgiCgpjYXQgPDwgRU9GID4gIiRQTElTVF9QQVRIIgo8P3htbCB2ZXJzaW9uPSIxLjAiIGVuY29kaW5nPSJVVEYtOCI/Pgo8IURPQ1RZUEUgcGxpc3QgUFVCTElDICItLy9BcHBsZS8vRFREIFBMSVNUIDEuMC8vRU4iICJodHRwOi8vd3d3LmFwcGxlLmNvbS9EVERzL1Byb3BlcnR5TGlzdC0xLjAuZHRkIj4KPHBsaXN0IHZlcnNpb249IjEuMCI+CjxkaWN0PgogIDxrZXk+TGFiZWw8L2tleT4KICA8c3RyaW5nPmNvbS5hbGlicmFpbi5icmlkZ2U8L3N0cmluZz4KICA8a2V5PlByb2dyYW1Bcmd1bWVudHM8L2tleT4KICA8YXJyYXk+CiAgICA8c3RyaW5nPiRXUkFQUEVSX1BBVEg8L3N0cmluZz4KICA8L2FycmF5PgogIDxrZXk+UnVuQXRMb2FkPC9rZXk+CiAgPHRydWUvPgogIDxrZXk+S2VlcEFsaXZlPC9rZXk+CiAgPHRydWUvPgogIDxrZXk+U3RhbmRhcmRPdXRQYXRoPC9rZXk+CiAgPHN0cmluZz4kQlJJREdFX0RJUi9icmlkZ2UubG9nPC9zdHJpbmc+CiAgPGtleT5TdGFuZGFyZEVycm9yUGF0aDwva2V5PgogIDxzdHJpbmc+JEJSSURHRV9ESVIvYnJpZGdlLmVycjwvc3RyaW5nPgo8L2RpY3Q+CjwvcGxpc3Q+CkVPRgoKIyBTdG9wIGFueSBleGlzdGluZyBpbnN0YW5jZSBvbiBwb3J0IDg3NjUKbHNvZiAtdGkgdGNwOiRQT1JUIHwgeGFyZ3Mga2lsbCAtOSAyPi9kZXYvbnVsbCB8fCB0cnVlCmxhdW5jaGN0bCBib290b3V0ICJndWkvJChpZCAtdSkiICIkUExJU1RfUEFUSCIgMj4vZGV2L251bGwgfHwgbGF1bmNoY3RsIHVubG9hZCAiJFBMSVNUX1BBVEgiIDI+L2Rldi9udWxsIHx8IHRydWUKCiMgTG9hZCBMYXVuY2hBZ2VudCBzbyBpdCBzdGFydHMgbm93IGFuZCBvbiBldmVyeSBtYWNPUyBsb2dpbgpsYXVuY2hjdGwgYm9vdHN0cmFwICJndWkvJChpZCAtdSkiICIkUExJU1RfUEFUSCIgMj4vZGV2L251bGwgfHwgbGF1bmNoY3RsIGxvYWQgLXcgIiRQTElTVF9QQVRIIiAyPi9kZXYvbnVsbCB8fCB0cnVlCgpzbGVlcCAwLjYKCiMgRmFsbGJhY2sgZGlyZWN0IGJhY2tncm91bmQgbGF1bmNoIGlmIGxhdW5jaGN0bCBoYXNuJ3QgYm91bmQgdGhlIHBvcnQgeWV0CmlmICEgbHNvZiAtaSB0Y3A6JFBPUlQgPi9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgbm9odXAgIiRXUkFQUEVSX1BBVEgiID4vZGV2L251bGwgMj4mMSAmCiAgc2xlZXAgMC41CmZpCgplY2hvICIiCmVjaG8gIj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09IgplY2hvICIgIEFsaSBCcmFpbiBTYWZhcmkgTG9jYWwgRmlsZSBTeW5jIEJyaWRnZSBpcyBBQ1RJVkUhIgplY2hvICIgIExpc3RlbmluZyBvbjogaHR0cDovLzEyNy4wLjAuMTokUE9SVCIKZWNobyAiICBBdXRvLVN0YXJ0OiAgIEVuYWJsZWQgKG1hY09TIExhdW5jaEFnZW50KSIKZWNobyAiPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iCmVjaG8gIiIKZWNobyAiWW91IGNhbiBub3cgY2xvc2UgdGhpcyBUZXJtaW5hbCB3aW5kb3cgYW5kIHJldHVybiB0byBTYWZhcmkuIgpQSwECFAMUAAAAAAAAACEAbEkUBOEqAADhKgAAGgAAAAAAAAAAAAAA7YEAAAAARW5hYmxlLVNhZmFyaS1TeW5jLmNvbW1hbmRQSwUGAAAAAAEAAQBIAAAAGSsAAAAA";
+            const bin = atob(b64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) {
+              bytes[i] = bin.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Enable-Safari-Sync.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          } catch (err) {
+            console.error("Download error:", err);
+          }
+        };
+
+        const handleCopyBridgeCommand = () => {
+          const cmd = 'unzip -qo ~/Downloads/Enable-Safari-Sync.zip -d ~/Downloads 2>/dev/null; xattr -c ~/Downloads/Enable-Safari-Sync.command 2>/dev/null; sh ~/Downloads/Enable-Safari-Sync.command';
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(cmd).then(() => {
+              setCopiedBridgeCmd(true);
+              setTimeout(() => setCopiedBridgeCmd(false), 2500);
+            }).catch(() => {});
+          }
+        };
+
         return (
-          <div className="flex h-screen items-center justify-center bg-[var(--bg-main)] p-[50px]">
-            <div className="bg-[var(--card-bg)] p-8 md:p-12 rounded-lg shadow-xl text-center max-w-md w-full relative">
+          <div className="flex h-screen items-center justify-center bg-[var(--bg-main)] p-[50px] overflow-y-auto">
+            <div className="bg-[var(--card-bg)] p-8 md:p-12 rounded-lg shadow-xl text-center max-w-md w-full relative my-auto">
               <div className="w-16 h-16 bg-[var(--bg-hover)] text-[var(--accent)] rounded-lg flex items-center justify-center mx-auto mb-6">
                 <i className="fa-solid fa-brain text-3xl"></i>
               </div>
               <h1 className="text-xl font-bold text-[var(--text-main)] mb-2 font-mono">Ali Brain</h1>
-              <p className="text-[var(--text-muted)] mb-8 text-xs leading-relaxed font-mono">
+              <p className="text-[var(--text-muted)] mb-6 text-xs leading-relaxed font-mono">
                 Offline-first personal knowledge management. Your data stays 100% private in a local JSON file.
               </p>
+
+              {!hasNativeFileSystemAccess && (
+                <div className="mb-5 text-left">
+                  {safariBridgeStatus === 'online' ? (
+                    <div className="flex items-center justify-center gap-2 px-3 py-2 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[11px] font-mono">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span>Safari Local File Sync Active</span>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-lg border border-[var(--border)] bg-[var(--bg-main)] space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                          <i className="fa-brands fa-safari text-[var(--accent)]"></i>
+                          Safari Auto-Save Setup (One-Time)
+                        </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          {safariBridgeStatus === 'checking' ? 'Checking...' : 'Bridge Offline'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed font-mono">
+                        Safari disables direct disk writes by default. Run the helper script once so Safari can open and auto-save your local <code className="text-[var(--text-main)]">.json</code> file in place just like Chrome:
+                      </p>
+                      <div className="flex flex-col gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={handleDownloadBridgeScript}
+                          className="btn-primary w-full py-2 text-xs font-mono flex items-center justify-center gap-2"
+                        >
+                          <i className="fa-solid fa-download"></i>
+                          1. Download Enable-Safari-Sync.zip
+                        </button>
+                        <a
+                          href="x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension"
+                          className="btn-secondary w-full py-1.5 text-[11px] font-mono flex items-center justify-center gap-1.5 no-underline"
+                          title="If macOS says 'Not Opened', click Done on the popup, then click here and press 'Open Anyway'"
+                        >
+                          <i className="fa-solid fa-shield-halved text-[var(--accent)]"></i>
+                          2. If "Not Opened": Open Privacy Settings &rarr; "Open Anyway"
+                        </a>
+                        <button
+                          type="button"
+                          onClick={handleCopyBridgeCommand}
+                          className="btn-secondary w-full py-1.5 text-[11px] font-mono flex items-center justify-center gap-1.5"
+                          title="Copy command to run the downloaded script in Terminal without Gatekeeper prompts"
+                        >
+                          <i className={`fa-solid ${copiedBridgeCmd ? 'fa-check text-emerald-400' : 'fa-terminal text-[var(--accent)]'}`}></i>
+                          {copiedBridgeCmd ? 'Copied! Paste into Terminal & press Enter' : 'Or Copy 1-Line Terminal Command (No Popup)'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-3">
                 {savedHandle && (
                   <button onClick={handleResume} className="btn-primary w-full py-2.5">
@@ -5380,9 +5958,9 @@ ${expandedBlocks.join('\n\n')}`
 
               {/* List Header */}
               <div className="px-[50px] pt-[50px] pb-4 flex flex-col gap-3">
-                <div className="flex gap-2 items-center h-8">
-                  <div className="relative flex-1 h-8">
-                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-[var(--text-muted)] text-xs pointer-events-none"></i>
+                <div className="flex gap-2 items-center h-7">
+                  <div className="relative flex-1 h-7">
+                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2 text-[var(--text-muted)] text-xs pointer-events-none"></i>
                     <input 
                       ref={searchInputRef}
                       type="text" 
@@ -5395,7 +5973,7 @@ ${expandedBlocks.join('\n\n')}`
                           setSearchQuery('');
                         }
                       }}
-                      className={`w-full h-8 pl-8 ${searchQuery ? 'pr-8' : 'pr-3'} bg-[var(--bg-main)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded text-xs transition-colors box-border`} 
+                      className={`w-full h-7 pl-8 ${searchQuery ? 'pr-8' : 'pr-3'} bg-[var(--bg-main)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded text-xs transition-colors box-border`} 
                     />
                     {searchQuery && (
                       <button
@@ -5404,7 +5982,7 @@ ${expandedBlocks.join('\n\n')}`
                           setSearchQuery('');
                           if (searchInputRef.current) searchInputRef.current.focus();
                         }}
-                        className="absolute right-2.5 top-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors p-0.5 rounded cursor-pointer flex items-center justify-center"
+                        className="absolute right-2.5 top-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors p-0.5 rounded cursor-pointer flex items-center justify-center"
                         title="Clear search (Esc)"
                         aria-label="Clear search"
                       >
@@ -5414,15 +5992,16 @@ ${expandedBlocks.join('\n\n')}`
                   </div>
                   <button 
                     onClick={handleNewNote} 
-                    className="btn-primary h-8 px-3 text-xs" 
+                    className="h-7 px-3 text-xs rounded bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
                     title="Create new blank note"
                   >
-                    <i className="fa-solid fa-plus text-xs"></i> Note
+                    <i className="fa-solid fa-plus text-[10px]"></i>
+                    <span>Note</span>
                   </button>
                   <button 
                     type="button"
                     onClick={() => startWholeBrainChat()} 
-                    className="h-8 px-3 text-xs rounded bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors flex items-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0 shadow-xs" 
+                    className="h-7 px-3 text-xs rounded bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors flex items-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0 shadow-xs" 
                     title={`Start new ${activeBrainChatTitle}`}
                   >
                     <i className="fa-solid fa-plus text-[10px]"></i>
@@ -5593,7 +6172,7 @@ ${expandedBlocks.join('\n\n')}`
                     </div>
                   );
                 })()}
-                {promptState.isGenerating && (
+                {promptState.isGenerating && !promptState.draft && (
                   <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[#10e567]/60 text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
                     <i className="fa-solid fa-spinner fa-spin text-[#10e567]"></i> {activeListScopeSummary ? `Finding themes in ${activeListScopeSummary}...` : 'Finding themes and loose ends across visible notes...'}
                   </div>
@@ -5621,14 +6200,27 @@ ${expandedBlocks.join('\n\n')}`
                       </div>
                       <div className="flex items-center gap-2">
                         <button 
+                          type="button"
+                          onClick={generatePromptNote}
+                          disabled={promptState.isGenerating}
+                          className="text-xs text-[var(--text-muted)] hover:text-[#10e567] p-1 cursor-pointer transition-colors disabled:opacity-50"
+                          title="Generate a new prompt"
+                          aria-label="Generate a new prompt"
+                        >
+                          <i className={`fa-solid fa-rotate-right ${promptState.isGenerating ? 'fa-spin text-[#10e567]' : ''}`}></i>
+                        </button>
+                        <button 
+                          type="button"
                           onClick={handleWriteFromPrompt} 
-                          className="text-xs bg-[#10e567] text-neutral-900 px-3 py-1 rounded font-bold hover:bg-[#00c853] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer"
+                          disabled={promptState.isGenerating}
+                          className="text-xs bg-[#10e567] text-neutral-900 px-3 py-1 rounded font-bold hover:bg-[#00c853] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer disabled:opacity-50"
                           title="Write response to this prompt"
                         >
                           <i className="fa-solid fa-pen-nib text-[10px]"></i> Write
                         </button>
                         <button 
-                          onClick={() => setPromptState(prev => ({ ...prev, draft: null }))} 
+                          type="button"
+                          onClick={() => setPromptState({ isGenerating: false, draft: null })} 
                           className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] p-1 cursor-pointer transition-colors"
                           title="Dismiss prompt"
                         >
@@ -5636,14 +6228,16 @@ ${expandedBlocks.join('\n\n')}`
                         </button>
                       </div>
                     </div>
-                    <div className="font-bold text-[var(--text-main)] mb-2 font-mono text-base">{promptState.draft.title}</div>
-                    <div 
-                      className="text-xs text-[var(--text-main)] font-mono leading-relaxed pb-1 whitespace-pre-wrap select-text"
-                      dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(promptState.draft.fullContent), entries) }}
-                      onClick={handleContentClick}
-                      onMouseOver={handleContentMouseOver}
-                      onMouseOut={handleContentMouseOut}
-                    />
+                    <div className={`transition-opacity duration-150 ${promptState.isGenerating ? 'opacity-50' : ''}`}>
+                      <div className="font-bold text-[var(--text-main)] mb-2 font-mono text-base">{promptState.draft.title}</div>
+                      <div 
+                        className="text-xs text-[var(--text-main)] font-mono leading-relaxed pb-1 whitespace-pre-wrap select-text"
+                        dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(promptState.draft.fullContent), entries) }}
+                        onClick={handleContentClick}
+                        onMouseOver={handleContentMouseOver}
+                        onMouseOut={handleContentMouseOut}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -5822,6 +6416,7 @@ ${expandedBlocks.join('\n\n')}`
 
                   const createdVal = activeSingleEntry.createdAt || activeSingleEntry.updatedAt || Date.now();
                   const createdDateStr = new Date(createdVal).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                  const chatTokenTotals = sumChatTokens(currentChatMessages, activeSingleEntry.tokenUsage);
 
                   return (
                     /* Whole Brain AI Chat View (Replaces document view fully) */
@@ -5897,7 +6492,17 @@ ${expandedBlocks.join('\n\n')}`
                           <span className="badge text-[10px]">
                             {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
                           </span>
+                          <span>•</span>
+                          <span className="badge text-[10px] bg-[#a855f7]/10 text-[var(--text-main)] border-[#a855f7]/30 flex items-center gap-1.5" title="Cumulative Input & Output Tokens in this AI Chat">
+                            <span className="text-[#a855f7] font-semibold">Tokens</span>
+                            <span>In: {chatTokenTotals.inputTokens.toLocaleString()}</span>
+                            <span className="opacity-40">|</span>
+                            <span>Out: {chatTokenTotals.outputTokens.toLocaleString()}</span>
+                          </span>
                         </div>
+
+                        {/* Taxonomies Row for AI Chat */}
+                        {renderTaxonomySection(activeSingleEntry, { showSourceUrl: false })}
 
                         {/* Expandable Session Summary & Key Takeaways Panel */}
                         {showChatSummary && (
@@ -6166,193 +6771,7 @@ ${expandedBlocks.join('\n\n')}`
                           </div>
 
                           {/* In-Place Taxonomy Section */}
-                          {isEditingTaxonomy ? (
-                            <div className="relative group p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-md space-y-4 font-mono my-2 shadow-[var(--track-card-shadow)]">
-                              <div className="flex justify-between items-center">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)] flex items-center gap-1.5">
-                                  <i className="fa-solid fa-tags text-[var(--accent)]"></i> Taxonomy & Tags
-                                </h3>
-                                <button 
-                                  type="button" 
-                                  onClick={() => setIsEditingTaxonomy(false)} 
-                                  className="btn-primary h-6 px-3 text-[11px] font-semibold"
-                                >
-                                  Done
-                                </button>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {/* Projects */}
-                                <div>
-                                  <label className="block text-[11px] font-semibold text-amber-500 uppercase mb-1 flex items-center gap-1">
-                                    <i className="fa-solid fa-folder-open text-[10px]"></i> Projects
-                                  </label>
-                                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
-                                    {(activeSingleEntry.projects || []).map(p => (
-                                      <span key={p} className="badge text-xs">
-                                        {p}
-                                        <button type="button" onClick={() => removeEntryProject(activeSingleEntry.id, p)} className="hover:text-[var(--danger)] ml-1">
-                                          <i className="fa-solid fa-xmark text-[10px]"></i>
-                                        </button>
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <input 
-                                    type="text" 
-                                    value={taxProjectInput} 
-                                    onChange={e => setTaxProjectInput(e.target.value)} 
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        addEntryProject(activeSingleEntry.id, taxProjectInput);
-                                        setTaxProjectInput('');
-                                      }
-                                    }} 
-                                    placeholder="Add project (Enter)" 
-                                    className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
-                                  />
-                                </div>
-
-                                {/* Categories */}
-                                <div>
-                                  <label className="block text-[11px] font-semibold text-[var(--accent)] uppercase mb-1 flex items-center gap-1">
-                                    <i className="fa-solid fa-layer-group text-[10px]"></i> Categories
-                                  </label>
-                                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
-                                    {(activeSingleEntry.categories || []).map(c => (
-                                      <span key={c} className="badge text-xs">
-                                        {c}
-                                        <button type="button" onClick={() => removeEntryCategory(activeSingleEntry.id, c)} className="hover:text-[var(--danger)] ml-1">
-                                          <i className="fa-solid fa-xmark text-[10px]"></i>
-                                        </button>
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <input 
-                                    type="text" 
-                                    value={taxCatInput} 
-                                    onChange={e => setTaxCatInput(e.target.value)} 
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        addEntryCategory(activeSingleEntry.id, taxCatInput);
-                                        setTaxCatInput('');
-                                      }
-                                    }} 
-                                    placeholder="Add category (Enter)" 
-                                    className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
-                                  />
-                                </div>
-
-                                {/* Tags */}
-                                <div>
-                                  <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase mb-1 flex items-center gap-1">
-                                    <i className="fa-solid fa-tag text-[10px]"></i> Tags
-                                  </label>
-                                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[26px]">
-                                    {(activeSingleEntry.tags || []).map(t => (
-                                      <span key={t} className="badge text-xs">
-                                        #{t}
-                                        <button type="button" onClick={() => removeEntryTag(activeSingleEntry.id, t)} className="hover:text-[var(--danger)] ml-1">
-                                          <i className="fa-solid fa-xmark text-[10px]"></i>
-                                        </button>
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <input 
-                                    type="text" 
-                                    value={taxTagInput} 
-                                    onChange={e => setTaxTagInput(e.target.value)} 
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        addEntryTag(activeSingleEntry.id, taxTagInput);
-                                        setTaxTagInput('');
-                                      }
-                                    }} 
-                                    placeholder="Add tag (Enter)" 
-                                    className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Source URL in taxonomy editor */}
-                              <div>
-                                <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase mb-1">Source URL</label>
-                                <input 
-                                  type="text" 
-                                  value={activeSingleEntry.sourceUrl || ''} 
-                                  onChange={e => {
-                                    const val = e.target.value;
-                                    setEntries(prev => prev.map(ent => ent.id === activeSingleEntry.id ? { ...ent, sourceUrl: val || null, updatedAt: Date.now() } : ent));
-                                  }} 
-                                  placeholder="https://example.com/article" 
-                                  className="w-full px-2.5 py-1 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono border border-[var(--border)] focus:border-[var(--accent)] outline-none" 
-                                />
-                              </div>
-
-                              {/* Round refresh icon hanging in margin */}
-                              <button
-                                type="button"
-                                onClick={() => handleGenerateTaxonomies(activeSingleEntry.id)}
-                                disabled={isAnalyzing}
-                                className={`absolute left-full ml-3 top-4 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
-                                title="Auto-generate taxonomy & tags"
-                                aria-label="Auto-generate taxonomy & tags"
-                              >
-                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="relative group">
-                              <div 
-                                onClick={() => setIsEditingTaxonomy(true)}
-                                className="flex flex-wrap items-center gap-2 text-xs font-mono cursor-pointer rounded p-1 -m-1 hover:bg-[var(--bg-hover)] transition-colors"
-                                title="Click to edit taxonomy & tags"
-                              >
-                                {Array.isArray(activeSingleEntry.projects) && activeSingleEntry.projects.length > 0 && activeSingleEntry.projects.map(p => (
-                                  <span key={p} className="badge text-[11px]">
-                                    <i className="fa-solid fa-folder-open text-[10px] text-amber-500"></i>{p}
-                                  </span>
-                                ))}
-                                {Array.isArray(activeSingleEntry.categories) && activeSingleEntry.categories.length > 0 && activeSingleEntry.categories.map(c => (
-                                  <span key={c} className="badge text-[11px]">{c}</span>
-                                ))}
-                                {Array.isArray(activeSingleEntry.tags) && activeSingleEntry.tags.length > 0 && activeSingleEntry.tags.map(t => (
-                                  <span key={t} className="badge text-[11px]">#{t}</span>
-                                ))}
-                                {(!activeSingleEntry.projects?.length && !activeSingleEntry.categories?.length && !activeSingleEntry.tags?.length) && (
-                                  <span className="text-[11px] text-[var(--text-muted)] italic flex items-center gap-1.5 py-0.5">
-                                    <i className="fa-solid fa-tags text-[10px]"></i> Click to add projects, categories & tags...
-                                  </span>
-                                )}
-                                {activeSingleEntry.sourceUrl && (
-                                  <a 
-                                    href={activeSingleEntry.sourceUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    onClick={e => e.stopPropagation()} 
-                                    className="ml-auto btn-secondary text-xs px-2.5 py-1"
-                                  >
-                                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px] mr-1"></i> View Source
-                                  </a>
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleGenerateTaxonomies(activeSingleEntry.id);
-                                }}
-                                disabled={isAnalyzing}
-                                className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.projects?.length && !activeSingleEntry.categories?.length && !activeSingleEntry.tags?.length) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
-                                title="Auto-generate taxonomy & tags"
-                                aria-label="Auto-generate taxonomy & tags"
-                              >
-                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'taxonomies' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
-                              </button>
-                            </div>
-                          )}
+                          {renderTaxonomySection(activeSingleEntry, { showSourceUrl: true })}
                         </>
                       );
                     })()}
@@ -6746,14 +7165,24 @@ ${expandedBlocks.join('\n\n')}`
               
               {/* Assistant Header */}
               <div className="px-[50px] pt-[50px] pb-4 shrink-0 space-y-3">
-                <div className="flex justify-between items-center h-8">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xs font-bold text-[var(--text-main)] font-mono">AI Assistant</h3>
-                    <span className="badge text-[10px] font-mono" title={`Model: ${taskModels.assistant || DEFAULT_MODEL}`}>
-                      {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
-                    </span>
-                  </div>
-                </div>
+                {(() => {
+                  const drawerTokens = sumChatTokens(assistantMessages);
+                  return (
+                    <div className="flex flex-wrap justify-between items-center gap-2 min-h-8">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xs font-bold text-[var(--text-main)] font-mono">AI Assistant</h3>
+                        <span className="badge text-[10px] font-mono" title={`Model: ${taskModels.assistant || DEFAULT_MODEL}`}>
+                          {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
+                        </span>
+                      </div>
+                      <span className="badge text-[10px] font-mono flex items-center gap-1 text-[var(--text-muted)]" title="Cumulative Input & Output Tokens in this chat">
+                        <span>In: {drawerTokens.inputTokens.toLocaleString()}</span>
+                        <span className="opacity-40">|</span>
+                        <span>Out: {drawerTokens.outputTokens.toLocaleString()}</span>
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Scope Segmented Control */}
                 <div className="grid grid-cols-2 p-0.5 bg-[var(--bg-main)] rounded text-[11px] font-medium font-mono">

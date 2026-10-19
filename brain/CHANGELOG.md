@@ -1,13 +1,17 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.65** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.69** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.65 (2026-10-17) — *Latest*
+## v2.8.69 (2026-10-19) — *Latest*
 
-- **Single-Pass Theme Prompt Generator & Pool Settings:** Generates concise reflection prompts (50 words max, `temperature: 1.0`) in a single API call using only candidate note summaries and key takeaways, isolating one concept from 1 or 2 notes and ending with an open-ended "Why" or "How" question. Reinstated the inline Prompt Pool Settings panel with **Date Range** (default 2 months, 1–24 months or All Time) and **Pool Size** (default 10 notes, 5–50 or All) sliders.
+- **In-Place Taxonomy Editing for AI Chats:** Added an interactive taxonomy row directly below the metadata subtitle in Whole Brain AI Chats. Clicking any badge or placeholder opens the full in-place taxonomy editor, allowing users to assign or remove projects, categories, and tags directly on AI chat sessions (with full support for auto-tag generation).
+- **Unified Compact Button Height (`h-7`):** Standardized the entry list action bar (`+ Note`, `+ Chat`, and search input) to match the compact `h-7` height (28px) of the AI Chat view action buttons (`Summary`, `+ New Chat`, delete).
+- **AI Chat Input & Output Token Tracking:** Added live `Tokens In: X | Out: Y` badges at the top of both the full-width **AI Chat** header and the **Current Entry AI Assistant** drawer header. Extracts exact prompt and completion token counts from Gemini API `usageMetadata` (summing across both passes when a chat escalates from summaries to takeaways/content) and persists cumulative session totals on each chat.
+- **Safari Local File Sync Bridge (`Enable-Safari-Sync.command`):** When the native File System Access API is unavailable (Safari), Brain automatically falls back to a lightweight local macOS file bridge on `127.0.0.1:8765`. Includes a one-time downloadable `Enable-Safari-Sync.command` setup script on the Landing screen that installs a Python 3 LaunchAgent (`~/.alibrain/bridge.py`) for native macOS Finder file pickers, in-place auto-saving, startup auto-resume, and 3-way external change merging.
+- **Single-Pass Theme Prompt Generator, In-Place Refresh & Pool Settings:** Generates concise reflection prompts (50 words max, `temperature: 1.0`) in a single API call using only candidate note summaries and key takeaways, isolating one concept from 1 or 2 notes and ending with an open-ended "Why" or "How" question. Added a refresh icon next to the **Write** button on generated prompt cards to roll a new prompt in place without dismissing, and reinstated the inline Prompt Pool Settings panel with **Date Range** (default 2 months, 1–24 months or All Time) and **Pool Size** (default 10 notes, 5–50 or All) sliders.
 - **Scoped Whole Brain AI Chat (Uncapped Summaries & On-Demand Detail):** Dynamically names AI Chat sessions after active entry type and taxonomy filters, sends all matching Executive Summaries without artificial count caps, and answers in a single pass (`directReply`) when summaries suffice—escalating to Key Takeaways or Full Content in a second pass only when needed. Auto-selects the purple AI Chat entry type on open while excluding prior chats from new context.
 - **Context-Aware Current Entry AI Drawer:** Switching notes automatically closes the single-entry AI Assistant drawer if the new note has no prior conversation, and automatically re-opens it for notes with an existing chat (`assistantChats[entry.id]`).
 - **Unified First-Save All-Fields Metadata Generation:** Saving a note's content edit for the first time now synthesizes Title, Executive Summary, Key Takeaways, and Taxonomies (projects, categories, tags) together in a single pass via the centralized `METADATA_FIELD_SPECS` registry (4,096-token budget).
