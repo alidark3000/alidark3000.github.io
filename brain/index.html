@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ali Brain</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="theme-color" content="#141414">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Ali Brain">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <!-- Consolidated Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
@@ -106,7 +114,7 @@
 
   <script type="text/babel">
 
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useLayoutEffect, useRef } = React;
 
     // =========================================================================
     // VERSIONING & DOCUMENTATION PROTOCOL:
@@ -120,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.69";
+    const APP_VERSION = "v2.8.94";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -132,22 +140,29 @@
       return Boolean(entry.promptQuestion || (Array.isArray(entry.tags) && entry.tags.includes('prompt')) || (Array.isArray(entry.categories) && entry.categories.includes('prompt')));
     };
 
+    const isSeedEntry = (entry) => {
+      if (!entry) return false;
+      return entry.type === 'seed' || (Array.isArray(entry.tags) && entry.tags.includes('seed')) || (Array.isArray(entry.tags) && entry.tags.includes('seeds')) || (Array.isArray(entry.categories) && entry.categories.includes('seed')) || (Array.isArray(entry.categories) && entry.categories.includes('seeds'));
+    };
+
     const isAiChatEntry = (entry) => {
       if (!entry) return false;
       return entry.type === 'aiChat' || (Array.isArray(entry.chatMessages) && entry.chatMessages.length > 0) || (Array.isArray(entry.tags) && entry.tags.includes('ai-chat')) || (Array.isArray(entry.categories) && entry.categories.includes('ai-chat'));
     };
 
     const ENTRY_TYPES = [
-      { id: 'note', label: 'Notes', color: '#f59e0b', icon: 'fa-file-lines' },
-      { id: 'prompt', label: 'Prompts', color: '#10e567', icon: 'fa-brain' },
-      { id: 'media', label: 'Media', color: '#ff5252', icon: 'fa-play' },
-      { id: 'web', label: 'Web', color: '#38bdf8', icon: 'fa-link' },
-      { id: 'aiChat', label: 'AI Chat', color: '#a855f7', icon: 'fa-comment-dots' }
+      { id: 'note', label: 'Notes', color: '#f59e0b', icon: 'fa-file-lines', description: 'Manual user thoughts, outlines, and notes' },
+      { id: 'media', label: 'Media', color: '#ff5252', icon: 'fa-play', description: 'YouTube & Vimeo videos or audio with sync notes' },
+      { id: 'web', label: 'Web', color: '#38bdf8', icon: 'fa-link', description: 'Scraped web articles, pages, and processed PDFs' },
+      { id: 'prompt', label: 'Prompts', color: '#059669', icon: 'fa-brain', description: 'AI-generated reflection questions & syntheses' },
+      { id: 'aiChat', label: 'AI Chat', color: '#a855f7', icon: 'fa-comment-dots', description: 'Archived AI conversations & knowledge syntheses' },
+      { id: 'seed', label: 'Seeds', color: '#3b82f6', icon: 'fa-seedling', description: 'AI prompt shortcuts & instructions' }
     ];
 
     // Keywords and aliases corresponding to entry types that should not be used as categories or tags
     const ENTRY_TYPE_TAXONOMY_KEYWORDS = new Set([
       'note', 'notes',
+      'seed', 'seeds',
       'prompt', 'prompts',
       'media', 'video', 'videos', 'audio', 'podcast', 'podcasts',
       'web', 'website', 'webpage', 'article', 'articles',
@@ -164,11 +179,26 @@
     const getEntryType = (entry) => {
       if (!entry) return 'note';
       if (isAiChatEntry(entry)) return 'aiChat';
+      if (isSeedEntry(entry)) return 'seed';
       if (isPromptEntry(entry)) return 'prompt';
       if (isMediaSource(entry.sourceUrl)) return 'media';
       const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
       if (isPdf || entry.sourceUrl) return 'web';
       return 'note';
+    };
+
+    const ENTRY_TYPE_ACCENTS = {
+      note: ['#f59e0b', '#d97706'],
+      media: ['#ff5252', '#e03e3e'],
+      web: ['#38bdf8', '#0ea5e9'],
+      prompt: ['#059669', '#047857'],
+      aiChat: ['#a855f7', '#9333ea'],
+      seed: ['#3b82f6', '#2563eb']
+    };
+    const getEntryAccentStyle = (entry) => {
+      if (!entry) return undefined;
+      const [accent, hover] = ENTRY_TYPE_ACCENTS[getEntryType(entry)] || ENTRY_TYPE_ACCENTS.note;
+      return { '--accent': accent, '--accent-hover': hover };
     };
 
     const getEmbedUrl = (url) => {
@@ -731,6 +761,11 @@ RULES (50 WORDS MAX & CONCEPT ISOLATION):
    - Ask questions that spark genuine reflection or small experiments, strongly preferring "Why" and "How" over "What" or "Which".
    - NEVER ask closed Yes/No questions (strictly ban starting questions with auxiliary verbs: "Can...", "Could...", "Is...", "Are...", "Do...", "Does...", "Did...", "Will...", "Would...", "Should...", "Have...", "Has...").
    - NEVER trap the user in a narrow "Either/Or" choice (e.g. "...or does intentional living demand an overarching horizon?").
+ 
+KNOWLEDGE PROVENANCE & USER PERSPECTIVE (MANDATORY):
+- User-Generated Content: Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
+- External / Contextual Knowledge: Web, media, and text entries are assumed to be external and contextual third-hand knowledge (reference materials, articles, videos, or external docs collected for context—not the user's personal thoughts or creations).
+- Ignored Content: Seeds and AI are ignored (never treat seeds or AI chats as user thoughts or knowledge).
 
 GROUNDING & NEUTRALITY (MANDATORY):
 - Trust notes at face value: Do not invent psychological motives, projections, or hidden insecurities, and do not reframe boundaries as personal flaws.
@@ -805,6 +840,22 @@ Respond with valid JSON ONLY matching this structure:
         isGenerating: false,
         draft: null
       });
+      const promptInnerRef = useRef(null);
+      const [promptHeight, setPromptHeight] = useState(0);
+
+      useEffect(() => {
+        const el = promptInnerRef.current;
+        if (!el) return;
+        const updateHeight = () => {
+          setPromptHeight(el.offsetHeight);
+        };
+        updateHeight();
+        if (typeof ResizeObserver !== 'undefined') {
+          const observer = new ResizeObserver(updateHeight);
+          observer.observe(el);
+          return () => observer.disconnect();
+        }
+      }, [promptState.isGenerating, promptState.draft, activeListScopeSummary]);
 
       const setEntries = (updater) => {
         setHistoryState(prev => {
@@ -881,12 +932,70 @@ Respond with valid JSON ONLY matching this structure:
       const [manualModelMode, setManualModelMode] = useState(false);
       const [tempTheme, setTempTheme] = useState('default');
 
+      // PWA install + offline support
+      const [installPromptEvent, setInstallPromptEvent] = useState(null);
+      const [isStandalone, setIsStandalone] = useState(() => typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true));
+      const [swStatus, setSwStatus] = useState(() => (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) ? 'checking' : 'unsupported');
+      useEffect(() => {
+        const onBeforeInstall = (e) => { e.preventDefault(); setInstallPromptEvent(e); };
+        const onInstalled = () => { setInstallPromptEvent(null); setIsStandalone(true); };
+        window.addEventListener('beforeinstallprompt', onBeforeInstall);
+        window.addEventListener('appinstalled', onInstalled);
+        if ('serviceWorker' in navigator && /^https?:$/.test(window.location.protocol)) {
+          navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).then(() => setSwStatus('ready')).catch(() => setSwStatus('error'));
+        } else if ('serviceWorker' in navigator) {
+          setSwStatus('unavailable');
+        }
+        return () => {
+          window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+          window.removeEventListener('appinstalled', onInstalled);
+        };
+      }, []);
+      const handleInstallApp = async () => {
+        if (!installPromptEvent) return;
+        installPromptEvent.prompt();
+        try { await installPromptEvent.userChoice; } catch (e) {}
+        setInstallPromptEvent(null);
+      };
+      const [tempPromptConfig, setTempPromptConfig] = useState(DEFAULT_PROMPT_CONFIG);
+
       const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
       const [isListSidebarOpen, setIsListSidebarOpen] = useState(true);
+      const [listSortMode, setListSortMode] = useState(() => {
+        try { return localStorage.getItem('listSortMode') === 'modified' ? 'modified' : 'created'; } catch (e) { return 'created'; }
+      });
+      useEffect(() => { try { localStorage.setItem('listSortMode', listSortMode); } catch (e) {} }, [listSortMode]);
+      // FLIP animation: remember card positions before a re-sort, then glide each card to its new spot
+      const listFlipRef = useRef(null);
+      const handleSetSortMode = (mode) => {
+        if (mode === listSortMode) return;
+        const positions = new Map();
+        document.querySelectorAll('[data-entry-id]').forEach(el => {
+          if (el.offsetHeight > 0) positions.set(el.dataset.entryId, el.getBoundingClientRect().top);
+        });
+        listFlipRef.current = positions;
+        setListSortMode(mode);
+      };
+      useLayoutEffect(() => {
+        const before = listFlipRef.current;
+        listFlipRef.current = null;
+        if (!before) return;
+        document.querySelectorAll('[data-entry-id]').forEach(el => {
+          const oldTop = before.get(el.dataset.entryId);
+          if (oldTop === undefined || el.offsetHeight === 0) return;
+          const delta = oldTop - el.getBoundingClientRect().top;
+          if (Math.abs(delta) < 1) return;
+          el.animate(
+            [{ transform: `translateY(${delta}px)` }, { transform: 'translateY(0)' }],
+            { duration: 300, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' }
+          );
+        });
+      }, [listSortMode]);
+      const [isAssistantOpen, setIsAssistantOpen] = useState(false);
       const [activeProjects, setActiveProjects] = useState([]);
       const [activeCategories, setActiveCategories] = useState([]);
       const [activeTags, setActiveTags] = useState([]);
-      const [activeTypeFilters, setActiveTypeFilters] = useState(['note', 'prompt', 'media', 'web']);
+      const [activeTypeFilters, setActiveTypeFilters] = useState(['note', 'media', 'web', 'prompt']);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
       const [navHistory, setNavHistory] = useState([]);
@@ -902,6 +1011,10 @@ Respond with valid JSON ONLY matching this structure:
       const isContentFocusedRef = useRef(false);
       const entriesRef = useRef(entries);
       const autoGeneratedMetaIdsRef = useRef(new Set());
+      const isLeftSidebarOpenRef = useRef(isLeftSidebarOpen);
+      useEffect(() => { isLeftSidebarOpenRef.current = isLeftSidebarOpen; }, [isLeftSidebarOpen]);
+      const wasTaxonomyOpenBeforeAssistantRef = useRef(false);
+      const isAssistantOpenRef = useRef(isAssistantOpen);
 
       const triggerAutoMetadataOnFirstBlur = async (id) => {
         if (!id || autoGeneratedMetaIdsRef.current.has(id)) return;
@@ -915,11 +1028,12 @@ Respond with valid JSON ONLY matching this structure:
         }
         
         const currentEntry = (entriesRef.current || []).find(e => e.id === id);
+        if (isSeedEntry(currentEntry)) return;
         const finalContent = (liveVal || currentEntry?.fullContent || '').trim();
         if (finalContent.length <= 5) return;
 
         const existingTitle = (currentEntry?.title || '').trim();
-        const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
+        const isUntitled = !existingTitle || /^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
         const needsSummary = !currentEntry?.summary || (currentEntry?.fullContent || '').trim() !== finalContent;
         const hasTaxonomies = ((currentEntry?.categories?.length || 0) > 0) || ((currentEntry?.tags?.length || 0) > 0) || ((currentEntry?.projects?.length || 0) > 0);
         const hasTakeaways = Array.isArray(currentEntry?.shortVersion) && currentEntry.shortVersion.length > 0;
@@ -1137,6 +1251,29 @@ Respond with valid JSON ONLY matching this structure:
           setIsAssistantOpen(hasEntryChat);
         }
       }, [activeSingleEntry?.id]);
+
+      useEffect(() => {
+        const prevOpen = isAssistantOpenRef.current;
+        isAssistantOpenRef.current = isAssistantOpen;
+        if (prevOpen === isAssistantOpen) return;
+
+        if (isAssistantOpen) {
+          // If the AI Assistant is opening and taxonomy sidebar is currently open, remember to restore it and close it
+          if (isLeftSidebarOpenRef.current) {
+            wasTaxonomyOpenBeforeAssistantRef.current = true;
+            setIsLeftSidebarOpen(false);
+          } else {
+            wasTaxonomyOpenBeforeAssistantRef.current = false;
+          }
+        } else {
+          // When closing AI Assistant, if taxonomy was previously open before opening AI, restore it
+          if (wasTaxonomyOpenBeforeAssistantRef.current) {
+            setIsLeftSidebarOpen(true);
+            wasTaxonomyOpenBeforeAssistantRef.current = false;
+          }
+        }
+      }, [isAssistantOpen]);
+
       useEffect(() => { isContentFocusedRef.current = isContentFocused; }, [isContentFocused]);
       useEffect(() => { entriesRef.current = entries; }, [entries]);
 
@@ -1191,14 +1328,8 @@ Respond with valid JSON ONLY matching this structure:
           }
           contentTextareaRef.current.blur();
         }
+        // Exit Focus Mode only; stay in inline edit mode so the user can keep editing (use Done to save)
         setIsContentFocused(false);
-        if (currentEntry && currentEntry.id) {
-          if (saveNoteRef.current) {
-            saveNoteRef.current(currentEntry.id);
-          } else {
-            saveNote(currentEntry.id);
-          }
-        }
       };
 
       // Click outside listener: saves note when clicked away from edit mode
@@ -1229,7 +1360,12 @@ Respond with valid JSON ONLY matching this structure:
       const handleContentKeyDown = (e) => {
         if (e.key === 'Escape') {
           e.preventDefault();
-          handleDefocus();
+          if (isContentFocusedRef.current) {
+            handleDefocus();
+          } else {
+            const cur = activeSingleEntryRef.current || activeSingleEntry;
+            if (cur?.id) saveNote(cur.id);
+          }
         } else if (e.key === 'Tab') {
           e.preventDefault();
           const textarea = e.currentTarget;
@@ -1301,7 +1437,6 @@ Respond with valid JSON ONLY matching this structure:
       }, [isContentFocused, activeSingleEntry]);
 
       // Unified AI Assistant
-      const [isAssistantOpen, setIsAssistantOpen] = useState(false);
       const [assistantScope, setAssistantScope] = useState('selected');
       const [assistantChats, setAssistantChats] = useState({ workspace: [] });
       const [archivedAssistantChats, setArchivedAssistantChats] = useState({ workspace: [] });
@@ -2924,6 +3059,58 @@ Respond with valid JSON ONLY matching this structure:
         setEditingEntries(prev => ({ ...prev, [newId]: true }));
       };
 
+      const handleNewSeed = ({ projects = [], categories = [], tags = [] } = {}) => {
+        const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
+        const newId = 'entry-' + Date.now();
+        const seedCategories = (categories && categories.length > 0) ? [...categories] : [];
+        const seedProjects = (projects && projects.length > 0) ? [...projects] : [];
+        const seedTags = (tags && tags.length > 0) ? [...tags] : [];
+
+        const newEntry = {
+          id: newId,
+          type: 'seed',
+          title: 'Untitled Seed',
+          numericId: nextNumericId,
+          summary: '',
+          shortVersion: [],
+          fullContent: '',
+          categories: seedCategories,
+          tags: seedTags,
+          projects: seedProjects,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          sourceUrl: null,
+          references: [],
+          pinned: false
+        };
+        // Ensure seed filter is active so new seed is visible
+        setActiveTypeFilters(prev => prev.includes('seed') ? prev : [...prev, 'seed']);
+        entriesRef.current = [newEntry, ...(entriesRef.current || [])];
+        setEntries(prev => [newEntry, ...prev]);
+        setNewlyCreatedEntryId(newId);
+        selectEntryWithHistory([newId]);
+        const initialEditObj = {
+          title: 'Untitled Seed',
+          summary: '',
+          shortVersion: '',
+          fullContent: '',
+          categories: seedCategories,
+          tags: seedTags,
+          projects: seedProjects,
+          sourceUrl: '',
+          references: []
+        };
+        if (editDataRef.current) {
+          editDataRef.current = { ...editDataRef.current, [newId]: initialEditObj };
+        }
+        setEditData(prev => ({
+          ...prev,
+          [newId]: initialEditObj
+        }));
+        editingEntriesRef.current = { ...(editingEntriesRef.current || {}), [newId]: true };
+        setEditingEntries(prev => ({ ...prev, [newId]: true }));
+      };
+
       const handleWriteFromPrompt = () => {
         if (!promptState.draft) return;
         const draft = promptState.draft;
@@ -2980,7 +3167,7 @@ Respond with valid JSON ONLY matching this structure:
       };
 
       // Filtered entries (matching active type filters, taxonomies, and search query)
-      const filteredEntries = entries.filter(entry => {
+      const entryMatchesFilters = (entry) => {
         if (!entry) return false;
         const entryType = getEntryType(entry);
         if (!activeTypeFilters.includes(entryType)) return false;
@@ -2995,11 +3182,23 @@ Respond with valid JSON ONLY matching this structure:
           (entry.numericId != null && (`#${entry.numericId}`).includes(searchLower)) ||
           (entry.numericId != null && String(entry.numericId).includes(searchLower));
         return matchesProject && matchesCat && matchesTag && matchesSearch;
-      }).sort((a, b) => {
+      };
+      const sortEntriesForList = (a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
+        if (listSortMode === 'modified') {
+          const diff = (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
+          if (diff !== 0) return diff;
+        } else {
+          const diff = (b.createdAt || 0) - (a.createdAt || 0);
+          if (diff !== 0) return diff;
+        }
         return (b.numericId || 0) - (a.numericId || 0);
-      });
+      };
+      // All entries stay mounted (sorted) so filtering can animate; filteredEntries is the visible subset
+      const sortedAllEntries = entries.filter(Boolean).slice().sort(sortEntriesForList);
+      const filteredEntries = sortedAllEntries.filter(entryMatchesFilters);
+      const visibleEntryIds = new Set(filteredEntries.map(e => e.id));
 
       const activeTaxonomyList = [
         ...activeProjects,
@@ -3010,12 +3209,11 @@ Respond with valid JSON ONLY matching this structure:
         ? (activeTaxonomyList.length <= 2 ? activeTaxonomyList.join(', ') : `${activeTaxonomyList.slice(0, 2).join(', ')} +${activeTaxonomyList.length - 2}`)
         : '';
 
-      // Check if only aiChat is deselected among entry types (default state)
-      const standardNonChatTypes = ENTRY_TYPES.filter(t => t.id !== 'aiChat').map(t => t.id);
-      const selectedNonChatTypeObjs = ENTRY_TYPES.filter(t => t.id !== 'aiChat' && activeTypeFilters.includes(t.id));
-      const isAllNonChatTypesSelected = standardNonChatTypes.every(tid => activeTypeFilters.includes(tid));
-      const isOnlyAiChatDeselected = isAllNonChatTypesSelected;
-      const hasCustomTypeFilter = !isAllNonChatTypesSelected && selectedNonChatTypeObjs.length > 0;
+      // Check if standard content types are selected (default state excludes aiChat and seed)
+      const standardDefaultVisibleTypes = ENTRY_TYPES.filter(t => t.id !== 'aiChat' && t.id !== 'seed').map(t => t.id);
+      const selectedNonChatTypeObjs = ENTRY_TYPES.filter(t => t.id !== 'aiChat' && t.id !== 'seed' && activeTypeFilters.includes(t.id));
+      const isAllStandardTypesSelected = standardDefaultVisibleTypes.every(tid => activeTypeFilters.includes(tid)) && !activeTypeFilters.includes('aiChat') && !activeTypeFilters.includes('seed');
+      const hasCustomTypeFilter = !isAllStandardTypesSelected;
 
       // Descriptive summary of active list view filters (taxonomies, search, and type filters)
       const activeFilterParts = [
@@ -3067,7 +3265,8 @@ Respond with valid JSON ONLY matching this structure:
           
           // Potential pool: entries currently shown in the entry list view (filtered by active entry types, taxonomy, or search)
           // AND within the configured date range timeframe (default: 2 months)
-          const baseFilteredPool = filteredEntries.filter(e => !isWelcomeEntry(e) && hasSummaryOrTakeaways(e));
+          // Explicitly ignore seeds and AI chats; only consider notes, prompt replies, and external media/web documents
+          const baseFilteredPool = filteredEntries.filter(e => !isWelcomeEntry(e) && !isSeedEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e));
           const scopedEntries = baseFilteredPool.filter(e => isEntryWithinPromptDateRange(e, rangeMonths, now));
 
           if (scopedEntries.length < 1) {
@@ -3121,20 +3320,38 @@ Respond with valid JSON ONLY matching this structure:
           const candidateNotesText = selectedNotes.map(e => {
             const time = Number(e.createdAt) || Number(e.updatedAt) || now;
             const dateStr = new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            const type = getEntryType(e);
+            let provenance = 'Note [User Content - Own Issues/Projects/Knowledge]';
+            if (type === 'prompt') {
+              provenance = 'Prompt Reply [User Content - Reflection Answer]';
+            } else if (type === 'media') {
+              provenance = 'Media [External Third-Hand Knowledge - Video/Audio]';
+            } else if (type === 'web') {
+              provenance = 'Web / Document [External Third-Hand Knowledge - Web/Text]';
+            }
+            const promptQuestionPart = (type === 'prompt' && e.promptQuestion) ? `\nPrompt Question: ${e.promptQuestion}` : '';
             const summaryPart = e.summary ? `\nSummary: ${e.summary}` : '';
             const takeawaysList = Array.isArray(e.shortVersion) && e.shortVersion.length
               ? `\nTakeaways:\n${e.shortVersion.map((t) => `  - ${t}`).join('\n')}`
               : '';
-            const fallbackPart = (!summaryPart && !takeawaysList) ? `\nSummary: ${e.title || 'Untitled note'}` : '';
+            const replyPart = (type === 'prompt' && e.fullContent && String(e.fullContent).trim()) ? `\nUser Reply: ${String(e.fullContent).trim()}` : '';
+            const fallbackPart = (!summaryPart && !takeawaysList && !replyPart) ? `\nSummary: ${e.title || 'Untitled note'}` : '';
 
-            return `=== NOTE [[kb-ref:${e.id}]] [Ref ID: ${e.numericId}] "${e.title || 'Untitled'}" (${dateStr}) ===${summaryPart}${takeawaysList}${fallbackPart}`;
+            return `=== [[kb-ref:${e.id}]] [Ref ID: ${e.numericId}] "${e.title || 'Untitled'}" [${provenance}] (${dateStr}) ===${promptQuestionPart}${summaryPart}${takeawaysList}${replyPart}${fallbackPart}`;
           }).join('\n\n' + '='.repeat(50) + '\n\n');
 
-          const promptRequestText = `${candidateNotesText}\n\nTASK:\nReview the candidate notes above (up to 10 randomly sampled notes from the user's knowledge base, showing only their Summary and Takeaways). Select 1 or 2 notes where isolating ONE single idea from each note (whether from its Summary or a single Takeaway) reveals an interesting tension, contradiction, or practical trade-off, and write a concise, conversational reflection prompt adhering strictly to these rules:
+          const promptRequestText = `${candidateNotesText}\n\nTASK:\nReview the candidate entries above (up to 10 randomly sampled entries from the user's knowledge base).
+
+KNOWLEDGE PROVENANCE & USER PERSPECTIVE:
+- Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
+- Web, media, and text documents are assumed to be external and contextual third-hand knowledge (reference materials, articles, videos, or external docs collected for context—not the user's personal thoughts or creations).
+- Seeds and AI are ignored.
+
+Select 1 or 2 entries where isolating ONE single idea from an entry (whether from its Summary, Takeaway, or user reflection) reveals an interesting tension, contradiction, or practical trade-off, and write a concise, conversational reflection prompt adhering strictly to these rules:
 
 1. Length & Concept Isolation (50 words max):
    - Keep the entire prompt to 50 words or fewer.
-   - Use concept isolation: take ONE single idea from a note (or ONE single idea from each of 2 notes) drawn from either its Summary or one Takeaway, and show how they clash or complicate each other (or highlight an internal tension within a single note). Do NOT summarize the whole note or combine multiple takeaways. Weave the exact citation tag(s) (e.g. [[kb-ref:ID]]) in naturally.
+   - Use concept isolation: take ONE single idea from an entry (or ONE single idea from each of 2 entries) drawn from either its Summary, one Takeaway, or user reply, and show how they clash or complicate each other (or highlight an internal tension within a single entry). Do NOT summarize the whole entry or combine multiple takeaways. Weave the exact citation tag(s) (e.g. [[kb-ref:ID]]) in naturally.
    - End with one sharp, open-ended question that cuts to the heart of that tension.
 2. Conversational & Direct: Write like a perceptive friend, not an academic or a template. Use plain, everyday English and active verbs. Skip dramatic metaphors, clichés ("bridges the gap", "anchor yourself", "hold space"), and armchair psychology.
 3. Self-Contained Context: State the isolated idea clearly so the prompt makes complete sense on its own. Never drop brand-new facts or unmentioned feelings into the final question if you haven't set them up first.
@@ -3516,7 +3733,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
         // If manual note is untitled and content is empty, delete it on save/defocus
         const checkContent = (data.fullContent !== undefined && data.fullContent !== null ? data.fullContent : (existingEntry?.fullContent || '')).trim();
         const checkTitle = (data.title !== undefined && data.title !== null ? data.title : (existingEntry?.title || '')).trim();
-        const isDefaultTitle = !checkTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(checkTitle);
+        const isDefaultTitle = !checkTitle || /^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test(checkTitle);
         const isNotAiChat = !isAiChatEntry(existingEntry || data);
         if (isNotAiChat && !checkContent && isDefaultTitle && !(existingEntry || data).sourceUrl) {
           setEntries(prev => prev.filter(e => e.id !== id));
@@ -3530,13 +3747,15 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
         }
         savingIdsRef.current.add(id);
 
-        const rawShortVersion = typeof data.shortVersion === 'string'
+        const isSeed = isSeedEntry(existingEntry || data);
+        const rawShortVersion = isSeed ? [] : (typeof data.shortVersion === 'string'
           ? data.shortVersion.split('\n').map(s => s.trim()).filter(Boolean)
-          : (Array.isArray(data.shortVersion) ? data.shortVersion : (existingEntry?.shortVersion || []));
+          : (Array.isArray(data.shortVersion) ? data.shortVersion : (existingEntry?.shortVersion || [])));
 
         const initialSavedEntry = {
-          title: (data.title !== undefined && data.title !== null) ? data.title.trim() : (existingEntry?.title || 'Untitled Note'),
-          summary: (data.summary !== undefined && data.summary !== null) ? data.summary.trim() : (existingEntry?.summary || ''),
+          type: (data.type !== undefined) ? data.type : (existingEntry?.type || (isSeed ? 'seed' : undefined)),
+          title: (data.title !== undefined && data.title !== null) ? data.title.trim() : (existingEntry?.title || (isSeed ? 'Untitled Seed' : 'Untitled Note')),
+          summary: isSeed ? '' : ((data.summary !== undefined && data.summary !== null) ? data.summary.trim() : (existingEntry?.summary || '')),
           promptQuestion: data.promptQuestion || existingEntry?.promptQuestion || undefined,
           fullContent: (data.fullContent !== undefined && data.fullContent !== null) ? data.fullContent : (existingEntry?.fullContent || ''),
           shortVersion: rawShortVersion,
@@ -3558,11 +3777,11 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
 
         try {
           // Auto-generate title, summary, takeaways, and taxonomies when user stops editing
-          if (isAiChatEntry(initialSavedEntry)) return;
+          if (isAiChatEntry(initialSavedEntry) || isSeed) return;
 
           const existingTitle = (initialSavedEntry.title || '').trim();
-          const isUntitled = !existingTitle || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
-          const userManuallyRenamedTitle = !isUntitled && existingEntry && (existingEntry.title || '').trim() !== existingTitle && !/^untitled(\s+note)?(\s*#?\d+)?$/i.test((existingEntry.title || '').trim());
+          const isUntitled = !existingTitle || /^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test(existingTitle) || existingTitle.toLowerCase() === 'theme reflection' || existingTitle.toLowerCase() === 'theme prompt';
+          const userManuallyRenamedTitle = !isUntitled && existingEntry && (existingEntry.title || '').trim() !== existingTitle && !/^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test((existingEntry.title || '').trim());
           const contentChanged = Boolean(!existingEntry || (existingEntry.fullContent || '').trim() !== (initialSavedEntry.fullContent || '').trim());
           const hasTaxonomies = (Array.isArray(initialSavedEntry.categories) && initialSavedEntry.categories.length > 0) ||
                                 (Array.isArray(initialSavedEntry.tags) && initialSavedEntry.tags.length > 0) ||
@@ -4318,10 +4537,16 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
 
           if (currentScope === 'selected' && targetDocs.length > 0) {
             let contextText = targetDocs.map(ent => {
-              let block = `--- PRIMARY DOCUMENT: ${ent.title} (ID: ${ent.numericId || ent.id}) ---\n`;
+              const docType = getEntryType(ent);
+              let provLabel = 'Note [User Content - Own Issues/Projects/Knowledge]';
+              if (docType === 'prompt') provLabel = 'Prompt Reply [User Content - Reflection Answer]';
+              else if (docType === 'media') provLabel = 'Media [External Third-Hand Knowledge - Video/Audio]';
+              else if (docType === 'web') provLabel = 'Web / Document [External Third-Hand Knowledge - Web/Text]';
+              let block = `--- PRIMARY DOCUMENT: ${ent.title} (ID: ${ent.numericId || ent.id}, Provenance: ${provLabel}) ---\n`;
+              if (docType === 'prompt' && ent.promptQuestion) block += `Prompt Question: ${ent.promptQuestion}\n`;
               if (ent.summary) block += `Summary: ${ent.summary}\n`;
               if (ent.shortVersion && ent.shortVersion.length > 0) block += `Key Points:\n${ent.shortVersion.map(p => `- ${p}`).join('\n')}\n`;
-              if (ent.fullContent) block += `Content:\n${ent.fullContent}\n`;
+              if (ent.fullContent) block += `${docType === 'prompt' ? 'User Reply' : 'Content'}:\n${ent.fullContent}\n`;
               if (ent.sourceUrl) block += `Source URL: ${ent.sourceUrl}\n`;
               return block;
             }).join('\n\n');
@@ -4334,7 +4559,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
             if (primaryProjects.length > 0 || primaryCategories.length > 0) {
               const matchedEntries = entries.filter(e => {
                 if (!e || targetDocs.some(se => se.id === e.id)) return false;
-                if (isAiChatEntry(e)) return false;
+                if (isAiChatEntry(e) || isSeedEntry(e)) return false;
                 if (typeof isWelcomeEntry === 'function' && isWelcomeEntry(e)) return false;
                 const matchesProj = primaryProjects.length > 0 && Array.isArray(e.projects) && e.projects.some(p => primaryProjects.includes(String(p).toLowerCase().trim()));
                 const matchesCat = primaryCategories.length > 0 && Array.isArray(e.categories) && e.categories.some(c => primaryCategories.includes(String(c).toLowerCase().trim()));
@@ -4367,7 +4592,12 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
             let archiveContextText = "";
             if (relatedEntries.length > 0) {
               archiveContextText = relatedEntries.map(e => {
-                let line = `• [[kb-ref:${e.id}]] "${e.title || 'Untitled'}"`;
+                const relType = getEntryType(e);
+                let relLabel = 'Note [User Content]';
+                if (relType === 'prompt') relLabel = 'Prompt Reply [User Content]';
+                else if (relType === 'media') relLabel = 'Media [External]';
+                else if (relType === 'web') relLabel = 'Web/Text [External]';
+                let line = `• [[kb-ref:${e.id}]] [${relLabel}] "${e.title || 'Untitled'}"`;
                 if (e.summary) line += `\n  Executive Summary: ${e.summary}`;
                 if (Array.isArray(e.shortVersion) && e.shortVersion.length > 0) line += `\n  Key Takeaways: ${e.shortVersion.join(' | ')}`;
                 return line;
@@ -4384,6 +4614,11 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
                 parts: [{
                   text: `You are a helpful AI Assistant for the user's personal knowledge base.
 Focus primarily on the active document: "${targetDocs[0]?.title || 'Selected Note'}", using relevant notes in the same project or category for context and cross-references.
+
+KNOWLEDGE PROVENANCE & USER PERSPECTIVE:
+- Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
+- Web, media, and text documents are assumed to be external and contextual third-hand knowledge (reference materials, articles, videos, or external docs collected for context, NOT the user's personal thoughts or creations).
+- Seeds and AI are ignored as source knowledge.
 
 CONVERSATIONAL & CONCISE WRITING RULES:
 - Length: Under 50 words unless requested or necessary. Default to short.
@@ -4518,19 +4753,20 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
       // Filter-scoped Whole Brain candidate pool & single-pass / on-demand escalation engine
       const getWholeBrainCandidateNotes = (excludeId = null) => {
         // Draw candidate pool from currently selected entry types and active taxonomy/search filters (just like generatePromptNote),
-        // strictly requiring an executive summary (e.summary) and NEVER feeding previous AI Chat sessions into context (!isAiChatEntry(e)).
+        // strictly requiring an executive summary (e.summary) and NEVER feeding previous AI Chat sessions or seeds into context.
         let pool = filteredEntries.filter(e =>
           !isWelcomeEntry(e) &&
           !isAiChatEntry(e) &&
+          !isSeedEntry(e) &&
           e.id !== excludeId &&
           Boolean(e.summary && String(e.summary).trim())
         );
 
-        // Edge case: if the user solo-selected 'aiChat' in the entry type filter bar so non-chat notes are hidden,
-        // fall back to non-chat entries matching the active taxonomy & search filters that have a summary.
-        if (pool.length === 0 && activeTypeFilters.every(t => t === 'aiChat')) {
+        // Edge case: if the user solo-selected 'aiChat' or 'seed' in the entry type filter bar so non-chat notes are hidden,
+        // fall back to non-chat/non-seed entries matching the active taxonomy & search filters that have a summary.
+        if (pool.length === 0 && activeTypeFilters.every(t => t === 'aiChat' || t === 'seed')) {
           pool = entries.filter(entry => {
-            if (!entry || isWelcomeEntry(entry) || isAiChatEntry(entry) || entry.id === excludeId) return false;
+            if (!entry || isWelcomeEntry(entry) || isAiChatEntry(entry) || isSeedEntry(entry) || entry.id === excludeId) return false;
             if (!entry.summary || !String(entry.summary).trim()) return false;
             const matchesProject = activeProjects.length === 0 || (Array.isArray(entry.projects) && entry.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
             const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
@@ -4547,7 +4783,12 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
         return pool;
       };
 
-      const WHOLE_BRAIN_WRITING_RULES = `CONVERSATIONAL & CONCISE WRITING RULES:
+      const WHOLE_BRAIN_WRITING_RULES = `KNOWLEDGE PROVENANCE & USER PERSPECTIVE:
+- Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
+- Web, media, and text documents are assumed to be external and contextual third-hand knowledge (articles, podcasts, videos, or external docs collected for reference, NOT the user's personal thoughts or creations).
+- Seeds and AI chats are ignored as source knowledge.
+
+CONVERSATIONAL & CONCISE WRITING RULES:
 - Length: Under 50 words unless requested or necessary. Default to short.
 - Be concise, conversational, and direct. Go a step at a time.
 - Avoid spilling large amounts of text unless specifically requested.
@@ -4594,7 +4835,12 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
           const hasTakeawaysFlag = Array.isArray(e.shortVersion) && e.shortVersion.length > 0;
           const hasContentFlag = Boolean(e.fullContent && String(e.fullContent).trim());
           const availMeta = [hasTakeawaysFlag ? 'takeaways' : null, hasContentFlag ? 'content' : null].filter(Boolean).join(', ');
-          return `[kb-ref:${e.id}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum}`;
+          const type = getEntryType(e);
+          let typeTag = 'Note [User Content]';
+          if (type === 'prompt') typeTag = 'Prompt Reply [User Content]';
+          else if (type === 'media') typeTag = 'Media [External Third-Hand]';
+          else if (type === 'web') typeTag = 'Web/Text [External Third-Hand]';
+          return `[kb-ref:${e.id}] [${typeTag}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum}`;
         }).join('\n');
 
         // Pass 1: Single-Pass Direct Synthesis OR On-Demand Escalation
@@ -4686,15 +4932,20 @@ ${candidateSummaries}`;
         const expandedBlocks = (matchedNotes.length > 0 ? matchedNotes : candidateNotes).map(e => {
           const wantTakeaways = takeawayIds.includes(e.id);
           const wantContent = contentIds.includes(e.id);
+          const type = getEntryType(e);
+          let typeTag = 'Note [User Content]';
+          if (type === 'prompt') typeTag = 'Prompt Reply [User Content]';
+          else if (type === 'media') typeTag = 'Media [External Third-Hand Knowledge]';
+          else if (type === 'web') typeTag = 'Web/Text [External Third-Hand Knowledge]';
           const parts = [
-            `--- [kb-ref:${e.id}] (Ref #${e.numericId || '?'}) Title: "${e.title || 'Untitled'}" ---`,
+            `--- [kb-ref:${e.id}] (Ref #${e.numericId || '?'}, Type: ${typeTag}) Title: "${e.title || 'Untitled'}" ---`,
             `Executive Summary: ${e.summary}`
           ];
           if (wantTakeaways && Array.isArray(e.shortVersion) && e.shortVersion.length > 0) {
             parts.push(`Key Takeaways:\n${e.shortVersion.map(t => `- ${t}`).join('\n')}`);
           }
           if (wantContent && e.fullContent && String(e.fullContent).trim()) {
-            parts.push(`Full Content:\n${String(e.fullContent).trim()}`);
+            parts.push(`${type === 'prompt' ? 'User Reply' : 'Full Content'}:\n${String(e.fullContent).trim()}`);
           }
           return parts.join('\n');
         });
@@ -4914,6 +5165,7 @@ ${expandedBlocks.join('\n\n')}`
           assistant: taskModels.assistant || model || DEFAULT_MODEL
         });
         setTempTheme(theme);
+        setTempPromptConfig({ ...DEFAULT_PROMPT_CONFIG, ...promptConfig });
         setMergeStatus(null);
         setFetchModelsError(null);
         setShowKeyModal(true);
@@ -4933,6 +5185,7 @@ ${expandedBlocks.join('\n\n')}`
         setTaskModels(resolvedTaskModels);
         setModel(resolvedTaskModels.assistant);
         setTheme(tempTheme);
+        setPromptConfig(tempPromptConfig);
         setShowKeyModal(false);
       };
 
@@ -5082,8 +5335,9 @@ ${expandedBlocks.join('\n\n')}`
           {/* SETTINGS MODAL */}
           {showKeyModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[70] p-4 md:p-[50px]">
-              <div className="bg-[var(--card-bg)] p-6 rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-5 pb-3 border-b border-[var(--border)]">
+              <div className="bg-[var(--card-bg)] rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+                {/* Fixed Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0 bg-[var(--card-bg)]">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded bg-[var(--accent)] text-white flex items-center justify-center text-xs">
                       <i className="fa-solid fa-gear"></i>
@@ -5094,232 +5348,346 @@ ${expandedBlocks.join('\n\n')}`
                   <button onClick={() => setShowKeyModal(false)} className="btn-icon"><i className="fa-solid fa-xmark text-lg"></i></button>
                 </div>
 
-                {/* API Keys */}
-                <div className="mb-5">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">Gemini API Key</label>
-                    <button type="button" onClick={() => setTempKeys([...tempKeys, { id: 'k' + Date.now(), name: 'Key ' + (tempKeys.length + 1), key: '' }])} className="text-xs text-[var(--accent)] hover:underline font-mono">
-                      + Add Key
-                    </button>
+                {/* Vertically Scrollable Content Body */}
+                <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0 space-y-5">
+                  {/* API Keys */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">Gemini API Key</label>
+                      <button type="button" onClick={() => setTempKeys([...tempKeys, { id: 'k' + Date.now(), name: 'Key ' + (tempKeys.length + 1), key: '' }])} className="text-xs text-[var(--accent)] hover:underline font-mono">
+                        + Add Key
+                      </button>
+                    </div>
+                    <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                      {tempKeys.map((k, i) => (
+                        <div key={k.id} className="flex gap-2 items-center">
+                          <input type="password" value={k.key} onChange={e => { const newKeys = [...tempKeys]; newKeys[i].key = e.target.value; setTempKeys(newKeys); }} className="flex-1 px-3 py-2 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono" placeholder="AIzaSy..." />
+                          <button type="button" onClick={() => setTempKeys(tempKeys.filter(tk => tk.id !== k.id))} className="text-[var(--text-muted)] hover:text-[var(--danger)] p-1.5"><i className="fa-solid fa-trash-can text-sm"></i></button>
+                        </div>
+                      ))}
+                      {tempKeys.length === 0 && (
+                        <div className="text-xs text-[var(--text-muted)] text-center py-3 bg-[var(--bg-main)] rounded font-mono">
+                          No API key set. Add one to enable AI capabilities.
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1.5 font-mono">
+                      Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">Google AI Studio</a>.
+                    </p>
                   </div>
-                  <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                    {tempKeys.map((k, i) => (
-                      <div key={k.id} className="flex gap-2 items-center">
-                        <input type="password" value={k.key} onChange={e => { const newKeys = [...tempKeys]; newKeys[i].key = e.target.value; setTempKeys(newKeys); }} className="flex-1 px-3 py-2 text-xs bg-[var(--bg-main)] text-[var(--text-main)] rounded font-mono" placeholder="AIzaSy..." />
-                        <button type="button" onClick={() => setTempKeys(tempKeys.filter(tk => tk.id !== k.id))} className="text-[var(--text-muted)] hover:text-[var(--danger)] p-1.5"><i className="fa-solid fa-trash-can text-sm"></i></button>
+
+                  {/* PWA / Install App */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono block mb-1.5">Install as App (PWA)</label>
+                    <div className="bg-[var(--bg-main)] rounded p-3 space-y-2 font-mono">
+                      <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-main)]">
+                        <span className="flex items-center gap-1.5">
+                          <i className={`fa-solid ${isStandalone ? 'fa-circle-check text-green-500' : 'fa-mobile-screen text-[var(--accent)]'}`}></i>
+                          {isStandalone ? 'Running as installed app' : 'Not installed'}
+                        </span>
+                        {!isStandalone && installPromptEvent && (
+                          <button type="button" onClick={handleInstallApp} className="btn-primary h-6 px-3 text-[11px] font-semibold">
+                            <i className="fa-solid fa-download text-[10px]"></i> Install
+                          </button>
+                        )}
                       </div>
-                    ))}
-                    {tempKeys.length === 0 && (
-                      <div className="text-xs text-[var(--text-muted)] text-center py-3 bg-[var(--bg-main)] rounded font-mono">
-                        No API key set. Add one to enable AI capabilities.
+                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
+                        <i className={`fa-solid ${swStatus === 'ready' ? 'fa-circle-check text-green-500' : 'fa-circle-info'}`}></i>
+                        {swStatus === 'ready' && 'Offline-ready: app files are cached for launching without a connection.'}
+                        {swStatus === 'checking' && 'Preparing offline cache...'}
+                        {swStatus === 'unavailable' && 'Offline cache needs the app to be served over http(s), not opened as a local file.'}
+                        {swStatus === 'unsupported' && 'This browser does not support offline caching.'}
+                        {swStatus === 'error' && 'Offline cache could not be set up.'}
+                      </div>
+                      {!isStandalone && !installPromptEvent && (
+                        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                          Safari (macOS): File &gt; Add to Dock. Chrome/Edge: use the install icon in the address bar.
+                        </p>
+                      )}
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                        Safari still needs the Local Sync Bridge to read and write your notes file, with or without installing.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* AI Models Configuration by Task */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                        AI Models by Task
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => fetchAvailableModels(tempKeys?.[0]?.key)}
+                        disabled={isFetchingModels || (!tempKeys?.[0]?.key && !apiKeys?.[0]?.key)}
+                        className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1.5 font-mono disabled:opacity-40 cursor-pointer"
+                        title="Fetch live active 'latest' alias models directly from Google AI Studio"
+                      >
+                        <i className={`fa-solid fa-arrows-rotate text-[9px] ${isFetchingModels ? 'fa-spin' : ''}`}></i>
+                        {isFetchingModels ? 'Fetching...' : (availableModels.length > 0 ? 'Refresh Models' : 'Fetch Models from API')}
+                      </button>
+                    </div>
+
+                    {fetchModelsError && (
+                      <div className="mb-2.5 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] rounded font-mono flex items-start gap-1.5">
+                        <i className="fa-solid fa-circle-exclamation text-xs mt-0.5 shrink-0"></i>
+                        <span>{fetchModelsError}</span>
+                      </div>
+                    )}
+
+                    {availableModels.length > 0 && (
+                      <div className="text-[10px] text-[var(--text-muted)] font-mono mb-2 flex items-center justify-between px-1">
+                        <span>{availableModels.length} latest alias models fetched from Google AI Studio</span>
+                        <span className="text-[9px] text-emerald-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> API Connected
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="space-y-3 bg-[var(--bg-main)] p-3 rounded border border-[var(--border)]">
+                      {/* Metadata Extraction */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                            <i className="fa-solid fa-bolt text-amber-500 text-[9px]"></i> Quick Metadata & Summaries
+                          </label>
+                          <span className="text-[9px] text-[var(--text-muted)] font-mono">Titles, TL;DR, Takeaways, Tags</span>
+                        </div>
+                        {!manualModelMode && availableModels.length > 0 ? (
+                          <select
+                            value={tempTaskModels.metadata}
+                            onChange={e => setTempTaskModels(prev => ({ ...prev, metadata: e.target.value }))}
+                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                          >
+                            {!availableModels.some(m => m.id === tempTaskModels.metadata) && (
+                              <option value={tempTaskModels.metadata}>{tempTaskModels.metadata} (custom)</option>
+                            )}
+                            {availableModels.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={tempTaskModels.metadata}
+                            onChange={e => setTempTaskModels(prev => ({ ...prev, metadata: e.target.value }))}
+                            placeholder={DEFAULT_MODEL}
+                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                          />
+                        )}
+                      </div>
+
+                      {/* Theme Prompts */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                            <i className="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-[9px]"></i> Theme Prompts
+                          </label>
+                          <span className="text-[9px] text-[var(--text-muted)] font-mono">Synthesis & Reflection</span>
+                        </div>
+                        {!manualModelMode && availableModels.length > 0 ? (
+                          <select
+                            value={tempTaskModels.prompts}
+                            onChange={e => setTempTaskModels(prev => ({ ...prev, prompts: e.target.value }))}
+                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                          >
+                            {!availableModels.some(m => m.id === tempTaskModels.prompts) && (
+                              <option value={tempTaskModels.prompts}>{tempTaskModels.prompts} (custom)</option>
+                            )}
+                            {availableModels.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={tempTaskModels.prompts}
+                            onChange={e => setTempTaskModels(prev => ({ ...prev, prompts: e.target.value }))}
+                            placeholder={DEFAULT_MODEL}
+                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                          />
+                        )}
+                      </div>
+
+                      {/* AI Assistant */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                            <i className="fa-solid fa-comments text-sky-400 text-[9px]"></i> AI Assistant Copilot
+                          </label>
+                          <span className="text-[9px] text-[var(--text-muted)] font-mono">Chat & Whole Brain Search</span>
+                        </div>
+                        {!manualModelMode && availableModels.length > 0 ? (
+                          <select
+                            value={tempTaskModels.assistant}
+                            onChange={e => setTempTaskModels(prev => ({ ...prev, assistant: e.target.value }))}
+                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                          >
+                            {!availableModels.some(m => m.id === tempTaskModels.assistant) && (
+                              <option value={tempTaskModels.assistant}>{tempTaskModels.assistant} (custom)</option>
+                            )}
+                            {availableModels.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={tempTaskModels.assistant}
+                            onChange={e => setTempTaskModels(prev => ({ ...prev, assistant: e.target.value }))}
+                            placeholder={DEFAULT_MODEL}
+                            className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                          />
+                        )}
+                      </div>
+
+                      {/* Quick Controls & Mode Toggle */}
+                      <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[10px] font-mono">
+                        <button
+                          type="button"
+                          onClick={() => setManualModelMode(!manualModelMode)}
+                          className="text-[var(--text-muted)] hover:text-[var(--text-main)] underline cursor-pointer"
+                        >
+                          {manualModelMode ? 'Use model dropdowns' : 'Type custom model IDs'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTempTaskModels({ metadata: DEFAULT_MODEL, prompts: DEFAULT_MODEL, assistant: DEFAULT_MODEL })}
+                          className="text-[var(--accent)] hover:underline cursor-pointer"
+                        >
+                          Reset to Default Lite ({DEFAULT_MODEL})
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Theme Prompt Pool Settings */}
+                  <div className="p-3.5 bg-[var(--bg-main)] rounded border border-[var(--border)]">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <i className="fa-solid fa-wand-magic-sparkles text-[#059669]"></i> Theme Prompt Pool
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setTempPromptConfig(prev => ({ ...prev, dateRangeMonths: 2, poolSize: 10 }))}
+                        className="text-[10px] text-[var(--text-muted)] hover:text-[#059669] underline cursor-pointer font-mono"
+                        title="Reset date range (2 months) and pool size (10 notes) to defaults"
+                      >
+                        Reset Defaults
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] mb-3 leading-relaxed font-mono">
+                      Candidate notes matching active filters are sampled within this timeframe and pool limit when synthesizing theme reflection questions.
+                    </p>
+
+                    <div className="space-y-3 font-mono">
+                      {/* Date Range Slider */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-[var(--text-muted)]">Candidate Timeframe</span>
+                          <span className="font-semibold text-[var(--text-main)]">
+                            {formatPromptDateRangeLabel(tempPromptConfig?.dateRangeMonths)}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="25"
+                          step="1"
+                          value={Number(tempPromptConfig?.dateRangeMonths) || 2}
+                          onChange={(e) => setTempPromptConfig(prev => ({ ...prev, dateRangeMonths: Number(e.target.value) }))}
+                          className="w-full accent-[#059669] cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+                          <span>1 mo</span>
+                          <span>2 mos</span>
+                          <span>6 mos</span>
+                          <span>1 yr</span>
+                          <span>2 yrs</span>
+                          <span>All Time</span>
+                        </div>
+                      </div>
+
+                      {/* Pool Size Slider */}
+                      <div className="space-y-1.5 pt-2 border-t border-[var(--border)]">
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-[var(--text-muted)]">Sample Pool Size</span>
+                          <span className="font-semibold text-[var(--text-main)]">
+                            {formatPromptPoolSizeLabel(Number(tempPromptConfig?.poolSize) > 50 ? 55 : Math.min(50, Math.max(5, Math.round((Number(tempPromptConfig?.poolSize) || 10) / 5) * 5)))}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="5"
+                          max="55"
+                          step="5"
+                          value={Number(tempPromptConfig?.poolSize) > 50 ? 55 : Math.min(50, Math.max(5, Math.round((Number(tempPromptConfig?.poolSize) || 10) / 5) * 5))}
+                          onChange={(e) => setTempPromptConfig(prev => ({ ...prev, poolSize: Number(e.target.value) }))}
+                          className="w-full accent-[#059669] cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
+                          <span>5</span>
+                          <span>10</span>
+                          <span>20</span>
+                          <span>30</span>
+                          <span>40</span>
+                          <span>50</span>
+                          <span>All</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Library Merge */}
+                  <div className="p-3.5 bg-[var(--bg-main)] rounded border border-[var(--border)]">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <i className="fa-solid fa-code-merge text-[var(--accent)]"></i> Merge External Library
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] mb-3 leading-relaxed font-mono">
+                      Select an external library JSON file. Merges the most recent changes for existing notes and inserts new notes in chronological order using decimal numbering.
+                    </p>
+                    
+                    <input 
+                      type="file" 
+                      ref={mergeFileInputRef} 
+                      onChange={handleMergeFileInputChange} 
+                      accept=".json,application/json" 
+                      className="hidden" 
+                    />
+                    
+                    <button 
+                      type="button" 
+                      onClick={handleMergePicker} 
+                      className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-2 font-mono"
+                      title="Select a library JSON file to merge into the current library"
+                    >
+                      <i className="fa-solid fa-file-import text-xs"></i> Select Library to Merge...
+                    </button>
+
+                    {mergeStatus && (
+                      <div className={`mt-2.5 p-2.5 rounded text-xs font-mono leading-relaxed flex items-start justify-between gap-2 ${mergeStatus.type === 'error' ? 'bg-[var(--danger)]/15 text-[var(--danger)]' : 'bg-emerald-500/15 text-emerald-400'}`}>
+                        <div className="flex items-start gap-1.5 flex-1">
+                          <i className={`fa-solid ${mergeStatus.type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-check'} text-xs mt-0.5 shrink-0`}></i>
+                          <span>{mergeStatus.message}</span>
+                        </div>
+                        <button type="button" onClick={() => setMergeStatus(null)} className="hover:opacity-75 shrink-0 text-xs">
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
                       </div>
                     )}
                   </div>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5 font-mono">
-                    Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">Google AI Studio</a>.
-                  </p>
                 </div>
 
-                {/* AI Models Configuration by Task */}
-                <div className="mb-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
-                      AI Models by Task
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => fetchAvailableModels(tempKeys?.[0]?.key)}
-                      disabled={isFetchingModels || (!tempKeys?.[0]?.key && !apiKeys?.[0]?.key)}
-                      className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1.5 font-mono disabled:opacity-40 cursor-pointer"
-                      title="Fetch live active 'latest' alias models directly from Google AI Studio"
-                    >
-                      <i className={`fa-solid fa-arrows-rotate text-[9px] ${isFetchingModels ? 'fa-spin' : ''}`}></i>
-                      {isFetchingModels ? 'Fetching...' : (availableModels.length > 0 ? 'Refresh Models' : 'Fetch Models from API')}
-                    </button>
-                  </div>
-
-                  {fetchModelsError && (
-                    <div className="mb-2.5 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] rounded font-mono flex items-start gap-1.5">
-                      <i className="fa-solid fa-circle-exclamation text-xs mt-0.5 shrink-0"></i>
-                      <span>{fetchModelsError}</span>
-                    </div>
-                  )}
-
-                  {availableModels.length > 0 && (
-                    <div className="text-[10px] text-[var(--text-muted)] font-mono mb-2 flex items-center justify-between px-1">
-                      <span>{availableModels.length} latest alias models fetched from Google AI Studio</span>
-                      <span className="text-[9px] text-emerald-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> API Connected
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="space-y-3 bg-[var(--bg-main)] p-3 rounded border border-[var(--border)]">
-                    {/* Metadata Extraction */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
-                          <i className="fa-solid fa-bolt text-amber-500 text-[9px]"></i> Quick Metadata & Summaries
-                        </label>
-                        <span className="text-[9px] text-[var(--text-muted)] font-mono">Titles, TL;DR, Takeaways, Tags</span>
-                      </div>
-                      {!manualModelMode && availableModels.length > 0 ? (
-                        <select
-                          value={tempTaskModels.metadata}
-                          onChange={e => setTempTaskModels(prev => ({ ...prev, metadata: e.target.value }))}
-                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
-                        >
-                          {!availableModels.some(m => m.id === tempTaskModels.metadata) && (
-                            <option value={tempTaskModels.metadata}>{tempTaskModels.metadata} (custom)</option>
-                          )}
-                          {availableModels.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value={tempTaskModels.metadata}
-                          onChange={e => setTempTaskModels(prev => ({ ...prev, metadata: e.target.value }))}
-                          placeholder={DEFAULT_MODEL}
-                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
-                        />
-                      )}
-                    </div>
-
-                    {/* Theme Prompts */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
-                          <i className="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-[9px]"></i> Theme Prompts
-                        </label>
-                        <span className="text-[9px] text-[var(--text-muted)] font-mono">Synthesis & Reflection</span>
-                      </div>
-                      {!manualModelMode && availableModels.length > 0 ? (
-                        <select
-                          value={tempTaskModels.prompts}
-                          onChange={e => setTempTaskModels(prev => ({ ...prev, prompts: e.target.value }))}
-                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
-                        >
-                          {!availableModels.some(m => m.id === tempTaskModels.prompts) && (
-                            <option value={tempTaskModels.prompts}>{tempTaskModels.prompts} (custom)</option>
-                          )}
-                          {availableModels.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value={tempTaskModels.prompts}
-                          onChange={e => setTempTaskModels(prev => ({ ...prev, prompts: e.target.value }))}
-                          placeholder={DEFAULT_MODEL}
-                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
-                        />
-                      )}
-                    </div>
-
-                    {/* AI Assistant */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
-                          <i className="fa-solid fa-comments text-sky-400 text-[9px]"></i> AI Assistant Copilot
-                        </label>
-                        <span className="text-[9px] text-[var(--text-muted)] font-mono">Chat & Whole Brain Search</span>
-                      </div>
-                      {!manualModelMode && availableModels.length > 0 ? (
-                        <select
-                          value={tempTaskModels.assistant}
-                          onChange={e => setTempTaskModels(prev => ({ ...prev, assistant: e.target.value }))}
-                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
-                        >
-                          {!availableModels.some(m => m.id === tempTaskModels.assistant) && (
-                            <option value={tempTaskModels.assistant}>{tempTaskModels.assistant} (custom)</option>
-                          )}
-                          {availableModels.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value={tempTaskModels.assistant}
-                          onChange={e => setTempTaskModels(prev => ({ ...prev, assistant: e.target.value }))}
-                          placeholder={DEFAULT_MODEL}
-                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
-                        />
-                      )}
-                    </div>
-
-                    {/* Quick Controls & Mode Toggle */}
-                    <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[10px] font-mono">
-                      <button
-                        type="button"
-                        onClick={() => setManualModelMode(!manualModelMode)}
-                        className="text-[var(--text-muted)] hover:text-[var(--text-main)] underline cursor-pointer"
-                      >
-                        {manualModelMode ? 'Use model dropdowns' : 'Type custom model IDs'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTempTaskModels({ metadata: DEFAULT_MODEL, prompts: DEFAULT_MODEL, assistant: DEFAULT_MODEL })}
-                        className="text-[var(--accent)] hover:underline cursor-pointer"
-                      >
-                        Reset to Default Lite ({DEFAULT_MODEL})
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-
-                {/* Library Merge */}
-                <div className="mb-5 p-3.5 bg-[var(--bg-main)] rounded border border-[var(--border)]">
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider font-mono flex items-center gap-1.5">
-                      <i className="fa-solid fa-code-merge text-[var(--accent)]"></i> Merge External Library
-                    </label>
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] mb-3 leading-relaxed font-mono">
-                    Select an external library JSON file. Merges the most recent changes for existing notes and inserts new notes in chronological order using decimal numbering.
-                  </p>
-                  
-                  <input 
-                    type="file" 
-                    ref={mergeFileInputRef} 
-                    onChange={handleMergeFileInputChange} 
-                    accept=".json,application/json" 
-                    className="hidden" 
-                  />
-                  
-                  <button 
-                    type="button" 
-                    onClick={handleMergePicker} 
-                    className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-2 font-mono"
-                    title="Select a library JSON file to merge into the current library"
-                  >
-                    <i className="fa-solid fa-file-import text-xs"></i> Select Library to Merge...
-                  </button>
-
-                  {mergeStatus && (
-                    <div className={`mt-2.5 p-2.5 rounded text-xs font-mono leading-relaxed flex items-start justify-between gap-2 ${mergeStatus.type === 'error' ? 'bg-[var(--danger)]/15 text-[var(--danger)]' : 'bg-emerald-500/15 text-emerald-400'}`}>
-                      <div className="flex items-start gap-1.5 flex-1">
-                        <i className={`fa-solid ${mergeStatus.type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-check'} text-xs mt-0.5 shrink-0`}></i>
-                        <span>{mergeStatus.message}</span>
-                      </div>
-                      <button type="button" onClick={() => setMergeStatus(null)} className="hover:opacity-75 shrink-0 text-xs">
-                        <i className="fa-solid fa-xmark"></i>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center pt-4 border-t border-[var(--border)]">
+                {/* Fixed Footer */}
+                <div className="flex justify-between items-center px-6 py-4 border-t border-[var(--border)] shrink-0 bg-[var(--card-bg)]">
                   <div className="flex items-center gap-3">
                     <a href="readme.html" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--accent)] flex items-center">
                       <i className="fa-solid fa-file-lines mr-1.5"></i> Readme
@@ -5652,7 +6020,7 @@ ${expandedBlocks.join('\n\n')}`
                           className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer select-none ${
                             isActive ? 'shadow-xs font-semibold' : 'opacity-40 hover:opacity-75'
                           }`}
-                          title={`${isActive ? 'Hide' : 'Show'} ${t.label} (Click to toggle, Shift-click to solo)`}
+                          title={`${t.label}: ${t.description || ''}\n\n${isActive ? 'Click to hide' : 'Click to show'} • Shift-click to solo`}
                         >
                           <i className={`fa-solid ${t.icon} text-[10px]`}></i>
                           <span>{t.label}</span>
@@ -5945,7 +6313,7 @@ ${expandedBlocks.join('\n\n')}`
             onDragLeave={(e) => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false); }}
             onDrop={(e) => { if (isListSidebarOpen) { handleDrop(e); setIsDragging(false); } }}
           >
-            <div className="w-96 lg:w-[440px] h-full flex flex-col shrink-0">
+            <div className="relative w-96 lg:w-[440px] h-full flex flex-col shrink-0">
               {isDragging && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--accent)]/10 backdrop-blur-xs border-2 border-dashed border-[var(--accent)] m-2 rounded-lg pointer-events-none transition-all">
                   <div className="bg-[var(--card-bg)] p-6 text-center rounded-lg shadow-xl flex flex-col items-center">
@@ -5957,74 +6325,193 @@ ${expandedBlocks.join('\n\n')}`
               )}
 
               {/* List Header */}
-              <div className="px-[50px] pt-[50px] pb-4 flex flex-col gap-3">
+              <div className="px-[50px] pt-[50px] pb-[15px] flex flex-col gap-[15px]">
+                {/* Action Buttons Row */}
                 <div className="flex gap-2 items-center h-7">
-                  <div className="relative flex-1 h-7">
-                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2 text-[var(--text-muted)] text-xs pointer-events-none"></i>
-                    <input 
-                      ref={searchInputRef}
-                      type="text" 
-                      placeholder="Search notes..." 
-                      value={searchQuery} 
-                      onChange={(e) => setSearchQuery(e.target.value)} 
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape' && searchQuery) {
-                          e.stopPropagation();
-                          setSearchQuery('');
-                        }
-                      }}
-                      className={`w-full h-7 pl-8 ${searchQuery ? 'pr-8' : 'pr-3'} bg-[var(--bg-main)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded text-xs transition-colors box-border`} 
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchQuery('');
-                          if (searchInputRef.current) searchInputRef.current.focus();
-                        }}
-                        className="absolute right-2.5 top-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors p-0.5 rounded cursor-pointer flex items-center justify-center"
-                        title="Clear search (Esc)"
-                        aria-label="Clear search"
-                      >
-                        <i className="fa-solid fa-xmark text-xs"></i>
-                      </button>
-                    )}
-                  </div>
                   <button 
                     onClick={handleNewNote} 
-                    className="h-7 px-3 text-xs rounded bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
-                    title="Create new blank note"
+                    className="flex-1 h-7 px-3 text-xs rounded bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
+                    title="Note: Manual user thoughts, outlines, and notes&#10;&#10;Create a new blank note" 
                   >
                     <i className="fa-solid fa-plus text-[10px]"></i>
                     <span>Note</span>
                   </button>
                   <button 
                     type="button"
-                    onClick={() => startWholeBrainChat()} 
-                    className="h-7 px-3 text-xs rounded bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors flex items-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0 shadow-xs" 
-                    title={`Start new ${activeBrainChatTitle}`}
+                    onClick={() => handleNewSeed()} 
+                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
+                    title="Seed: AI prompt shortcuts &amp; instructions&#10;&#10;Create a new prompt shortcut without summaries or takeaways"
                   >
                     <i className="fa-solid fa-plus text-[10px]"></i>
-                    <i className="fa-solid fa-comment-dots text-xs"></i>
+                    <span>Seed</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={generatePromptNote}
+                    disabled={promptState.isGenerating || !filteredEntries.some(e => !isWelcomeEntry(e) && !isSeedEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e))}
+                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#059669] hover:bg-[#047857] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={`Prompt: AI theme reflection questions\u000A\u000AGenerate a new prompt from ${activeListScopeSummary ? `notes matching ${activeListScopeSummary}` : 'your recent notes'} (pool and timeframe in Prompt Settings)`}
+                  >
+                    <i className="fa-solid fa-plus text-[10px]"></i>
+                    <span>Prompt</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => startWholeBrainChat()} 
+                    className="flex-1 h-7 px-3 text-xs rounded bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors flex items-center justify-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0 shadow-xs" 
+                    title={`AI Chat: Archived AI conversations &amp; syntheses&#10;&#10;Start new ${activeBrainChatTitle}`}
+                  >
+                    <i className="fa-solid fa-plus text-[10px]"></i>
                     <span>Chat</span>
                   </button>
                 </div>
 
+                {/* Generated Theme Prompt Popup & Loading State */}
+                <div 
+                  className="w-full overflow-hidden"
+                  style={{
+                    height: (promptState.draft || promptState.isGenerating) ? `${promptHeight}px` : '0px',
+                    marginTop: (promptState.draft || promptState.isGenerating) ? '0px' : '-15px',
+                    opacity: (promptState.draft || promptState.isGenerating) ? 1 : 0,
+                    transition: 'height 300ms cubic-bezier(0.4, 0, 0.2, 1), margin-top 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms ease-in-out',
+                    pointerEvents: (promptState.draft || promptState.isGenerating) ? 'auto' : 'none'
+                  }}
+                >
+                  <div ref={promptInnerRef}>
+                    {promptState.isGenerating && !promptState.draft && (
+                      <div>
+                        <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[#059669]/60 text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center bg-[#059669]/5">
+                          <i className="fa-solid fa-spinner fa-spin text-[#059669]"></i> {activeListScopeSummary ? `Finding themes in ${activeListScopeSummary}...` : 'Finding themes and loose ends across visible notes...'}
+                        </div>
+                      </div>
+                    )}
+                    {promptState.draft && (
+                      <div>
+                        <div className="group relative p-4 rounded-md shadow-[var(--track-card-shadow)] border-l-4 bg-[var(--card-bg)]" style={{ borderLeftColor: '#059669', borderLeftWidth: '4px' }}>
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex items-center gap-2 text-[#059669] font-bold text-xs uppercase tracking-wider flex-wrap">
+                              <span className="flex items-center gap-1.5"><i className="fa-solid fa-brain"></i> Theme Prompt</span>
+                              {promptState.draft.projects && promptState.draft.projects.length > 0 && (
+                                <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
+                                  <i className="fa-solid fa-folder-open text-[9px] mr-1"></i>{promptState.draft.projects.join(', ')}
+                                </span>
+                              )}
+                              {promptState.draft.categories && promptState.draft.categories.length > 0 && promptState.draft.categories[0] !== 'notes' && (
+                                <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded border border-blue-500/20">
+                                  <i className="fa-solid fa-layer-group text-[9px] mr-1"></i>{promptState.draft.categories.join(', ')}
+                                </span>
+                              )}
+                              {promptState.draft.tags && promptState.draft.tags.filter(t => t !== 'prompt' && t !== 'reflection').length > 0 && (
+                                <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-purple-500/10 text-purple-500 rounded border border-purple-500/20">
+                                  #{promptState.draft.tags.filter(t => t !== 'prompt' && t !== 'reflection').join(', #')}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                type="button"
+                                onClick={generatePromptNote}
+                                disabled={promptState.isGenerating}
+                                className="text-xs text-[var(--text-muted)] hover:text-[#059669] p-1 cursor-pointer transition-colors disabled:opacity-50"
+                                title="Generate a new prompt"
+                                aria-label="Generate a new prompt"
+                              >
+                                <i className={`fa-solid fa-rotate-right ${promptState.isGenerating ? 'fa-spin text-[#059669]' : ''}`}></i>
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={handleWriteFromPrompt} 
+                                disabled={promptState.isGenerating}
+                                className="text-xs bg-[#059669] text-white px-3 py-1 rounded font-bold hover:bg-[#047857] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer disabled:opacity-50"
+                                title="Write response to this prompt"
+                              >
+                                <i className="fa-solid fa-pen-nib text-[10px]"></i> Write
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => setPromptState({ isGenerating: false, draft: null })} 
+                                className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] p-1 cursor-pointer transition-colors"
+                                title="Dismiss prompt"
+                              >
+                                <i className="fa-solid fa-xmark"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div className={`transition-opacity duration-150 ${promptState.isGenerating ? 'opacity-50' : ''}`}>
+                            <div className="font-bold text-[var(--text-main)] mb-2 font-mono text-base">{promptState.draft.title}</div>
+                            <div 
+                              className="text-xs text-[var(--text-main)] font-mono leading-relaxed pb-1 whitespace-pre-wrap select-text"
+                              dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(promptState.draft.fullContent), entries) }}
+                              onClick={handleContentClick}
+                              onMouseOver={handleContentMouseOver}
+                              onMouseOut={handleContentMouseOut}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Quick Add URL/Text */}
-                <form onSubmit={(e) => { e.preventDefault(); if (addInput.trim()) processInput(addInput.trim()); }} className="relative">
-                  <i className="fa-solid fa-link absolute left-3 top-2 text-[var(--text-muted)] text-xs"></i>
+                <form onSubmit={(e) => { e.preventDefault(); if (addInput.trim()) processInput(addInput.trim()); }} className="relative w-full h-7">
+                  <i className="fa-solid fa-link absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xs pointer-events-none"></i>
                   <input 
                     type="text" 
                     value={addInput} 
                     onChange={e => setAddInput(e.target.value)} 
                     disabled={isAnalyzing} 
                     placeholder="Paste URL, YouTube, or text..." 
-                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-[var(--bg-main)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded disabled:opacity-50 transition-colors" 
+                    className="w-full h-7 pl-8 pr-7 text-xs bg-[var(--field-bg)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded disabled:opacity-50 transition-colors box-border" 
                   />
-                  <button type="submit" disabled={isAnalyzing || !addInput.trim()} className="absolute right-2 top-1.5 text-[var(--accent)] hover:text-[var(--accent-hover)] disabled:opacity-30 p-0.5">
+                  <button 
+                    type="submit" 
+                    disabled={isAnalyzing || !addInput.trim()} 
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center text-[var(--accent)] hover:text-[var(--accent-hover)] disabled:opacity-30 p-0.5 cursor-pointer leading-none"
+                    title="Process input (Enter)"
+                    aria-label="Process input"
+                  >
                     {isAnalyzing ? <i className="fa-solid fa-spinner fa-spin text-xs"></i> : <i className="fa-solid fa-arrow-right text-xs"></i>}
                   </button>
                 </form>
+
+                {/* Search Bar Row */}
+                <div className="relative w-full h-7">
+                  <i className="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xs pointer-events-none"></i>
+                  <input 
+                    ref={searchInputRef}
+                    type="text" 
+                    placeholder="Search notes..." 
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape' && searchQuery) {
+                        e.stopPropagation();
+                        setSearchQuery('');
+                        if (searchInputRef.current) searchInputRef.current.blur();
+                      }
+                    }} 
+                    className="w-full h-7 pl-8 pr-8 bg-[var(--field-bg)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded text-xs transition-colors box-border" 
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSearchQuery('');
+                      if (searchInputRef.current) {
+                        searchInputRef.current.value = '';
+                        searchInputRef.current.blur();
+                      }
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    disabled={!searchQuery}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-default transition-all cursor-pointer z-10"
+                    title={searchQuery ? "Cancel search (Esc)" : "Cancel search"}
+                    aria-label="Cancel search"
+                  >
+                    <i className="fa-solid fa-xmark text-xs"></i>
+                  </button>
+                </div>
 
                 {/* Active Filter Indicators */}
                 {(activeProjects.length > 0 || activeCategories.length > 0 || activeTags.length > 0) && (
@@ -6059,192 +6546,33 @@ ${expandedBlocks.join('\n\n')}`
               </div>
 
               {/* Note Cards List: 30px margin between cards */}
-              <div className="flex-1 overflow-y-auto px-[50px] pb-[50px] pt-2 space-y-[30px]">
-                
-                {/* PROMPT NOTE SECTION (Visible when at least 1 summarized note matching selected entry types exists in visible list view) */}
-                {filteredEntries.filter(e => !isWelcomeEntry(e) && hasSummaryOrTakeaways(e)).length >= 1 && !promptState.draft && !promptState.isGenerating && (() => {
-                  const rangeMonths = Number(promptConfig?.dateRangeMonths) || 2;
-                  const rangeLabel = formatPromptDateRangeLabel(rangeMonths);
-                  const rawPoolSize = Number(promptConfig?.poolSize) || 10;
-                  const poolSizeSliderVal = rawPoolSize > 50 ? 55 : Math.min(50, Math.max(5, Math.round(rawPoolSize / 5) * 5));
-                  const poolSizeLabel = formatPromptPoolSizeLabel(poolSizeSliderVal);
-                  const matchingTimeframeCount = filteredEntries.filter(e => !isWelcomeEntry(e) && hasSummaryOrTakeaways(e) && isEntryWithinPromptDateRange(e, rangeMonths)).length;
-                  const effectiveSampleCount = poolSizeSliderVal > 50 ? matchingTimeframeCount : Math.min(matchingTimeframeCount, poolSizeSliderVal);
-                  return (
-                    <div className="space-y-2">
-                      <div className="flex gap-2 items-stretch">
-                        <button 
-                          type="button"
-                          onClick={generatePromptNote} 
-                          className="flex-1 p-3.5 rounded-md border-2 border-dashed border-[#10e567] text-[var(--text-main)] hover:bg-[#10e567]/10 hover:text-[var(--text-main)] transition-colors font-bold font-mono text-xs shadow-[var(--track-card-shadow)] flex items-center justify-center gap-2 cursor-pointer"
-                          title={activeListScopeSummary ? `Generate prompt analyzing notes matching: ${activeListScopeSummary} (${rangeLabel}, Pool: ${poolSizeLabel})` : `Generate prompt analyzing notes from ${rangeLabel} (Pool: ${poolSizeLabel})`}
-                        >
-                          <i className="fa-solid fa-wand-magic-sparkles text-[#10e567]"></i>
-                          <span className="text-[var(--text-main)]">
-                            Generate Prompt{activeListScopeSummary ? ` (${activeListScopeSummary})` : ''}
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsPromptConfigOpen(prev => !prev)}
-                          className={`px-3.5 rounded-md border-2 border-dashed transition-colors flex items-center justify-center cursor-pointer shadow-[var(--track-card-shadow)] ${
-                            isPromptConfigOpen
-                              ? 'border-[#10e567] bg-[#10e567]/15 text-[#10e567]'
-                              : 'border-[#10e567]/60 text-[var(--text-muted)] hover:border-[#10e567] hover:text-[#10e567] hover:bg-[#10e567]/10'
-                          }`}
-                          title={`Prompt Settings • Timeframe: ${rangeLabel} • Pool Size: ${poolSizeLabel} (${effectiveSampleCount}/${matchingTimeframeCount} eligible notes)`}
-                          aria-label="Prompt Generation Settings"
-                        >
-                          <i className="fa-solid fa-sliders text-xs"></i>
-                        </button>
-                      </div>
-
-                      {isPromptConfigOpen && (
-                        <div className="p-3.5 rounded-md bg-[var(--card-bg)] border border-[#10e567]/40 shadow-[var(--track-card-shadow)] space-y-3.5 font-mono text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#10e567] flex items-center gap-1.5">
-                              <i className="fa-solid fa-sliders text-[10px]"></i> Prompt Pool Settings
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setPromptConfig(prev => ({ ...prev, dateRangeMonths: 2, poolSize: 10 }))}
-                              className="text-[10px] text-[var(--text-muted)] hover:text-[#10e567] underline cursor-pointer"
-                              title="Reset date range (2 months) and pool size (10 notes) to defaults"
-                            >
-                              Reset Defaults
-                            </button>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <div className="flex justify-between items-center text-[11px]">
-                              <span className="text-[var(--text-muted)]">Date Range</span>
-                              <span className="font-semibold text-[var(--text-main)]">
-                                {rangeLabel} <span className="text-[10px] text-[var(--text-muted)] font-normal">({matchingTimeframeCount} eligible {matchingTimeframeCount === 1 ? 'note' : 'notes'})</span>
-                              </span>
-                            </div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="25"
-                              step="1"
-                              value={rangeMonths}
-                              onChange={(e) => setPromptConfig(prev => ({ ...prev, dateRangeMonths: Number(e.target.value) }))}
-                              className="w-full accent-[#10e567] cursor-pointer"
-                            />
-                            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
-                              <span>1 mo</span>
-                              <span>2 mos</span>
-                              <span>6 mos</span>
-                              <span>1 yr</span>
-                              <span>2 yrs</span>
-                              <span>All Time</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5 pt-2 border-t border-[var(--border)]">
-                            <div className="flex justify-between items-center text-[11px]">
-                              <span className="text-[var(--text-muted)]">Pool Size</span>
-                              <span className="font-semibold text-[var(--text-main)]">
-                                {poolSizeLabel} <span className="text-[10px] text-[var(--text-muted)] font-normal">({effectiveSampleCount} sampled)</span>
-                              </span>
-                            </div>
-                            <input
-                              type="range"
-                              min="5"
-                              max="55"
-                              step="5"
-                              value={poolSizeSliderVal}
-                              onChange={(e) => setPromptConfig(prev => ({ ...prev, poolSize: Number(e.target.value) }))}
-                              className="w-full accent-[#10e567] cursor-pointer"
-                            />
-                            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
-                              <span>5</span>
-                              <span>10</span>
-                              <span>20</span>
-                              <span>30</span>
-                              <span>40</span>
-                              <span>50</span>
-                              <span>All</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-                {promptState.isGenerating && !promptState.draft && (
-                  <div className="w-full p-3.5 rounded-md border-2 border-dashed border-[#10e567]/60 text-[var(--text-muted)] font-mono text-xs flex items-center justify-center gap-2 text-center">
-                    <i className="fa-solid fa-spinner fa-spin text-[#10e567]"></i> {activeListScopeSummary ? `Finding themes in ${activeListScopeSummary}...` : 'Finding themes and loose ends across visible notes...'}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden px-[50px] pb-[50px] pt-0 space-y-[30px]">
+                <div className="-mb-[20px]">
+                <div className="pb-[15px]">
+                  <div className="relative grid grid-cols-2 p-0.5 rounded-md bg-[var(--sort-toggle-bg)] border border-[var(--sort-toggle-border)] text-[11px] font-semibold font-mono select-none" role="group" aria-label="Sort entries by">
+                    <div
+                      className="absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] rounded bg-[var(--sort-toggle-pill-bg)] border border-[var(--sort-toggle-pill-border)] shadow-[var(--track-card-shadow)] transition-transform duration-200 ease-out"
+                      style={{ transform: listSortMode === 'modified' ? 'translateX(100%)' : 'translateX(0)' }}
+                    ></div>
+                    {[['created', 'Created', 'fa-calendar-plus'], ['modified', 'Modified', 'fa-pen-to-square']].map(([mode, label, icon]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => handleSetSortMode(mode)}
+                        aria-pressed={listSortMode === mode}
+                        title={`Sort by date ${mode} (newest first)`}
+                        className={`relative z-10 py-1 flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${listSortMode === mode ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        <i className={`fa-regular ${icon} text-[10px]`}></i>{label}
+                      </button>
+                    ))}
                   </div>
-                )}
-                {promptState.draft && (
-                  <div className="group relative p-4 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 border-l-4 bg-[var(--card-bg)]" style={{ borderLeftColor: '#10e567', borderLeftWidth: '4px' }}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2 text-[#10e567] font-bold text-xs uppercase tracking-wider flex-wrap">
-                        <span className="flex items-center gap-1.5"><i className="fa-solid fa-brain"></i> Theme Prompt</span>
-                        {promptState.draft.projects && promptState.draft.projects.length > 0 && (
-                          <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
-                            <i className="fa-solid fa-folder-open text-[9px] mr-1"></i>{promptState.draft.projects.join(', ')}
-                          </span>
-                        )}
-                        {promptState.draft.categories && promptState.draft.categories.length > 0 && promptState.draft.categories[0] !== 'notes' && (
-                          <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded border border-blue-500/20">
-                            <i className="fa-solid fa-layer-group text-[9px] mr-1"></i>{promptState.draft.categories.join(', ')}
-                          </span>
-                        )}
-                        {promptState.draft.tags && promptState.draft.tags.filter(t => t !== 'prompt' && t !== 'reflection').length > 0 && (
-                          <span className="text-[10px] lowercase font-normal px-1.5 py-0.5 bg-purple-500/10 text-purple-500 rounded border border-purple-500/20">
-                            #{promptState.draft.tags.filter(t => t !== 'prompt' && t !== 'reflection').join(', #')}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          type="button"
-                          onClick={generatePromptNote}
-                          disabled={promptState.isGenerating}
-                          className="text-xs text-[var(--text-muted)] hover:text-[#10e567] p-1 cursor-pointer transition-colors disabled:opacity-50"
-                          title="Generate a new prompt"
-                          aria-label="Generate a new prompt"
-                        >
-                          <i className={`fa-solid fa-rotate-right ${promptState.isGenerating ? 'fa-spin text-[#10e567]' : ''}`}></i>
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={handleWriteFromPrompt} 
-                          disabled={promptState.isGenerating}
-                          className="text-xs bg-[#10e567] text-neutral-900 px-3 py-1 rounded font-bold hover:bg-[#00c853] transition-colors flex items-center gap-1.5 font-mono shadow-xs cursor-pointer disabled:opacity-50"
-                          title="Write response to this prompt"
-                        >
-                          <i className="fa-solid fa-pen-nib text-[10px]"></i> Write
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={() => setPromptState({ isGenerating: false, draft: null })} 
-                          className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] p-1 cursor-pointer transition-colors"
-                          title="Dismiss prompt"
-                        >
-                          <i className="fa-solid fa-xmark"></i>
-                        </button>
-                      </div>
-                    </div>
-                    <div className={`transition-opacity duration-150 ${promptState.isGenerating ? 'opacity-50' : ''}`}>
-                      <div className="font-bold text-[var(--text-main)] mb-2 font-mono text-base">{promptState.draft.title}</div>
-                      <div 
-                        className="text-xs text-[var(--text-main)] font-mono leading-relaxed pb-1 whitespace-pre-wrap select-text"
-                        dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdownInline(promptState.draft.fullContent), entries) }}
-                        onClick={handleContentClick}
-                        onMouseOver={handleContentMouseOver}
-                        onMouseOut={handleContentMouseOut}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {filteredEntries.map(entry => {
+                </div>
+                {sortedAllEntries.map(entry => {
                   const isSelected = selectedEntryIds.includes(entry.id);
                   const isAiChat = isAiChatEntry(entry);
-                  const isPrompt = !isAiChat && isPromptEntry(entry);
+                  const isSeed = !isAiChat && isSeedEntry(entry);
+                  const isPrompt = !isAiChat && !isSeed && isPromptEntry(entry);
                   const isPdf = !isAiChat && !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
                   const isMedia = !isAiChat && !isPdf && isMediaSource(entry.sourceUrl);
                   
@@ -6253,8 +6581,11 @@ ${expandedBlocks.join('\n\n')}`
                   if (isAiChat) {
                     typeColor = '#a855f7'; // AI Chat (Purple)
                     typeIcon = 'fa-comment-dots';
+                  } else if (isSeed) {
+                    typeColor = '#3b82f6'; // Seed (Muted Navy)
+                    typeIcon = 'fa-seedling';
                   } else if (isPrompt) {
-                    typeColor = '#10e567'; // Prompt (Fluoro Green)
+                    typeColor = '#059669'; // Prompt (Muted Emerald)
                     typeIcon = 'fa-brain';
                   } else if (isMedia) {
                     typeColor = '#ff5252'; // Media (Red)
@@ -6264,9 +6595,17 @@ ${expandedBlocks.join('\n\n')}`
                     typeIcon = isPdf ? 'fa-file-pdf' : 'fa-link';
                   }
 
+                  const isEntryVisible = visibleEntryIds.has(entry.id);
                   return (
-                    <div 
+                    <div
                       key={entry.id}
+                      className={`tax-collapse-item ${isEntryVisible ? 'is-visible' : 'is-hidden'}`}
+                      data-entry-id={entry.id}
+                      aria-hidden={!isEntryVisible}
+                    >
+                    <div className="min-h-0">
+                    <div className="pb-[20px]">
+                    <div 
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData('kb-ref-id', entry.id);
@@ -6299,7 +6638,7 @@ ${expandedBlocks.join('\n\n')}`
                       <div className="flex justify-between items-start gap-2 mb-1">
                         <h4 className="text-sm font-semibold leading-snug line-clamp-2 flex-1 text-[var(--text-main)] font-mono">
                           <i className={`fa-solid ${typeIcon} mr-1.5 text-xs`} style={{ color: typeColor }}></i>
-                          {entry.title || 'Untitled Note'}
+                          {entry.title || (isSeed ? 'Untitled Seed' : 'Untitled Note')}
                         </h4>
                         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
@@ -6323,11 +6662,11 @@ ${expandedBlocks.join('\n\n')}`
                         )}
                       </div>
 
-                      {/* For prompt or aiChat entries, show summary or fullContent preview */}
-                      {(isPrompt || isAiChat) ? (
-                        (entry.summary || entry.fullContent) && (
+                      {/* For seed, prompt, or aiChat entries, show fullContent or summary preview */}
+                      {(isSeed || isPrompt || isAiChat) ? (
+                        (entry.fullContent || entry.summary) && (
                           <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
-                            {entry.summary || entry.fullContent}
+                            {entry.fullContent || entry.summary}
                           </p>
                         )
                       ) : (
@@ -6348,8 +6687,12 @@ ${expandedBlocks.join('\n\n')}`
                         ))}
                       </div>
                     </div>
+                    </div>
+                    </div>
+                    </div>
                   );
                 })}
+                </div>
 
                 {filteredEntries.length === 0 && (
                   <div className="text-center py-12 px-4 text-[var(--text-muted)] font-mono">
@@ -6362,7 +6705,7 @@ ${expandedBlocks.join('\n\n')}`
           </div>
 
           {/* MAIN DOCUMENT COLUMN (READER / EDITOR) */}
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0 bg-[var(--bg-main)]">
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0 bg-[var(--bg-main)]" style={getEntryAccentStyle(activeSingleEntry)}>
             
             {/* Top Bar / Actions (when multi-notes selected) */}
             {selectedEntryIds.length > 1 && (
@@ -6374,7 +6717,7 @@ ${expandedBlocks.join('\n\n')}`
             )}
 
             {/* Content Area: 50px view padding */}
-            <div className={`flex-1 min-h-0 bg-[var(--bg-main)] ${activeSingleEntry && isAiChatEntry(activeSingleEntry) ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+            <div className={`flex-1 min-h-0 ${activeSingleEntry && isAiChatEntry(activeSingleEntry) ? 'flex flex-col overflow-hidden bg-[var(--bg-main)]' : 'overflow-y-auto bg-[var(--bg-main)]'}`}>
               {!activeSingleEntry && selectedEntries.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-[50px] text-center font-mono">
                   <div className="w-16 h-16 rounded-lg bg-[var(--card-bg)] flex items-center justify-center mb-4 text-2xl text-[var(--text-muted)]">
@@ -6425,11 +6768,11 @@ ${expandedBlocks.join('\n\n')}`
                       {/* Sticky Chat Header */}
                       <div className="px-[50px] pt-[50px] pb-3 shrink-0 bg-[var(--bg-main)] space-y-2">
                         <div className="flex justify-between items-center gap-3">
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1 group">
                             <span className="w-8 h-8 rounded bg-[#a855f7]/15 text-[#a855f7] flex items-center justify-center font-bold text-sm shrink-0">
                               <i className="fa-solid fa-comment-dots"></i>
                             </span>
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 flex items-center gap-2">
                               <EditableText 
                                 key={`title-${activeSingleEntry.id}`}
                                 tag="h1"
@@ -6440,6 +6783,16 @@ ${expandedBlocks.join('\n\n')}`
                                   setEntries(prev => prev.map(e => e.id === targetId ? { ...e, title: newText.trim() || activeBrainChatTitle, updatedAt: Date.now() } : e));
                                 }} 
                               />
+                              <button
+                                type="button"
+                                onClick={() => handleSuggestTitle(activeSingleEntry.id)}
+                                disabled={isAnalyzing}
+                                className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer opacity-70 sm:opacity-0 sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'title' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
+                                title="Auto-generate title"
+                                aria-label="Auto-generate title"
+                              >
+                                <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'title' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
+                              </button>
                             </div>
                           </div>
                           
@@ -6627,8 +6980,8 @@ ${expandedBlocks.join('\n\n')}`
                               <div key={msg.id || mIdx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[85%] rounded p-4 shadow-[var(--track-card-shadow)] leading-relaxed ${
                                   msg.role === 'user'
-                                    ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)]'
-                                    : 'bg-[var(--card-bg)] text-[var(--text-main)]'
+                                    ? 'bg-[var(--card-bg)] text-[var(--text-main)]'
+                                    : 'bg-[#a855f7]/10 text-[var(--text-main)]'
                                 }`}>
                                   {msg.role === 'user' ? (
                                     <div className="whitespace-pre-wrap text-xs font-mono">{msg.text}</div>
@@ -6781,9 +7134,9 @@ ${expandedBlocks.join('\n\n')}`
                   {isPromptEntry(activeSingleEntry) ? (
                     <div className="prompt-split-layout">
                       {/* Left Column: Prompt Question */}
-                      <div className="prompt-split-card bg-[var(--card-bg)] border-l-4 border-l-[#10e567] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
+                      <div className="prompt-split-card bg-[var(--card-bg)] border-l-4 border-l-[#059669] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono flex flex-col justify-between">
                         <div>
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#10e567] mb-1.5 flex items-center gap-1.5">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#059669] mb-1.5 flex items-center gap-1.5">
                             <i className="fa-solid fa-brain"></i>
                             <span>Theme Prompt</span>
                           </div>
@@ -6829,12 +7182,12 @@ ${expandedBlocks.join('\n\n')}`
                         </button>
                       </div>
                     </div>
-                  ) : (
+                  ) : !isSeedEntry(activeSingleEntry) ? (
                     <>
                       {/* Theme Prompt Display for non-prompt entries if promptQuestion exists */}
                       {activeSingleEntry.promptQuestion && (
-                        <div className="bg-[var(--card-bg)] border-l-4 border-l-[#10e567] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#10e567] mb-1 flex items-center gap-1.5">
+                        <div className="bg-[var(--card-bg)] border-l-4 border-l-[#059669] rounded p-4 text-[var(--text-main)] text-xs leading-relaxed shadow-[var(--track-card-shadow)] font-mono">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#059669] mb-1 flex items-center gap-1.5">
                             <i className="fa-solid fa-brain"></i>
                             <span>Theme Prompt</span>
                           </div>
@@ -6878,101 +7231,94 @@ ${expandedBlocks.join('\n\n')}`
                         </button>
                       </div>
                     </>
-                  )}
+                  ) : null}
 
-                  {/* Key Takeaways */}
-                  <div className="relative group bg-[var(--card-bg)] rounded p-5 shadow-[var(--track-card-shadow)] font-mono">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-                        <i className="fa-solid fa-list-check text-[var(--accent)]"></i> Key Takeaways
-                      </h3>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
-                          disabled={isAnalyzing}
-                          className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
-                          title="Auto-generate key takeaways"
-                        >
-                          <i className={`fa-solid fa-rotate-right text-[10px] ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i> refresh
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const targetId = activeSingleEntry.id;
-                            setEntries(prev => prev.map(e => {
-                              if (e.id !== targetId) return e;
-                              return { ...e, shortVersion: [...(e.shortVersion || []), 'New takeaway'], updatedAt: Date.now() };
-                            }));
-                          }}
-                          className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
-                          title="Add key takeaway"
-                        >
-                          <i className="fa-solid fa-plus text-[10px]"></i> add point
-                        </button>
+                  {/* Key Takeaways (suppressed for Seeds) */}
+                  {!isSeedEntry(activeSingleEntry) && (
+                    <div className="relative group bg-[var(--card-bg)] rounded p-5 shadow-[var(--track-card-shadow)] font-mono">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                          <i className="fa-solid fa-list-check text-[var(--accent)]"></i> Key Takeaways
+                        </h3>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetId = activeSingleEntry.id;
+                              setEntries(prev => prev.map(e => {
+                                if (e.id !== targetId) return e;
+                                return { ...e, shortVersion: [...(e.shortVersion || []), 'New takeaway'], updatedAt: Date.now() };
+                              }));
+                            }}
+                            className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                            title="Add key takeaway"
+                          >
+                            <i className="fa-solid fa-plus text-[10px]"></i> add point
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    {Array.isArray(activeSingleEntry.shortVersion) && activeSingleEntry.shortVersion.length > 0 ? (
-                      <ul className="space-y-2">
-                        {activeSingleEntry.shortVersion.map((point, idx) => (
-                          <li key={idx} className="flex items-start text-xs text-[var(--text-main)] leading-relaxed group/item">
-                            <span className="text-[var(--accent)] mr-2 font-bold shrink-0 mt-0.5">•</span>
-                            <EditableText 
-                              key={`takeaway-${activeSingleEntry.id}-${idx}`}
-                              tag="span"
-                              multiline={true}
-                              className="flex-1 cursor-text"
-                              text={point}
-                              renderView={(val) => <span dangerouslySetInnerHTML={{ __html: parseMarkdownInline(val) }} />}
-                              onSave={(newText) => {
-                                const targetId = activeSingleEntry.id;
-                                setEntries(prev => prev.map(e => {
-                                  if (e.id !== targetId) return e;
-                                  const updated = [...(e.shortVersion || [])];
-                                  if (newText.trim() === '') {
+                      {Array.isArray(activeSingleEntry.shortVersion) && activeSingleEntry.shortVersion.length > 0 ? (
+                        <ul className="space-y-2">
+                          {activeSingleEntry.shortVersion.map((point, idx) => (
+                            <li key={idx} className="flex items-start text-xs text-[var(--text-main)] leading-relaxed group/item">
+                              <span className="text-[var(--accent)] mr-2 font-bold shrink-0 mt-0.5">•</span>
+                              <EditableText 
+                                key={`takeaway-${activeSingleEntry.id}-${idx}`}
+                                tag="span"
+                                multiline={true}
+                                className="flex-1 cursor-text"
+                                text={point}
+                                renderView={(val) => <span dangerouslySetInnerHTML={{ __html: parseMarkdownInline(val) }} />}
+                                onSave={(newText) => {
+                                  const targetId = activeSingleEntry.id;
+                                  setEntries(prev => prev.map(e => {
+                                    if (e.id !== targetId) return e;
+                                    const updated = [...(e.shortVersion || [])];
+                                    if (newText.trim() === '') {
+                                      updated.splice(idx, 1);
+                                    } else {
+                                      updated[idx] = newText.trim();
+                                    }
+                                    return { ...e, shortVersion: updated, updatedAt: Date.now() };
+                                  }));
+                                }} 
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const targetId = activeSingleEntry.id;
+                                  setEntries(prev => prev.map(e => {
+                                    if (e.id !== targetId) return e;
+                                    const updated = [...(e.shortVersion || [])];
                                     updated.splice(idx, 1);
-                                  } else {
-                                    updated[idx] = newText.trim();
-                                  }
-                                  return { ...e, shortVersion: updated, updatedAt: Date.now() };
-                                }));
-                              }} 
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const targetId = activeSingleEntry.id;
-                                setEntries(prev => prev.map(e => {
-                                  if (e.id !== targetId) return e;
-                                  const updated = [...(e.shortVersion || [])];
-                                  updated.splice(idx, 1);
-                                  return { ...e, shortVersion: updated, updatedAt: Date.now() };
-                                }));
-                              }}
-                              className="opacity-0 group-hover/item:opacity-100 text-[var(--text-muted)] hover:text-[var(--danger)] ml-2 text-[10px] cursor-pointer"
-                              title="Delete this point"
-                            >
-                              <i className="fa-solid fa-xmark"></i>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
-                        No key takeaways yet. Click &quot;add point&quot; or &quot;refresh&quot; to extract key points.
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
-                      disabled={isAnalyzing}
-                      className={`absolute left-full ml-3 top-5 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.shortVersion || activeSingleEntry.shortVersion.length === 0) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
-                      title="Auto-generate key takeaways"
-                      aria-label="Auto-generate key takeaways"
-                    >
-                      <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
-                    </button>
-                  </div>
+                                    return { ...e, shortVersion: updated, updatedAt: Date.now() };
+                                  }));
+                                }}
+                                className="opacity-0 group-hover/item:opacity-100 text-[var(--text-muted)] hover:text-[var(--danger)] ml-2 text-[10px] cursor-pointer"
+                                title="Delete this point"
+                              >
+                                <i className="fa-solid fa-xmark"></i>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-[var(--text-muted)] italic leading-relaxed">
+                          No key takeaways yet. Click &quot;add point&quot; or use the refresh button beside this section to extract key points.
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateTakeaways(activeSingleEntry.id)}
+                        disabled={isAnalyzing}
+                        className={`absolute left-full ml-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shadow-xs transition-all cursor-pointer ${(!activeSingleEntry.shortVersion || activeSingleEntry.shortVersion.length === 0) ? 'opacity-70 sm:opacity-40' : 'opacity-70 sm:opacity-0'} sm:group-hover:opacity-100 ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'opacity-100' : ''}`}
+                        title="Auto-generate key takeaways"
+                        aria-label="Auto-generate key takeaways"
+                      >
+                        <i className={`fa-solid fa-rotate-right text-xs ${(isAnalyzing && (generatingField === 'takeaways' || generatingField === 'metadata')) ? 'animate-spin' : ''}`}></i>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Media Embed */}
                   {getEmbedUrl(activeSingleEntry.sourceUrl) && (
@@ -6983,6 +7329,7 @@ ${expandedBlocks.join('\n\n')}`
 
                   {/* Markdown Body */}
                   {(() => {
+                    const isSeed = isSeedEntry(activeSingleEntry);
                     const isEditingContent = !isAiChat && Boolean(editingEntries[activeSingleEntry.id]);
                     const noteMarkdown = activeSingleEntry.fullContent || (
                       Array.isArray(activeSingleEntry.chatMessages) && activeSingleEntry.chatMessages.length > 0
@@ -6997,21 +7344,23 @@ ${expandedBlocks.join('\n\n')}`
                         <div ref={editFormRef} className="relative space-y-2">
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Content</span>
+                              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                                {isSeed ? 'Seed Prompt / Instructions' : 'Content'}
+                              </span>
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-semibold">
                                 Editing
                               </span>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <button 
                                 type="button" 
                                 onClick={() => {
                                   setIsContentFocused(true);
                                 }} 
-                                className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1.5 cursor-pointer"
+                                className="btn-secondary h-6 px-3 text-[11px] font-semibold text-[var(--accent)]"
                                 title="Open distraction-free Focus Mode"
                               >
-                                <i className="fa-solid fa-expand text-xs"></i> Focus Mode
+                                <i className="fa-solid fa-expand text-[10px]"></i> Focus Mode
                               </button>
                               <button
                                 type="button"
@@ -7019,7 +7368,7 @@ ${expandedBlocks.join('\n\n')}`
                                 className="btn-primary h-6 px-3 text-[11px] font-semibold"
                                 title="Save note and finish editing"
                               >
-                                Done
+                                <i className="fa-solid fa-check text-[10px]"></i> Done
                               </button>
                             </div>
                           </div>
@@ -7048,7 +7397,7 @@ ${expandedBlocks.join('\n\n')}`
                             }} 
                             onKeyDown={handleContentKeyDown}
                             className="w-full p-4 font-mono text-sm leading-[1.4] bg-[var(--card-bg)] text-[var(--text-main)] border border-[var(--border)] rounded focus:border-[var(--accent)] outline-none resize-y min-h-[260px] cursor-text select-text"
-                            placeholder="Write your note in Markdown..."
+                            placeholder={isSeed ? "Write a reusable prompt that runs on any note with one click. E.g. \"Rewrite this note as a concise LinkedIn post with a strong opening hook and 3 key takeaways.\"" : "Write your note in Markdown..."}
                             onBlur={() => {
                               if (activeSingleEntry?.id) {
                                 triggerAutoMetadataOnFirstBlur(activeSingleEntry.id);
@@ -7063,7 +7412,14 @@ ${expandedBlocks.join('\n\n')}`
                       <div className="relative group">
                         <div className="flex justify-between items-center mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Content</span>
+                            <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                              {isSeed ? 'Seed Prompt / Instructions' : 'Content'}
+                            </span>
+                            {isSeed && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#3b82f6]/15 text-[#60a5fa] border border-[#3b82f6]/30 flex items-center gap-1 font-semibold">
+                                <i className="fa-solid fa-seedling text-[9px]"></i> AI Prompt Shortcut
+                              </span>
+                            )}
                             {isAiChat && (
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#a855f7]/15 text-[#a855f7] border border-[#a855f7]/30 flex items-center gap-1 font-semibold">
                                 <i className="fa-solid fa-lock text-[9px]"></i> Read-Only Chat Transcript
@@ -7071,27 +7427,16 @@ ${expandedBlocks.join('\n\n')}`
                             )}
                           </div>
                           {!isAiChat && (
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <button 
                                 type="button" 
                                 onClick={() => {
                                   startEditing(activeSingleEntry);
                                 }} 
-                                className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:underline flex items-center gap-1 cursor-pointer"
-                                title="Edit note content"
+                                className="btn-secondary h-6 px-3 text-[11px] font-semibold"
+                                title={isSeed ? "Edit seed prompt" : "Edit note content"}
                               >
-                                <i className="fa-regular fa-pen-to-square text-xs"></i> Edit
-                              </button>
-                              <button 
-                                type="button" 
-                                onClick={() => {
-                                  startEditing(activeSingleEntry);
-                                  setIsContentFocused(true);
-                                }} 
-                                className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer"
-                                title="Open distraction-free Focus Mode"
-                              >
-                                <i className="fa-solid fa-expand text-xs"></i> Focus Mode
+                                <i className="fa-regular fa-pen-to-square text-[10px]"></i> Edit
                               </button>
                             </div>
                           )}
@@ -7103,7 +7448,7 @@ ${expandedBlocks.join('\n\n')}`
                               if (!isAiChat) startEditing(activeSingleEntry);
                             }}
                             className={`prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono min-h-[60px] ${isAiChat ? 'select-text cursor-default' : 'cursor-text'}`}
-                            title={isAiChat ? undefined : "Double-click to edit content"}
+                            title={isAiChat ? undefined : (isSeed ? "Double-click to edit seed prompt" : "Double-click to edit content")}
                             dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(noteMarkdown), entries) }} 
                           />
                         ) : (
@@ -7113,9 +7458,9 @@ ${expandedBlocks.join('\n\n')}`
                               if (!isAiChat) startEditing(activeSingleEntry);
                             }}
                             className={`text-[var(--text-muted)] italic leading-relaxed font-mono min-h-[60px] py-4 border border-dashed border-[var(--border)] rounded px-4 text-center ${isAiChat ? 'cursor-default' : 'cursor-text'}`}
-                            title={isAiChat ? undefined : "Double-click to write note content..."}
+                            title={isAiChat ? undefined : (isSeed ? "Double-click to write seed prompt..." : "Double-click to write note content...")}
                           >
-                            {isAiChat ? 'No chat messages recorded in this session.' : 'Double-click to write note content...'}
+                            {isAiChat ? 'No chat messages recorded in this session.' : (isSeed ? 'Double-click to write seed prompt / instructions...' : 'Double-click to write note content...')}
                           </div>
                         )}
                       </div>
@@ -7156,7 +7501,7 @@ ${expandedBlocks.join('\n\n')}`
           </div>
 
           {/* RIGHT COLUMN: UNIFIED AI ASSISTANT SIDEBAR */}
-          <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
+          <div className={`flex-shrink-0 flex flex-col z-20 overflow-hidden bg-white dark:bg-[var(--bg-pane)] transition-all duration-300 ease-in-out ${
             isAssistantOpen && !(activeSingleEntry && isAiChatEntry(activeSingleEntry))
               ? 'w-96 lg:w-[440px] opacity-100 visible' 
               : 'w-0 min-w-0 opacity-0 invisible pointer-events-none'
@@ -7183,29 +7528,6 @@ ${expandedBlocks.join('\n\n')}`
                     </div>
                   );
                 })()}
-
-                {/* Scope Segmented Control */}
-                <div className="grid grid-cols-2 p-0.5 bg-[var(--bg-main)] rounded text-[11px] font-medium font-mono">
-                  <button 
-                    type="button"
-                    onClick={() => startWholeBrainChat()} 
-                    className="py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1.5 text-[#a855f7] hover:bg-[#a855f7]/15 cursor-pointer truncate"
-                    title={`Open full-width ${activeBrainChatTitle} in main view`}
-                  >
-                    <i className="fa-solid fa-comment-dots text-[10px] shrink-0"></i>
-                    <span className="truncate">{activeBrainChatScopeLabel}</span>
-                  </button>
-
-                  <button 
-                    type="button"
-                    onClick={() => setAssistantScope('selected')} 
-                    className="py-1.5 px-2 rounded bg-[var(--card-bg)] text-[var(--accent)] font-semibold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                    title={activeSingleEntry ? `Focus on "${activeSingleEntry.title}" with archive context` : 'Focus on current entry'}
-                  >
-                    <i className="fa-solid fa-file-lines text-[10px]"></i>
-                    <span>Current Entry</span>
-                  </button>
-                </div>
 
                 {/* Active note context pill */}
                 {assistantScope === 'selected' && activeSingleEntry && (
@@ -7244,8 +7566,8 @@ ${expandedBlocks.join('\n\n')}`
                       <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[90%] rounded px-3.5 py-2.5 shadow-[var(--track-card-shadow)] leading-relaxed ${
                           msg.role === 'user' 
-                            ? 'bg-[var(--chat-user-bg)] text-[var(--text-main)]' 
-                            : 'bg-[var(--card-bg)] text-[var(--text-main)]'
+                            ? 'bg-[var(--bg-main)] text-[var(--text-main)]' 
+                            : 'bg-[#a855f7]/10 text-[var(--text-main)]'
                         }`}>
                           {msg.role === 'user' ? (
                             <div className="whitespace-pre-wrap">{msg.text}</div>
@@ -7292,38 +7614,8 @@ ${expandedBlocks.join('\n\n')}`
                 )}
               </div>
 
-              {/* Quick Prompt Chips (Current Entry Only) */}
-              {assistantScope === 'selected' && (
-                <div className="px-[50px] py-3 flex flex-wrap gap-1.5 bg-[var(--bg-main)]">
-                  <button 
-                    onClick={() => sendAssistantMessage("Summarize the key points concisely under 50 words.")} 
-                    className="btn-secondary text-[11px] px-2.5 py-1"
-                  >
-                    ⚡ Summarize
-                  </button>
-                  <button 
-                    onClick={() => sendAssistantMessage("Extract the top 5 key takeaways as bullet points.")} 
-                    className="btn-secondary text-[11px] px-2.5 py-1"
-                  >
-                    💡 Key Takeaways
-                  </button>
-                  <button 
-                    onClick={() => sendAssistantMessage("Extract all action items and tasks as a checklist.")} 
-                    className="btn-secondary text-[11px] px-2.5 py-1"
-                  >
-                    ✅ Action Items
-                  </button>
-                  <button 
-                    onClick={() => sendAssistantMessage("What are the most interesting connections or themes related to this?")} 
-                    className="btn-secondary text-[11px] px-2.5 py-1"
-                  >
-                    🔗 Connections
-                  </button>
-                </div>
-              )}
-
               {/* Assistant Input Bar */}
-              <div className="px-[50px] pb-[50px] pt-3 shrink-0 bg-[var(--bg-pane)]">
+              <div className="px-[50px] pb-[50px] pt-3 shrink-0 bg-white dark:bg-[var(--bg-pane)]">
                 <form 
                   onSubmit={(e) => { e.preventDefault(); sendAssistantMessage(); }} 
                   className="relative flex items-center"
@@ -7350,6 +7642,45 @@ ${expandedBlocks.join('\n\n')}`
                     <i className="fa-solid fa-paper-plane text-sm"></i>
                   </button>
                 </form>
+                  {/* Seed Prompt Chips (Current Entry Only) */}
+                  {assistantScope === 'selected' && (() => {
+                    const activeProjs = (activeSingleEntry && Array.isArray(activeSingleEntry.projects)) ? activeSingleEntry.projects.map(normTax) : [];
+                    const activeCats = (activeSingleEntry && Array.isArray(activeSingleEntry.categories)) ? activeSingleEntry.categories.map(normTax) : [];
+                
+                    const matchingSeeds = entries.filter(e => {
+                      if (!e || !isSeedEntry(e)) return false;
+                      if (activeSingleEntry && e.id === activeSingleEntry.id) return false;
+                      const eProjs = Array.isArray(e.projects) ? e.projects.filter(Boolean) : [];
+                      const eCats = Array.isArray(e.categories) ? e.categories.filter(Boolean) : [];
+                      // Uncategorized seeds (global seeds without projects or categories) appear everywhere
+                      const isGlobalSeed = eProjs.length === 0 && eCats.length === 0;
+                      const hasSharedProject = activeProjs.length > 0 && eProjs.some(p => activeProjs.includes(normTax(p)));
+                      const hasSharedCategory = activeCats.length > 0 && eCats.some(c => activeCats.includes(normTax(c)));
+                      return isGlobalSeed || hasSharedProject || hasSharedCategory;
+                    });
+
+                    if (matchingSeeds.length === 0) return null;
+
+                    return (
+                      <div className="pt-3 flex flex-wrap items-center gap-2 font-mono">
+                                                {matchingSeeds.map(seed => {
+                          const promptText = seed.fullContent || seed.title || 'Execute seed';
+                          return (
+                            <button
+                              key={seed.id}
+                              type="button"
+                              onClick={() => sendAssistantMessage(promptText)}
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-[#2563eb]/20 hover:bg-[#2563eb]/35 text-[#1e40af] dark:text-[#bfdbfe] border border-[#3b82f6]/50 hover:border-[#3b82f6] transition-all shadow-xs cursor-pointer max-w-[260px] truncate"
+                              title={`Execute Seed prompt: "${seed.title}"\n\n${promptText}`}
+                            >
+                              <i className="fa-solid fa-seedling text-[10px] shrink-0 text-[#3b82f6] dark:text-[#60a5fa]"></i>
+                              <span className="truncate">{seed.title || 'Untitled Seed'}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
               </div>
             </div>
           </div>
@@ -7371,7 +7702,7 @@ ${expandedBlocks.join('\n\n')}`
 
           {/* DISTRACTION-FREE FOCUS MODE (PORTAL OVER ENTIRE APP) */}
           {isContentFocused && activeSingleEntry && !isAiChatEntry(activeSingleEntry) && ReactDOM.createPortal(
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={getEntryAccentStyle(activeSingleEntry)}>
               {/* Opaque backdrop fading in */}
               <div 
                 className="absolute inset-0 animate-focus-backdrop cursor-pointer"
@@ -7398,7 +7729,7 @@ ${expandedBlocks.join('\n\n')}`
                 {/* Prompt Question Display Above Text Area */}
                 {activeSingleEntry.promptQuestion && (
                   <div className="shrink-0 pt-6 px-8 pb-4 pr-14 border-b border-[var(--border)] bg-[var(--bg-pane)] select-text">
-                    <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#10e567] font-mono mb-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-[#059669] font-mono mb-1.5">
                       <i className="fa-solid fa-brain"></i>
                       <span>Theme Prompt</span>
                     </div>

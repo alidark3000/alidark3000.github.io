@@ -80,7 +80,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; Changelog</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.69</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.94</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="readme.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -105,25 +105,244 @@
   <!-- Timeline -->
   <main class="space-y-8 text-sm">
 
-    <!-- v2.8.69 (Current Active Series) -->
+    <!-- v2.8.94 (Current Active Series) -->
     <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
       <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--accent)] border-[var(--bg-main)]"></div>
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.69</h2>
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.94</h2>
           <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
         </div>
-        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-19</span>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-20</span>
       </div>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
         <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">PWA Support &amp; Install Setting:</strong> Added PWA support: web app manifest, icons, and a service worker that caches the app shell and CDN libraries for offline launch (AI API calls and the Safari sync bridge are never cached). Settings has a new Install as App section with an Install button (Chrome/Edge), Safari add-to-Dock/Home Screen instructions, and offline-cache status.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Seed Chips Label Removed:</strong> Removed the redundant &quot;Seeds:&quot; label before the assistant seed chips (the seed icon on each chip is enough).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Seeds Below Assistant Input:</strong> Moved the Seeds shortcut chips in the Entry AI Assistant pane from above the text input to directly below it.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Field Order Swap:</strong> Swapped the order of the search field and the quick-add URL/text field (URL/text field now sits above search).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Standardised 15px Spacing:</strong> Standardised the vertical spacing between the entry buttons, search field, URL field, generated prompt, sort toggle and first card to 15px.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Darker Search &amp; URL Fields (Dark Mode):</strong> Made the search field and quick-add URL field slightly darker in dark mode (new <code>--field-bg</code> theme variable; light mode unchanged).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Assistant Drawer Toggle Removed:</strong> Removed the redundant Whole Brain / Current Entry scope toggle from the top of the Entry AI Assistant drawer (Whole Brain chat remains available via the purple Chat button).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Key Takeaways Refresh Cleanup:</strong> Removed the redundant header refresh link and vertically centered the margin refresh button on hover.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Edit / Focus Mode Buttons:</strong> Edit is a flush-right button that becomes Done while editing; the Focus Mode button appears only while editing (left of Done) and never swaps positions. Exiting Focus Mode returns to the inline editor without saving or ending editing; use Done or Escape in the inline editor to save.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- v2.8.82 -->
+    <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
+      <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--bg-pane)] border-[var(--border)]"></div>
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.82</h2>
+        </div>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-20</span>
+      </div>
+      <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+        <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Dark Mode Created / Modified Sort Toggle Visibility:</strong> Slightly increased the contrast and surface definition of the Created / Modified sort toggle track and active sliding pill in dark mode (<code>--sort-toggle-bg</code>, <code>--sort-toggle-border</code>, <code>--sort-toggle-pill-bg</code>, <code>--sort-toggle-pill-border</code>).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">AI Chat Title Auto-Generate Refresh Button:</strong> Added an on-hover auto-generate refresh button beside the title of AI Chat entries that synthesizes a descriptive title from the conversation transcript using the unified metadata generator (<code>handleSuggestTitle</code>).</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- v2.8.80 -->
+    <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
+      <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--bg-pane)] border-[var(--border)]"></div>
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.80</h2>
+        </div>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-20</span>
+      </div>
+      <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+        <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Animated Theme Prompt Placement Above Search Bar:</strong> Relocated the generated theme prompt card and loading spinner from within the scrollable notes list to sit directly below the entry creation row and above the search bar. Uses a <code>ResizeObserver</code>-measured pixel height and margin transition so that lower elements smoothly animate downward both when the loading state appears and when the &ldquo;generating&rdquo; section expands into the full generated prompt card (or regenerates), and smoothly glide back up when dismissed or written.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- v2.8.78 -->
+    <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
+      <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--bg-pane)] border-[var(--border)]"></div>
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.78</h2>
+        </div>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-20</span>
+      </div>
+      <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+        <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Search Field Cancel Cross Button:</strong> Added a dedicated cross button (<code>fa-xmark</code>) at the right end of the search input field that clears active search queries and exits search focus to cancel search completely (also triggering on <kbd>Escape</kbd>), styled symmetrically with the quick ingestion input.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- v2.8.77 -->
+    <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
+      <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--bg-pane)] border-[var(--border)]"></div>
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.77</h2>
+        </div>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-20</span>
+      </div>
+      <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+        <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Quick Ingestion &amp; Search Field Vertical Alignment:</strong> Centered the submit arrow button, processing spinner, and link icon in the quick add URL/text input bar, as well as the magnifying glass icon and clear button in the search bar, using <code>top-1/2 -translate-y-1/2</code> and standardized <code>h-7</code> input heights.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- v2.8.76 -->
+    <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
+      <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--bg-pane)] border-[var(--border)]"></div>
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.76</h2>
+        </div>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-20</span>
+      </div>
+      <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+        <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Knowledge Provenance &amp; User Perspective Modeling:</strong> Configured reflection prompts, Single-Document AI Assistant chats, and Whole Brain synthesis to strictly distinguish primary user thoughts from external third-hand reference material. Only manual Notes and Prompt replies are assumed to be user-generated content reflecting their own issues, projects, and personal knowledge. Web, Media, and Text documents are treated as external contextual third-hand knowledge (collected articles, videos, and references). Seeds and AI chats are explicitly ignored as source knowledge.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Provenance-Aware Context Feeds:</strong> Enriched candidate note payloads and expanded retrieval blocks with provenance metadata tags (<code>Note [User Content]</code>, <code>Prompt Reply [User Content]</code>, <code>Media [External]</code>, <code>Web/Text [External]</code>) and separated prompt questions from user replies so the AI accurately grounds reflection in personal user thinking.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- v2.8.75 -->
+    <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
+      <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--bg-pane)] border-[var(--border)]"></div>
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.75</h2>
+        </div>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-20</span>
+      </div>
+      <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
+        <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Streamlined Entry Action Buttons:</strong> Cleaned up the creation action buttons (<code>+ Note</code>, <code>+ Seed</code>, <code>+ Prompt</code>, <code>+ Chat</code>) by removing secondary type icons (seedling, brain, comment dots), creating a clean, consistent design with a uniform <code>+</code> prefix across all four buttons.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Theme Prompt Generation Settings in General Settings:</strong> Moved the prompt candidate timeframe (<code>dateRangeMonths</code>) and sample pool size (<code>poolSize</code>) configuration from the entry list directly into the General Settings modal under <em>Theme Prompt Pool Settings</em>, keeping the feed uncluttered while retaining instant reset to defaults.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Scrollable Settings Modal with Fixed Header &amp; Footer:</strong> Redesigned the General Settings modal so the header and footer remain pinned in place while the body scrolls vertically with smooth overflow handling.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">+ Prompt Button in Entry Creation Bar:</strong> Prompts now originate from a dedicated <code>+ Prompt</code> button in the note list action bar alongside <code>+ Note</code>, <code>+ Seed</code>, and <code>+ Chat</code>.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Muted Emerald Accent for Prompts:</strong> Refined the prompt accent color from bright neon to a legible, balanced emerald (<code>#059669</code>) with matching dark/light mode contrast.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Segmented Created vs Modified Sort Switch:</strong> Replaced the previous sort toggle with a clear, labeled segmented toggle directly above the cards for intuitive one-click switching between <em>Created</em> and <em>Modified</em> dates without re-rendering or unmounting cards.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">New &quot;Seeds&quot; Entry Type (Gemini Gem Shortcuts):</strong> Introduced a 6th top-level entry type called <strong>Seeds</strong> (<code>#3b82f6</code>, Muted Navy Blue with <code>fa-seedling</code> icon). Seeds share the same structure as manual notes, but intentionally have <strong>no summaries and no key takeaways</strong> (the Executive Summary and Key Takeaways cards are omitted in the document reader and skipped during auto-metadata generation). Like AI Chats, Seeds have their visibility/type filter <strong>off by default</strong> in the main notes list to avoid cluttering core note streams, and appear last in the entry types order: <strong>Notes &gt; Media &gt; Web &gt; Prompts &gt; AI Chats &gt; Seeds</strong>.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Seeds Replace Generic Prompts in AI Assistant:</strong> In the single-entry AI Assistant drawer, generic quick prompt chips (<em>Summarize</em>, <em>Key Takeaways</em>, <em>Action Items</em>, <em>Connections</em>) are replaced with matching Seed prompt shortcuts. Seeds with matching Projects or Categories appear on notes sharing those taxonomies, while <strong>uncategorized Seeds</strong> (no assigned project or category) serve as universal / global prompt shortcuts and appear everywhere across all notes. Seed chips feature high-contrast, bold text with vivid seedling icons and dark/light mode readability. Clicking a Seed chip directly executes its prompt text as the user message against the active note.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Lateral Space Auto-Toggling for Single-Entry AI View:</strong> When opening the single-entry AI Assistant drawer (via <kbd>Cmd+J</kbd>, the magic wand button, or switching to an entry with existing chat), the left Taxonomy/Library sidebar is automatically collapsed if open to maximize lateral reading and editing room. When closing the AI view or navigating to an entry without an active chat drawer, the taxonomy view is automatically restored to its previous state.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">AI View Background Differentiation:</strong> The single-entry AI Assistant drawer uses a white background in light mode, with AI answers in a subtle purple tint and user messages differentiated by background only (no borders). Full-width AI Chat keeps the same background as the content view it replaces.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Entry List Sort Toggle:</strong> A toggle (same style as the view toggles) at the top right of the entry list switches between date created and date modified sorting, most recent first in both. Pinned notes stay on top and the choice persists between sessions.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Animated List Filtering:</strong> Entries now collapse and fade in and out when filters or search change, matching the taxonomy sidebar animation. All entries stay mounted; the 20px card gap lives inside the collapsing wrapper so hidden cards leave no gaps.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Entry-Type Accent Colors:</strong> The red accent in the content reader, editor and Focus Mode now follows the open entry's type color (Note amber, Media red, Web sky, Prompt green, AI Chat purple, Seed blue). The <code>+ Note</code> button uses the amber note color.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Light-Mode Pane Backgrounds:</strong> The Taxonomy sidebar shares the content view background (<code>#f7f7f9</code>) in light mode; the entry list stays white.</span>
+
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Entry List Header Ergonomics:</strong> Positioned the creation action buttons (<code>+ Note</code>, <code>+ Seed</code>, and <code>+ Chat</code>) directly above the search input in the note list view for immediate access and clean visual separation.</span>
+          </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
             <span><strong class="text-[var(--text-main)]">In-Place Taxonomy Editing for AI Chats:</strong> Added an interactive taxonomy row directly below the metadata subtitle in Whole Brain AI Chats. Clicking any badge or placeholder opens the full in-place taxonomy editor, allowing users to assign or remove projects, categories, and tags directly on AI chat sessions (with full support for auto-tag generation).</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
-            <span><strong class="text-[var(--text-main)]">Unified Compact Button Height (<code>h-7</code>):</strong> Standardized the entry list action bar (`+ Note`, `+ Chat`, and search input) to match the compact `h-7` height (28px) of the AI Chat view action buttons (`Summary`, `+ New Chat`, delete).</span>
+            <span><strong class="text-[var(--text-main)]">Unified Compact Button Height (<code>h-7</code>):</strong> Standardized the entry list action bar (<code>+ Note</code>, <code>+ Seed</code>, <code>+ Chat</code>, and search input) to match the compact <code>h-7</code> height (28px) of the AI Chat view action buttons.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">MacOS LaunchAgent Rebranding (&quot;Ali Brain Link&quot;):</strong> Replaced the generic <code>python3</code> process label in macOS Login Items &amp; Background Items with <code>Ali Brain Link</code> using a native wrapper script (<code>~/.alibrain/Ali Brain Link</code>), verified via <code>sfltool dumpbtm</code>.</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
@@ -367,7 +586,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.69</strong></span>
+      <span>Version <strong>v2.8.94</strong></span>
       <a href="readme.html">System Manual</a>
       <a href="index.html">Back to Brain App</a>
     </div>

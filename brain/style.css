@@ -2,6 +2,7 @@
   /* Default Dark Theme - unified with player.html & index.html */
   --bg-main: #141414;
   --bg-pane: #1b1b1b;
+  --bg-ai-view: #1b1b1b;
   --bg-tracks: #181818;
   --bg-hover: #262626;
   --bg-active: #303030;
@@ -33,6 +34,11 @@
   --link-color: #e73624;
   --link-hover: #ff5644;
   --link-underline: rgba(231, 54, 36, 0.4);
+  --field-bg: #0e0e0e;
+  --sort-toggle-bg: #222222;
+  --sort-toggle-border: #303030;
+  --sort-toggle-pill-bg: #2f2f2f;
+  --sort-toggle-pill-border: #3d3d3d;
   --left-sidebar-w: 320px;
   --list-sidebar-w: 384px;
 }
@@ -49,6 +55,7 @@
     /* Clean Modern Light Theme - unified with player.html & index.html */
     --bg-main: #f7f7f9;
     --bg-pane: #f7f7f9;
+    --bg-ai-view: #ffffff;
     --bg-tracks: #ffffff;
     --track-card-bg: #f7f7f9;
     --track-card-active: #ffffff;
@@ -80,6 +87,11 @@
     --link-color: #e73624;
     --link-hover: #c42919;
     --link-underline: rgba(231, 54, 36, 0.35);
+    --field-bg: #f7f7f9;
+    --sort-toggle-bg: #efeff2;
+    --sort-toggle-border: #e5e5ea;
+    --sort-toggle-pill-bg: #ffffff;
+    --sort-toggle-pill-border: rgba(0, 0, 0, 0.05);
   }
 }
 

@@ -48,6 +48,7 @@ The synchronization engine ensures safe, concurrent multi-device usage over fold
 The taxonomy and organization system categorizes your knowledge base into distinct functional entry types alongside multi-dimensional tags, categories, and projects:
 
 - **Notes (Yellow):** Manual user notes, outlines, and thoughts.
+- **Seeds (Navy Blue):** AI prompt shortcuts and instructions (reusable prompts inspired by Gemini Gems). Seeds have no summaries and no key takeaways; their full content acts as an instant shortcut in the AI Assistant.
 - **Prompts (Green):** AI-generated theme reflection notes and intellectual inquiries.
 - **Media (Red):** Multimedia links (YouTube, Vimeo) with embedded synchronized player.
 - **Web (Blue):** Scraped web pages, articles, and processed PDFs.
@@ -60,6 +61,8 @@ The taxonomy and organization system categorizes your knowledge base into distin
 - **Taxonomy Management:** Hover over any project, category, or tag in the sidebar to reveal a delete button that removes the taxonomy across all notes in the database.
 - **Pinning:** Pin essential notes to keep them anchored at the top of the list for fast reference.
 - **Fast Search & Clear:** Real-time text search filters across titles and note contents. An inline clear button and <kbd>Escape</kbd> shortcut instantly reset your query.
+- **Sort Toggle:** A toggle at the top right of the entry list switches between date created and date modified order (newest first). Pinned notes always stay on top.
+- **Type-Colored Interface:** The reader, editor and Focus Mode accent color follows the entry's type (Note amber, Media red, Web sky, Prompt green, AI Chat purple, Seed blue).
 
 ---
 
@@ -72,7 +75,7 @@ The document editor delivers a seamless, in-place writing and curation workflow:
 - **Automatic All-Fields Initial Metadata Generation:** When a user saves a note's content edit for the first time (via Done, clicking outside, or exiting Focus Mode), the system automatically synthesizes **all metadata fields in a single pass**—generating a descriptive Title, an Executive Summary, Key Takeaways (`shortVersion`), and contextual domain Taxonomies (projects, categories, tags) together.
 - **Unified Instruction Registry (Single Source of Truth):** Both single-field margin refresh actions and combined initial background auto-generation derive from a centralized, DRY definition registry (`METADATA_FIELD_SPECS`). Field instructions, JSON schema property definitions, and sanitizers are defined in one place, ensuring 100% prompt consistency and eliminating prompt drift across individual and combined generations.
 - **In-Place Taxonomy Editor:** Clicking the taxonomy badges in the note header opens an inline manager to add new tags, remove existing tags, or trigger AI auto-tagging.
-- **Distraction-Free Focus Mode:** Double-clicking note content or clicking Edit opens an inline textarea editor with a visible Focus Mode link. Activating Focus Mode launches a centered distraction-free writing window. Exiting Focus Mode (via <kbd>Escape</kbd>, backdrop click, or close button) immediately finishes editing, saves all changes, and returns to the rendered Markdown reader view.
+- **Distraction-Free Focus Mode:** Double-clicking note content or clicking Edit opens an inline textarea editor with a flush-right **Edit** button (which becomes **Done** while editing) and a **Focus Mode** button that appears only while editing. Activating Focus Mode launches a centered distraction-free writing window. Exiting Focus Mode (via <kbd>Escape</kbd>, backdrop click, or close button) returns to the inline editor without saving or ending editing; click **Done** (or press <kbd>Escape</kbd> in the inline editor) to save.
 
 ---
 
@@ -91,11 +94,13 @@ The ingestion pipeline transforms raw web links, multimedia URLs, and pasted tex
 The Theme Prompt Generator analyzes your notes to surface connections, contradictions, and open questions that prompt new reflection notes:
 
 - **Filter-Scoped Candidate Pool:** Draws with equal weight from whatever notes are currently visible in your list (based on active Entry Types, Projects, Categories, Tags, and Search filters) that have an Executive Summary or Key Takeaways.
-- **Prompt Pool Settings (Sliders Icon):** Clicking the sliders icon beside **Generate Prompt** opens two pool controls:
+- **Theme Prompt Pool Settings (in General Settings):** Configured inside the **Settings** modal (<i class="fa-solid fa-gear"></i>) under *Theme Prompt Pool Settings*:
   - **Date Range (`dateRangeMonths`):** Defaults to **2 months** (adjustable from `1` to `24` months, or **All Time**). Restricts the pool to notes created or updated within that timeframe.
   - **Pool Size (`poolSize`):** Defaults to **10 notes** (adjustable from `5` to `50` in steps of 5, with the final step set to **All**). Controls how many eligible notes are randomly sampled (or all sent when set to **All**) in the request.
-- **Single-Pass Synthesis & In-Place Refresh:** Sends only the **Title**, **Date**, **Executive Summary**, and **Key Takeaways** of the sampled notes in a single API call. The model isolates one specific idea from 1 or 2 notes, links them with `[[kb-ref:ID]]` citations, and asks one open-ended "Why" or "How" reflection question (capped at 50 words). A refresh icon (`fa-rotate-right`) sits next to the **Write** button on generated prompt cards to roll a new prompt in place without dismissing first.
+- **Single-Pass Synthesis & In-Place Refresh:** Sends only the **Title**, **Date**, **Executive Summary**, and **Key Takeaways** of the sampled notes in a single API call. The model isolates one specific idea from 1 or 2 notes, links them with `[[kb-ref:ID]]` citations, and asks one open-ended "Why" or "How" reflection question (capped at 50 words). Generated prompts feature a **Write** button to capture responses directly into new reflection notes, alongside a refresh icon (`fa-rotate-right`) to roll a new prompt in place.
 - **Model & Default Temperature (`1.0`):** Uses the Theme Prompts model configured in Settings (`taskModels.prompts`) with a fixed default temperature of `1.0` (Google's recommended default for Gemini 2.5 reasoning models and associative synthesis across disparate ideas).
+- **Knowledge Provenance & User Perspective:** Prompts strictly assume only manual Notes and Prompt replies represent user-generated content reflecting their own issues, projects, and personal knowledge. Web, media, and text documents are treated as external and contextual third-hand knowledge (articles, videos, secondary research). Seeds and AI chats are ignored.
+- **Animated Top Placement Above Search Bar:** When generated, theme prompts smoothly expand between the entry creation buttons and the search bar, transitioning the search bar and note cards downward. Dismissing or saving the prompt smoothly glides the list layout back into position.
 
 ---
 
@@ -107,13 +112,14 @@ The AI Assistant lets you chat with either a single open note or your broader kn
   - **Context:** Sends the active note's full text, summary, takeaways, and source URL, plus summaries and takeaways of up to 10 related notes in the same category or project.
   - **Auto-Close & Auto-Reopen:** Switching notes automatically closes the drawer if the new note has no prior chat, and automatically re-opens it if the note already has a saved conversation (`assistantChats[entry.id]`). Toggle manually anytime with <kbd>Cmd+J</kbd> / <kbd>Ctrl+J</kbd>.
 - **Whole Brain / Scoped AI Chat (Full-Width Purple View):**
-  - **Dynamic Scope & Naming:** Named automatically after your active Entry Type and Taxonomy filters (e.g., `Whole Brain AI Chat` or `Project: X AI Chat`).
+  - **Dynamic Scope, Inline Editing & Title Auto-Generation:** Named automatically after your active Entry Type and Taxonomy filters (e.g., `Whole Brain AI Chat` or `Project: X AI Chat`), with double-click inline editing and an on-hover auto-generate refresh button beside the title to synthesize a descriptive title from the conversation transcript.
   - **Uncapped Summaries First, Details On Demand:** Sends **all** matching note **Executive Summaries** (`summary`) with no artificial count limit—you control the scope via your type and taxonomy selections. If summaries are enough to answer, the AI replies in a **single pass** (`directReply`). If deeper detail is required, it automatically fetches **Key Takeaways** (`takeawayIds`) or **Full Content** (`contentIds`) for specific notes in a second pass.
   - **Auto-Selected Type & Excluded Prior Chats:** Clicking the purple **Chat** / **New Chat** button automatically enables the `AI Chat` entry type in the list so your chat sessions are visible, while strictly excluding previous `AI Chat` entries from being fed into context for new chats.
   - **Persistent & Self-Cleaning:** Conversations save automatically to their `AI Chat` entry and resume when clicked. Empty chats that you navigate away from without sending a message are pruned automatically.
   - **In-Place Taxonomy Editing:** Includes an interactive taxonomy row directly below the metadata subtitle. Clicking anywhere on the row opens the standard in-place taxonomy editor to assign or remove Projects, Categories, and Tags (or auto-generate tags via Gemini) for the chat session.
 - **Cumulative Input & Output Token Tracking:** Both the full-width **AI Chat** header and the **Current Entry AI Assistant** drawer header display a live `Tokens In: X | Out: Y` counter that records and increments prompt input tokens and generated output tokens (`usageMetadata.promptTokenCount` and `candidatesTokenCount` / `thoughtsTokenCount`) across every turn (including two-pass escalations).
 - **Response Style & Temperature (`0.3`):** Uses a focused temperature of `0.3` for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline `[[kb-ref:ID]]` source citations.
+- **Knowledge Provenance Grounding:** In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.
 
 ---
 
@@ -130,6 +136,7 @@ The AI Assistant lets you chat with either a single open note or your broader kn
 - **API Key Management:** Store and rotate multiple Google Gemini API keys to distribute usage across quotas.
 - **Task-Specific Model Assignment:** Assign distinct Gemini models for Metadata & Summaries, Theme Prompts, and AI Assistant Copilot.
 - **Live Model Discovery:** Dynamically fetch available models directly from Google AI Studio.
+- **Install as App (PWA):** The **Install as App** section in Settings installs Ali Brain as a standalone app (Install button in Chrome/Edge; File > Add to Dock in Safari on macOS) and shows offline-cache status. A service worker caches the app files and CDN libraries so the app launches offline (AI calls and the Safari sync bridge are never cached; the offline cache needs the app served over http/https). Safari still needs the Local Sync Bridge to read and write your notes file.
 - **Workspace Merging:** Merge secondary JSON knowledge bases into your active workspace with automatic duplicate handling and conflict resolution.
 
 ---
@@ -151,7 +158,7 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 | Shortcut | Description |
 |---|---|
-| <kbd>Escape</kbd> | Exit Focus Mode or inline textarea editor; commits and saves changes, triggers background metadata synthesis, and restores Markdown view |
+| <kbd>Escape</kbd> | In Focus Mode: return to the inline editor (keeps editing). In the inline editor: commits and saves changes, triggers background metadata synthesis, and restores Markdown view |
 | <kbd>Tab</kbd> | Indent text by 2 spaces inside note editor textarea without losing focus |
 | <kbd>Enter</kbd> | Confirm and commit single-line inline edit fields (Title, Summary, Takeaways). In taxonomy inputs (Projects, Categories, Tags), commits the entered item |
 | <kbd>,</kbd> (Comma) | In taxonomy input fields, immediately adds the typed tag, project, or category |

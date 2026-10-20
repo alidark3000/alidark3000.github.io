@@ -219,7 +219,10 @@
         <span class="badge" style="background-color: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b;">
           <i class="fa-solid fa-file-lines"></i> Notes &bull; Manual User Thoughts
         </span>
-        <span class="badge" style="background-color: #10e56720; color: #10e567; border: 1px solid #10e567;">
+        <span class="badge" style="background-color: #3b82f620; color: #60a5fa; border: 1px solid #3b82f6;">
+          <i class="fa-solid fa-seedling"></i> Seeds &bull; AI Prompt Shortcuts (Gemini Gems)
+        </span>
+        <span class="badge" style="background-color: #05966920; color: #059669; border: 1px solid #059669;">
           <i class="fa-solid fa-brain"></i> Prompts &bull; AI Theme Reflection Notes
         </span>
         <span class="badge" style="background-color: #ff525220; color: #ff5252; border: 1px solid #ff5252;">
@@ -240,6 +243,8 @@
         <div>&bull; <strong>Taxonomy Management:</strong> Hover over any project, category, or tag in the sidebar to reveal a delete button that removes the taxonomy across all notes in the database.</div>
         <div>&bull; <strong>Pinning:</strong> Pin essential notes to keep them anchored at the top of the list for fast reference.</div>
         <div>&bull; <strong>Fast Search & Clear:</strong> Real-time text search filters across titles and note contents. An inline clear button and <kbd>Escape</kbd> shortcut instantly reset your query.</div>
+        <div>&bull; <strong>Sort Toggle:</strong> A toggle at the top right of the entry list switches between date created and date modified order (newest first). Pinned notes always stay on top.</div>
+        <div>&bull; <strong>Type-Colored Interface:</strong> The reader, editor and Focus Mode accent color follows the entry's type (Note amber, Media red, Web sky, Prompt green, AI Chat purple, Seed blue).</div>
         <div>&bull; <strong>Taxonomy & Entry-Type Separation:</strong> AI taxonomy generation and auto-tagging strictly separate structural document formats (notes, media, web, prompts, ai chat) from domain topics to keep your taxonomy clean.</div>
       </div>
     </section>
@@ -285,7 +290,7 @@
             <i class="fa-solid fa-expand text-[var(--accent)]"></i> Distraction-Free Focus Mode
           </div>
           <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-            Double-clicking note content or clicking Edit opens an inline textarea editor with a visible Focus Mode link. Activating Focus Mode launches a centered distraction-free writing window. Exiting Focus Mode (via Esc, backdrop click, or close button) immediately finishes editing, saves all changes, and returns to the rendered Markdown reader view.
+            Double-clicking note content or clicking Edit opens an inline textarea editor with a flush-right <strong>Edit</strong> button (which becomes <strong>Done</strong> while editing) and a <strong>Focus Mode</strong> button that appears only while editing. Activating Focus Mode launches a centered distraction-free writing window. Exiting Focus Mode (via Esc, backdrop click, or close button) returns to the inline editor without saving or ending editing; click <strong>Done</strong> (or press Esc in the inline editor) to save.
           </p>
         </div>
       </div>
@@ -322,7 +327,7 @@
           <strong>Filter-Scoped Candidate Pool:</strong> Draws with equal weight from whatever notes are currently visible in your list (based on active Entry Types, Projects, Categories, Tags, and Search filters) that have an Executive Summary or Key Takeaways.
         </div>
         <div class="pt-2 border-t border-[var(--border)]">
-          <strong>Prompt Pool Settings (Sliders Icon):</strong> Clicking the sliders icon beside <strong>Generate Prompt</strong> opens two pool controls:
+          <strong>Theme Prompt Pool Settings (in General Settings):</strong> Configured inside the <strong>Settings</strong> modal (<i class="fa-solid fa-gear"></i>) under <em>Theme Prompt Pool Settings</em>:
           <ul class="list-disc list-inside mt-1 ml-2 space-y-1 text-xs text-[var(--text-muted)]">
             <li><strong>Date Range (<code>dateRangeMonths</code>):</strong> Defaults to <strong>2 months</strong> (adjustable from <code>1</code> to <code>24</code> months, or <strong>All Time</strong>). Restricts the pool to notes created or updated within that timeframe.</li>
             <li><strong>Pool Size (<code>poolSize</code>):</strong> Defaults to <strong>10 notes</strong> (adjustable from <code>5</code> to <code>50</code> in steps of 5, with the final step set to <strong>All</strong>). Controls how many eligible notes are randomly sampled (or all sent when set to <strong>All</strong>) in the request.</li>
@@ -333,6 +338,12 @@
         </div>
         <div class="pt-2 border-t border-[var(--border)]">
           <strong>Model &amp; Default Temperature (<code>1.0</code>):</strong> Uses the Theme Prompts model configured in Settings (<code>taskModels.prompts</code>) with a fixed default temperature of <code>1.0</code> (Google's recommended default for Gemini 2.5 reasoning models and associative synthesis across disparate ideas).
+        </div>
+        <div class="pt-2 border-t border-[var(--border)]">
+          <strong>Knowledge Provenance &amp; User Perspective:</strong> Prompts strictly assume only manual Notes and Prompt replies represent user-generated content reflecting their own issues, projects, and personal knowledge. Web, media, and text documents are treated as external and contextual third-hand knowledge (articles, videos, secondary research). Seeds and AI chats are ignored.
+        </div>
+        <div class="pt-2 border-t border-[var(--border)]">
+          <strong>Animated Top Placement Above Search Bar:</strong> When generated, theme prompts smoothly expand between the entry creation buttons and the search bar, transitioning the search bar and note cards downward. Dismissing or saving the prompt smoothly glides the list layout back into position.
         </div>
       </div>
     </section>
@@ -354,7 +365,7 @@
         </li>
         <li><strong>Whole Brain / Scoped AI Chat (Full-Width Purple View):</strong>
           <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><em>Dynamic Scope &amp; Naming:</em> Named automatically after your active Entry Type and Taxonomy filters (e.g., <code>Whole Brain AI Chat</code> or <code>Project: X AI Chat</code>).</li>
+            <li><em>Dynamic Scope, Inline Editing &amp; Title Auto-Generation:</em> Named automatically after your active Entry Type and Taxonomy filters (e.g., <code>Whole Brain AI Chat</code> or <code>Project: X AI Chat</code>), with double-click inline editing and an on-hover auto-generate refresh button beside the title to synthesize a descriptive title from the conversation transcript.</li>
             <li><em>Uncapped Summaries First, Details On Demand:</em> Sends <strong>all</strong> matching note <strong>Executive Summaries</strong> (<code>summary</code>) with no artificial count limit&mdash;you control the scope via your type and taxonomy selections. If summaries are enough to answer, the AI replies in a <strong>single pass</strong> (<code>directReply</code>). If deeper detail is required, it automatically fetches <strong>Key Takeaways</strong> (<code>takeawayIds</code>) or <strong>Full Content</strong> (<code>contentIds</code>) for specific notes in a second pass.</li>
             <li><em>Auto-Selected Type &amp; Excluded Prior Chats:</em> Clicking the purple <strong>Chat</strong> / <strong>New Chat</strong> button automatically enables the <em>AI Chat</em> entry type in the list so your chat sessions are visible, while strictly excluding previous <em>AI Chat</em> entries from being fed into context for new chats.</li>
             <li><em>Persistent &amp; Self-Cleaning:</em> Conversations save automatically to their <em>AI Chat</em> entry and resume when clicked. Empty chats that you navigate away from without sending a message are pruned automatically.</li>
@@ -363,6 +374,7 @@
         </li>
         <li><strong>Cumulative Input &amp; Output Token Tracking:</strong> Both AI Chat views display a live <code>Tokens In: X | Out: Y</code> counter at the top of the chat header, tracking and incrementing cumulative prompt (<code>inputTokens</code>) and response (<code>outputTokens</code>) tokens across every turn of the conversation (including two-pass context escalations).</li>
         <li><strong>Response Style &amp; Temperature (<code>0.3</code>):</strong> Uses a focused temperature of <code>0.3</code> for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline <code>[[kb-ref:ID]]</code> source citations.</li>
+        <li><strong>Knowledge Provenance Grounding:</strong> In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.</li>
       </ul>
     </section>
 
@@ -398,6 +410,7 @@
             <li><em>AI Assistant Copilot:</em> Interactive models for contextual chatting and knowledge-base synthesis.</li>
           </ul>
         </li>
+        <li><strong>Install as App (PWA):</strong> The <strong>Install as App</strong> section in Settings installs Ali Brain as a standalone app (Install button in Chrome/Edge; File &gt; Add to Dock in Safari on macOS) and shows offline-cache status. A service worker caches the app files and CDN libraries so the app launches offline (AI calls and the Safari sync bridge are never cached; the offline cache needs the app served over http/https). Safari still needs the Local Sync Bridge to read and write your notes file.</li>
         <li><strong>Live Model Discovery:</strong> Dynamically fetch available models directly from Google AI Studio to select the latest versions and experimental releases.</li>
         <li><strong>Workspace Merging:</strong> Merge secondary JSON knowledge bases into your active workspace with automatic duplicate handling and conflict resolution.</li>
       </ul>
@@ -464,7 +477,7 @@
               <tbody class="divide-y divide-[var(--border)]">
                 <tr>
                   <td class="py-2 pr-4 font-mono"><kbd>Escape</kbd></td>
-                  <td class="py-2 text-[var(--text-muted)]">Exit Focus Mode or inline textarea editor; commits and saves changes immediately, triggers background metadata synthesis, and restores rendered Markdown view.</td>
+                  <td class="py-2 text-[var(--text-muted)]">In Focus Mode: return to the inline editor (keeps editing). In the inline editor: commits and saves changes immediately, triggers background metadata synthesis, and restores rendered Markdown view.</td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4 font-mono"><kbd>Tab</kbd></td>
