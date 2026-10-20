@@ -1,13 +1,13 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.94** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.95** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.94 (2026-10-20) — *Latest*
+## v2.8.95 (2026-10-21) — *Latest*
 
-- **PWA Support & Install Setting:** Added PWA support: web app manifest, icons, and a service worker that caches the app shell and CDN libraries for offline launch (AI API calls and the Safari sync bridge are never cached). Settings has a new Install as App section with an Install button (Chrome/Edge), Safari add-to-Dock/Home Screen instructions, and offline-cache status.
+- **PWA Support & Install Setting:** Added PWA support: web app manifest, icons, and a service worker that caches the app shell and CDN libraries for offline launch (AI API calls and the Safari sync bridge are never cached). Settings has a new Install as App section with an Install button (Chrome/Edge), Safari macOS Add to Dock instructions, and offline-cache status.
 - **Seed Chips Label Removed:** Removed the redundant "Seeds:" label before the assistant seed chips (the seed icon on each chip is enough).
 - **Seeds Below Assistant Input:** Moved the Seeds shortcut chips in the Entry AI Assistant pane from above the text input to directly below it.
 - **Field Order Swap:** Swapped the order of the search field and the quick-add URL/text field (URL/text field now sits above search).
