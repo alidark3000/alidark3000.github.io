@@ -80,7 +80,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; Changelog</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.101</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.102</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="readme.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -105,18 +105,22 @@
   <!-- Timeline -->
   <main class="space-y-8 text-sm">
 
-    <!-- v2.8.101 (Current Active Series) -->
+    <!-- v2.8.102 (Current Active Series) -->
     <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
       <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--accent)] border-[var(--bg-main)]"></div>
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.101</h2>
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.102</h2>
           <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
         </div>
         <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-21</span>
       </div>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
         <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Text &amp; Markdown File Multi-Select Library Merge:</strong> The Merge External Library function now supports selecting multiple files at once and importing plain text (<code>.txt</code>) and Markdown (<code>.md</code>) files directly into your active workspace. Imported notes preserve their original file modification and creation timestamps (<code>createdAt</code> and <code>updatedAt</code>), set their note titles from the filename, and automatically generate executive summaries using Gemini.</span>
+          </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
             <span><strong class="text-[var(--text-main)]">Fixed Manual Note Deletion on Navigation:</strong> Fixed a critical state/ref synchronization bug where navigating away from a newly saved manual note (or clicking another entry while editing) caused the empty-note cleanup routine to read stale state or the next note's editor value and delete the note.</span>
@@ -614,7 +618,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.101</strong></span>
+      <span>Version <strong>v2.8.102</strong></span>
       <a href="readme.html">System Manual</a>
       <a href="index.html">Back to Brain App</a>
     </div>

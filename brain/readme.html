@@ -97,7 +97,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.101</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.102</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="changelog.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -414,7 +414,7 @@
         </li>
         <li><strong>Install as App (PWA):</strong> The <strong>Install as App</strong> section in Settings installs Ali Brain as a standalone app (Install button in Chrome/Edge; File &gt; Add to Dock in Safari on macOS) and shows offline-cache status. A service worker caches the app files and CDN libraries so the app launches offline (AI calls and the Safari sync bridge are never cached; the offline cache needs the app served over http/https). Safari still needs the Local Sync Bridge to read and write your notes file.</li>
         <li><strong>Live Model Discovery:</strong> Dynamically fetch available models directly from Google AI Studio to select the latest versions and experimental releases.</li>
-        <li><strong>Workspace Merging:</strong> Merge secondary JSON knowledge bases into your active workspace with automatic duplicate handling and conflict resolution.</li>
+        <li><strong>Workspace Merging &amp; Text File Import:</strong> Merge secondary JSON knowledge bases or import multiple plain text (<code>.txt</code>) and Markdown (<code>.md</code>) files directly into your active workspace. Imported text files preserve their original file modification and creation timestamps (<code>createdAt</code> and <code>updatedAt</code>), name notes after the filename, and automatically generate executive summaries with Gemini. Multiple files can be selected simultaneously.</li>
       </ul>
     </section>
 
@@ -586,7 +586,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.101</strong></span>
+      <span>Version <strong>v2.8.102</strong></span>
       <a href="changelog.html">Changelog</a>
       <a href="index.html">Back to Brain App</a>
     </div>

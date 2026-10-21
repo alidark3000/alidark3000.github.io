@@ -128,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.101";
+    const APP_VERSION = "v2.8.102";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -2612,22 +2612,134 @@ Respond with valid JSON ONLY matching this structure:
         }
       };
 
+      const executeTextFilesMerge = async (files) => {
+        try {
+          if (!files || files.length === 0) return;
+          const current = saveStateRef.current;
+          const currentEntries = current.entries || [];
+          let maxNumericId = Math.floor(currentEntries.reduce((max, e) => Math.max(max, e.numericId || 0), 0));
+
+          const newEntries = [];
+          for (const file of files) {
+            const rawContent = await file.text();
+            const rawName = file.name || 'Untitled Note';
+            const baseTitle = rawName.replace(/\.[^/.]+$/, '').trim() || rawName;
+            const title = cleanTitle(baseTitle);
+            const mtime = Number(file.lastModified) || Date.now();
+            maxNumericId += 1;
+            const newEntry = {
+              id: 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+              numericId: maxNumericId,
+              title: title,
+              summary: '',
+              shortVersion: [],
+              fullContent: rawContent || '',
+              categories: [...activeCategories],
+              tags: [...activeTags],
+              projects: [...activeProjects],
+              createdAt: mtime,
+              updatedAt: mtime,
+              sourceUrl: null,
+              references: [],
+              pinned: false
+            };
+            newEntries.push(newEntry);
+          }
+
+          // Add new text notes to library
+          const updatedEntries = [...newEntries, ...currentEntries];
+          entriesRef.current = updatedEntries;
+          setHistoryState(h => ({
+            past: [...h.past.slice(-25), h.present],
+            present: updatedEntries
+          }));
+          isDirtyRef.current = true;
+
+          const summaryMsg = `Added ${newEntries.length} text note${newEntries.length === 1 ? '' : 's'} to library with preserved timestamps.`;
+          setMergeStatus({ type: 'success', message: summaryMsg });
+
+          // Auto-generate summaries for imported text files with content if API keys exist
+          if (apiKeys && apiKeys.length > 0) {
+            (async () => {
+              for (const entry of newEntries) {
+                const content = (entry.fullContent || '').trim();
+                if (content.length > 5) {
+                  try {
+                    const payload = buildMetadataPayload(['summary'], entry, content, { allProjects, allCategories, allTags });
+                    const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+                    const rawCandidate = result?.candidates?.[0];
+                    const rawText = getCandidateText(rawCandidate || result);
+                    const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
+                    const updates = applyMetadataResults(['summary'], parsed, entry, content, rawText);
+                    let finalSummary = updates.summary || null;
+                    if (!finalSummary && rawText) {
+                      const sm = rawText.match(/"(?:summary|Summary|tldr|executive_summary)"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
+                      if (sm) {
+                        finalSummary = cleanExecutiveSummary(sm[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim(), content);
+                      }
+                    }
+                    if (finalSummary) {
+                      entriesRef.current = (entriesRef.current || []).map(e => e.id === entry.id ? { ...e, summary: finalSummary } : e);
+                      setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, summary: finalSummary } : e));
+                      isDirtyRef.current = true;
+                    }
+                  } catch (genErr) {
+                    console.warn(`Summary auto-generation skipped for "${entry.title}":`, genErr);
+                  }
+                }
+              }
+            })();
+          }
+        } catch (err) {
+          console.error("Text files merge error:", err);
+          setMergeStatus({ type: 'error', message: `Import failed: ${err.message}` });
+        }
+      };
+
       const handleMergePicker = async () => {
         setMergeStatus(null);
         try {
           if (hasNativeFileSystemAccess) {
-            const [handle] = await window.showOpenFilePicker({
-              types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+            const handles = await window.showOpenFilePicker({
+              multiple: true,
+              types: [
+                {
+                  description: 'Knowledge Base & Text Files',
+                  accept: {
+                    'application/json': ['.json'],
+                    'text/plain': ['.txt', '.text'],
+                    'text/markdown': ['.md', '.markdown']
+                  }
+                }
+              ]
             });
-            const file = await handle.getFile();
-            const text = await file.text();
-            let data = {};
-            try {
-              data = JSON.parse(text);
-            } catch (pErr) {
-              throw new Error("File is not valid JSON.");
+            if (!handles || handles.length === 0) return;
+
+            const files = [];
+            for (const h of handles) {
+              const f = await h.getFile();
+              files.push(f);
             }
-            executeLibraryMerge(data, file.name);
+
+            const jsonFiles = files.filter(f => f.name.toLowerCase().endsWith('.json') || f.type === 'application/json');
+            const textFiles = files.filter(f => !jsonFiles.includes(f));
+
+            if (jsonFiles.length > 0) {
+              for (const jf of jsonFiles) {
+                const text = await jf.text();
+                let data = {};
+                try {
+                  data = JSON.parse(text);
+                } catch (pErr) {
+                  throw new Error(`File "${jf.name}" is not valid JSON.`);
+                }
+                executeLibraryMerge(data, jf.name);
+              }
+            }
+
+            if (textFiles.length > 0) {
+              await executeTextFilesMerge(textFiles);
+            }
           } else if (safariBridgeStatus === 'online') {
             const res = await fetch(`${SAFARI_BRIDGE_URL}/pick-open`, {
               method: 'POST',
@@ -2648,14 +2760,18 @@ Respond with valid JSON ONLY matching this structure:
             }
             const handle = createBridgeFileHandle(pickData.path, pickData.name);
             const file = await handle.getFile();
-            const text = await file.text();
-            let data = {};
-            try {
-              data = JSON.parse(text);
-            } catch (pErr) {
-              throw new Error("File is not valid JSON.");
+            if (file.name.toLowerCase().endsWith('.json')) {
+              const text = await file.text();
+              let data = {};
+              try {
+                data = JSON.parse(text);
+              } catch (pErr) {
+                throw new Error("File is not valid JSON.");
+              }
+              executeLibraryMerge(data, file.name);
+            } else {
+              await executeTextFilesMerge([file]);
             }
-            executeLibraryMerge(data, file.name);
           } else {
             if (mergeFileInputRef.current) {
               mergeFileInputRef.current.value = '';
@@ -2669,19 +2785,28 @@ Respond with valid JSON ONLY matching this structure:
         }
       };
 
-      const handleMergeFileInputChange = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const data = JSON.parse(event.target.result);
-            executeLibraryMerge(data, file.name);
-          } catch (err) {
-            setMergeStatus({ type: 'error', message: `Failed to parse JSON file: ${err.message}` });
+      const handleMergeFileInputChange = async (e) => {
+        const fileList = e.target.files ? Array.from(e.target.files) : [];
+        if (fileList.length === 0) return;
+
+        const jsonFiles = fileList.filter(f => f.name.toLowerCase().endsWith('.json') || f.type === 'application/json');
+        const textFiles = fileList.filter(f => !jsonFiles.includes(f));
+
+        if (jsonFiles.length > 0) {
+          for (const file of jsonFiles) {
+            try {
+              const text = await file.text();
+              const data = JSON.parse(text);
+              executeLibraryMerge(data, file.name);
+            } catch (err) {
+              setMergeStatus({ type: 'error', message: `Failed to parse JSON file "${file.name}": ${err.message}` });
+            }
           }
-        };
-        reader.readAsText(file);
+        }
+
+        if (textFiles.length > 0) {
+          await executeTextFilesMerge(textFiles);
+        }
       };
 
       const isWelcomeEntry = (entry) => {
@@ -5608,14 +5733,15 @@ ${expandedBlocks.join('\n\n')}`
                       </label>
                     </div>
                     <p className="text-[11px] text-[var(--text-muted)] mb-3 leading-relaxed font-mono">
-                      Select an external library JSON file. Merges the most recent changes for existing notes and inserts new notes in chronological order using decimal numbering.
+                      Select external library JSON or plain text/markdown files (.txt, .md). Merges library changes or imports text files as notes with timestamps and titles intact, auto-generating summaries.
                     </p>
                     
                     <input 
                       type="file" 
                       ref={mergeFileInputRef} 
                       onChange={handleMergeFileInputChange} 
-                      accept=".json,application/json" 
+                      accept=".json,application/json,.txt,.text,.md,.markdown,text/plain,text/markdown" 
+                      multiple
                       className="hidden" 
                     />
                     
@@ -5623,9 +5749,9 @@ ${expandedBlocks.join('\n\n')}`
                       type="button" 
                       onClick={handleMergePicker} 
                       className="btn-secondary w-full py-2 text-xs flex items-center justify-center gap-2 font-mono"
-                      title="Select a library JSON file to merge into the current library"
+                      title="Select library JSON or text files to merge into the current library"
                     >
-                      <i className="fa-solid fa-file-import text-xs"></i> Select Library to Merge...
+                      <i className="fa-solid fa-file-import text-xs"></i> Select Files to Merge...
                     </button>
 
                     {mergeStatus && (

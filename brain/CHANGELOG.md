@@ -1,11 +1,13 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.101** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.102** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.101 (2026-10-21) — *Latest*
+## v2.8.102 (2026-10-21) — *Latest*
+
+- **Text & Markdown File Multi-Select Library Merge:** The Merge External Library function now supports selecting multiple files at once and importing plain text (`.txt`) and Markdown (`.md`) files directly into your active workspace. Imported notes preserve their original file modification and creation timestamps (`createdAt` and `updatedAt`), set their note titles from the filename, and automatically generate executive summaries using Gemini.
 
 - **Fixed Manual Note Deletion on Navigation:** Fixed a critical state/ref synchronization bug where navigating away from a newly saved manual note (or clicking another entry while editing) caused the empty-note cleanup routine to read stale state or the next note's editor value and delete the note.
 

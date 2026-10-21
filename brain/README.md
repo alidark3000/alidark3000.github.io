@@ -139,7 +139,7 @@ The AI Assistant lets you chat with either a single open note or your broader kn
 - **Task-Specific Model Assignment:** Assign distinct Gemini models for Metadata & Summaries, Theme Prompts, and AI Assistant Copilot.
 - **Live Model Discovery:** Dynamically fetch available models directly from Google AI Studio.
 - **Install as App (PWA):** The **Install as App** section in Settings installs Ali Brain as a standalone app (Install button in Chrome/Edge; File > Add to Dock in Safari on macOS) and shows offline-cache status. A service worker caches the app files and CDN libraries so the app launches offline (AI calls and the Safari sync bridge are never cached; the offline cache needs the app served over http/https). Safari still needs the Local Sync Bridge to read and write your notes file.
-- **Workspace Merging:** Merge secondary JSON knowledge bases into your active workspace with automatic duplicate handling and conflict resolution.
+- **Workspace Merging & Text File Import:** Merge secondary JSON knowledge bases or import multiple plain text (`.txt`) and Markdown (`.md`) files directly into your active workspace. Imported text files preserve their original file modification and creation timestamps (`createdAt` and `updatedAt`), name notes after the filename, and automatically generate executive summaries with Gemini. Multiple files can be selected simultaneously.
 
 ---
 
@@ -187,4 +187,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.101** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.102** • Local-First Autonomous Knowledge Base*
