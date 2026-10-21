@@ -1,12 +1,21 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.95** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.101** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.95 (2026-10-21) — *Latest*
+## v2.8.101 (2026-10-21) — *Latest*
 
+- **Fixed Manual Note Deletion on Navigation:** Fixed a critical state/ref synchronization bug where navigating away from a newly saved manual note (or clicking another entry while editing) caused the empty-note cleanup routine to read stale state or the next note's editor value and delete the note.
+
+- **Streamlined AI Models to Direct Google Latest Aliases:** Removed the API model discovery network query and discovery error banners. Settings now provides instant dropdown selections for Google's official stable aliases (`gemini-flash-lite-latest` as default, `gemini-flash-latest`, and `gemini-pro-latest`) which automatically route to Google's newest live releases without configuration.
+- **Documentation on Dedicated Library Folders & `.crswap` Files:** Added clear guidance in the System Manual (`README.md` and `readme.html`) advising users to store their library within its own dedicated folder (e.g. `~/Documents/Brain/`) and clarifying that browser temporary write files (`.crswap`) created during atomic saves can be safely deleted if orphaned by cloud sync services.
+- **Theme Prompt Defaults Confirmed for Fresh Libraries:** Ensured fresh libraries initialize with candidate timeframe defaulting to 2 months and sample pool size defaulting to 10 notes across state initialization, new file creation, and schema migration fallbacks.
+- **Matched Candidate Timeframe Slider to Legend Stops:** Aligned the candidate timeframe range slider in Settings so its stops match the 6 discrete legend ticks (`1 mo`, `2 mos`, `6 mos`, `1 yr`, `2 yrs`, `All Time`), snapping accurately across indices.
+- **System Manual Link in Welcome Note:** Added a direct link to the user manual (`readme.html`) in both the summary highlights and full content of the initial onboarding welcome note.
+- **Simplified Embedded Reference Syntax `[Ref: 23]`:** Updated the reference parser and drag-and-drop generator so that embedded citations match the displayed label exactly (e.g. `[Ref: 23]` or lowercase `[ref: 23]`), while preserving full backwards compatibility for legacy `[[kb-ref:ID]]` tags.
+- **Updated Welcome Note & Getting Started Guide:** Overhauled the initial welcome note to explain scoped Whole Brain chat (focusing by active types, categories, and projects), introduced Notes, Seeds, and Prompts with instructions to create them via the top entry list buttons, noted that notes must be added before Theme Prompts can run, and included instructions plus direct link for obtaining a Google Gemini API key. Fixed the reference link to correctly cite this note (`[Ref: 1]`).
 - **PWA Support & Install Setting:** Added PWA support: web app manifest, icons, and a service worker that caches the app shell and CDN libraries for offline launch (AI API calls and the Safari sync bridge are never cached). Settings has a new Install as App section with an Install button (Chrome/Edge), Safari macOS Add to Dock instructions, and offline-cache status.
 - **Seed Chips Label Removed:** Removed the redundant "Seeds:" label before the assistant seed chips (the seed icon on each chip is enough).
 - **Seeds Below Assistant Input:** Moved the Seeds shortcut chips in the Entry AI Assistant pane from above the text input to directly below it.

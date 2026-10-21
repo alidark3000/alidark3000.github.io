@@ -97,7 +97,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.69</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.101</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="changelog.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -154,6 +154,8 @@
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Single JSON Database File:</strong> All entries, generated prompt questions, prompt reflection answers, taxonomies, assistant chat histories, and deletion tombstones are stored in a single JSON file on your computer.</li>
+        <li><strong>Dedicated Folder Recommended:</strong> It is strongly recommended to create and store your library inside its own dedicated folder (e.g. <code>~/Documents/Brain/BrainLibrary.json</code>) rather than directly in a root or general documents directory.</li>
+        <li><strong>Temporary Swap Files (<code>.crswap</code>):</strong> In Chromium browsers (Chrome, Edge, Brave), data is written atomically by creating a temporary swap file (<code>*.crswap</code>) in the same directory before renaming it to your JSON file. If your folder is synced by cloud services like iCloud Drive, OneDrive, or Dropbox, the sync client may lock these temporary scratch files mid-write, leaving orphaned <code>.crswap</code> files behind. These files hold no final state and <strong>can be safely deleted at any time</strong>. Placing your library in its own dedicated folder keeps any temporary files neatly isolated.</li>
         <li><strong>IndexedDB Persistence:</strong> File handles are retained via <code>idb-keyval</code> so you can resume your active workspace upon reload without picking the file again. An automatic backup snapshot is also written to IndexedDB on every save.</li>
         <li><strong>Safari Local File Sync Bridge (Fallback for Non-Chromium Browsers):</strong> When the browser supports the native File System Access API (Chrome, Edge, Brave), Brain reads and writes directly to your local <code>.json</code> file. When <code>window.showOpenFilePicker</code> is unavailable (such as in Safari), Brain automatically activates a local file bridge client (<code>127.0.0.1:8765</code>) paired with a one-time downloadable macOS setup archive (<a href="Enable-Safari-Sync.zip" download="Enable-Safari-Sync.zip"><code>Enable-Safari-Sync.zip</code></a> &rarr; <code>Enable-Safari-Sync.command</code>). Running the script installs a lightweight local Python LaunchAgent (<code>~/.alibrain/bridge.py</code>) that provides native macOS file pickers, in-place auto-saving, startup auto-resume, and 3-way external change polling in Safari.</li>
         <li><strong>Privacy by Default:</strong> Zero telemetry, zero analytics, zero external database servers. Communication occurs solely between your browser and the Google Gemini API when using AI features.</li>
@@ -387,8 +389,8 @@
         Ali Brain implements a lightweight, bi-directional referencing and linking network. You can connect ideas across different documents seamlessly without relying on proprietary database graph structures or fragile absolute paths.
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
-        <li><strong>Wiki Shortcodes:</strong> Using <code>[[kb-ref:ENTRY_ID]]</code> establishes an interactive link. Hovering over the reference renders an instant summary popover, while clicking navigates directly to the referenced note.</li>
-        <li><strong>Drag to Reference:</strong> Drag any note card from the sidebar list and drop it into the Markdown editor to automatically insert a formatted reference link.</li>
+        <li><strong>Interactive Backlinks &amp; Citations:</strong> Using <code>[Ref: 23]</code> (or lowercase <code>[ref: 23]</code>, as well as legacy <code>[[kb-ref:ENTRY_ID]]</code>) establishes an interactive link matching the rendered display format directly. Hovering over the reference renders an instant summary popover, while clicking navigates directly to the referenced note.</li>
+        <li><strong>Drag to Reference:</strong> Drag any note card from the sidebar list and drop it into the Markdown editor to automatically insert a clean <code>[Ref: ID]</code> reference link.</li>
         <li><strong>Chronological Decimal IDs:</strong> Notes use stable decimal identifiers (e.g. <code>#1</code>, <code>#2</code>, <code>#2.1</code>), permitting chronological insertions into intermediate timeline gaps while maintaining stable referencing.</li>
       </ul>
     </section>
@@ -584,7 +586,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.69</strong></span>
+      <span>Version <strong>v2.8.101</strong></span>
       <a href="changelog.html">Changelog</a>
       <a href="index.html">Back to Brain App</a>
     </div>

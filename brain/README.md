@@ -25,6 +25,8 @@
 Ali Brain is an autonomous, serverless personal knowledge management system that runs entirely in the browser using standard web technologies. It stores your complete database directly on your local file system, providing instant load times, complete data ownership, and offline capability without relying on centralized databases or servers.
 
 - **Single JSON Database File:** All entries, generated prompt questions, prompt reflection answers, taxonomies, assistant chat histories, and deletion tombstones are stored in a single JSON file on your computer.
+- **Dedicated Folder Recommended:** It is strongly recommended to store your library inside its own dedicated folder (e.g. `~/Documents/Brain/BrainLibrary.json`) rather than directly inside a crowded root or general folder.
+- **Temporary Swap Files (`.crswap`):** Chromium-based browsers (Chrome, Edge, Brave) write data atomically by creating a temporary swap file (e.g., `*.crswap`) in the same directory before renaming it to your JSON file. If your folder is synced by cloud services like iCloud Drive, OneDrive, or Dropbox, the sync agent can temporarily lock these scratch files while uploading, leaving behind orphaned `.crswap` files. These files contain no final state and **can be safely deleted at any time**. Storing your library in a dedicated folder keeps them contained and prevents folder clutter.
 - **IndexedDB Persistence:** File handles are retained via `idb-keyval` so you can resume your active workspace upon reload without picking the file again. An automatic backup snapshot is also written to IndexedDB on every save.
 - **Safari Local File Sync Bridge (Fallback for Non-Chromium Browsers):** When the browser supports the native File System Access API (Chrome, Edge, Brave), Brain reads and writes directly to your local `.json` file. When `window.showOpenFilePicker` is unavailable (such as in Safari), Brain automatically activates a local file bridge client (`127.0.0.1:8765`) paired with a one-time downloadable macOS setup archive ([`Enable-Safari-Sync.zip`](Enable-Safari-Sync.zip) → [`Enable-Safari-Sync.command`](Enable-Safari-Sync.command)). Running the script installs a lightweight local Python LaunchAgent (`~/.alibrain/bridge.py`) that provides native macOS file pickers, in-place auto-saving, startup auto-resume, and 3-way external change polling in Safari.
 - **Privacy by Default:** Zero telemetry, zero analytics, zero external database servers. Communication occurs solely between your browser and the Google Gemini API when using AI features.
@@ -125,8 +127,8 @@ The AI Assistant lets you chat with either a single open note or your broader kn
 
 ## 8. Backlinks & Decimal Numeric IDs
 
-- **Wiki Shortcodes:** Using `[[kb-ref:ENTRY_ID]]` establishes an interactive bi-directional link. Hovering renders an instant summary popover, while clicking navigates directly to the referenced note.
-- **Drag to Reference:** Drag any note card from the sidebar list and drop it into the Markdown editor to insert a formatted reference shortcode.
+- **Interactive Backlinks & Citations:** Using `[Ref: 23]` (or lowercase `[ref: 23]`, as well as legacy `[[kb-ref:ENTRY_ID]]`) establishes an interactive bi-directional citation. The syntax matches the rendered display text exactly. Hovering renders an instant summary popover, while clicking navigates directly to the referenced note.
+- **Drag to Reference:** Drag any note card from the sidebar list and drop it into the Markdown editor to insert a clean `[Ref: ID]` reference tag.
 - **Chronological Decimal IDs:** Notes use stable decimal identifiers (e.g. `#1`, `#2`, `#2.1`), permitting chronological insertions into intermediate timeline gaps while maintaining stable referencing.
 
 ---
@@ -185,4 +187,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.67** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.101** • Local-First Autonomous Knowledge Base*

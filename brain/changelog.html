@@ -80,7 +80,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; Changelog</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.95</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.101</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="readme.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -105,12 +105,12 @@
   <!-- Timeline -->
   <main class="space-y-8 text-sm">
 
-    <!-- v2.8.95 (Current Active Series) -->
+    <!-- v2.8.101 (Current Active Series) -->
     <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
       <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--accent)] border-[var(--bg-main)]"></div>
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.95</h2>
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.101</h2>
           <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
         </div>
         <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-21</span>
@@ -119,7 +119,35 @@
         <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
-            <span><strong class="text-[var(--text-main)]">PWA Support &amp; Install Setting:</strong> Added PWA support: web app manifest, icons, and a service worker that caches the app shell and CDN libraries for offline launch (AI API calls and the Safari sync bridge are never cached). Settings has a new Install as App section with an Install button (Chrome/Edge), Safari macOS Add to Dock instructions, and offline-cache status.</span>
+            <span><strong class="text-[var(--text-main)]">Fixed Manual Note Deletion on Navigation:</strong> Fixed a critical state/ref synchronization bug where navigating away from a newly saved manual note (or clicking another entry while editing) caused the empty-note cleanup routine to read stale state or the next note's editor value and delete the note.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Streamlined AI Models to Direct Google Latest Aliases:</strong> Removed the API model discovery network query and discovery error banners. Settings now provides instant dropdown selections for Google's official stable aliases (<code>gemini-flash-lite-latest</code> as default, <code>gemini-flash-latest</code>, and <code>gemini-pro-latest</code>) which automatically route to Google's newest live releases without configuration.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Documentation on Dedicated Library Folders &amp; <code>.crswap</code> Files:</strong> Added clear guidance in the System Manual (<code>README.md</code> and <code>readme.html</code>) advising users to store their library within its own dedicated folder (e.g. <code>~/Documents/Brain/</code>) and clarifying that browser temporary write files (<code>.crswap</code>) created during atomic saves can be safely deleted if orphaned by cloud sync services.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Theme Prompt Defaults Confirmed for Fresh Libraries:</strong> Ensured fresh libraries initialize with candidate timeframe defaulting to 2 months and sample pool size defaulting to 10 notes across state initialization, new file creation, and schema migration fallbacks.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Matched Candidate Timeframe Slider to Legend Stops:</strong> Aligned the candidate timeframe range slider in Settings so its stops match the 6 discrete legend ticks (<code>1 mo</code>, <code>2 mos</code>, <code>6 mos</code>, <code>1 yr</code>, <code>2 yrs</code>, <code>All Time</code>), snapping accurately across indices.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">System Manual Link in Welcome Note:</strong> Added a direct link to the user manual (<code>readme.html</code>) in both the summary highlights and full content of the initial onboarding welcome note.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Simplified Embedded Reference Syntax <code>[Ref: 23]</code>:</strong> Updated the reference parser and drag-and-drop generator so that embedded citations match the displayed label exactly (e.g. <code>[Ref: 23]</code> or lowercase <code>[ref: 23]</code>), while preserving full backwards compatibility for legacy <code>[[kb-ref:ID]]</code> tags.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Updated Welcome Note &amp; Getting Started Guide:</strong> Overhauled the initial welcome note to explain scoped Whole Brain chat (focusing by active types, categories, and projects), introduced Notes, Seeds, and Prompts with instructions to create them via the top entry list buttons, noted that notes must be added before Theme Prompts can run, and included instructions plus direct link for obtaining a Google Gemini API key. Fixed the reference link to correctly cite this note (<code>[Ref: 1]</code>).</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
@@ -586,7 +614,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.95</strong></span>
+      <span>Version <strong>v2.8.101</strong></span>
       <a href="readme.html">System Manual</a>
       <a href="index.html">Back to Brain App</a>
     </div>

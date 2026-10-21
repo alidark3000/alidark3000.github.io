@@ -128,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.95";
+    const APP_VERSION = "v2.8.101";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -309,8 +309,8 @@
 
     const injectReferences = (text, allEntries) => {
       if (!text) return '';
-      return text.replace(/\[\[(?:kb-ref:|ref:)?([^\]]+)\]\]|\[(?:kb-ref:|ref:)?(entry-[a-zA-Z0-9_-]+)\](?!\()/gi, (match, id1, id2) => {
-        const rawId = (id1 || id2 || '').trim();
+      return text.replace(/\[\[(?:kb-ref:|ref:\s*)?([^\]]+)\]\]|\[(?:kb-ref:|ref:\s*)([^\]]+)\](?!\()|\[(entry-[a-zA-Z0-9_-]+)\](?!\()/gi, (match, id1, id2, id3) => {
+        const rawId = (id1 || id2 || id3 || '').trim();
         const refEntry = (allEntries || []).find(e => e.id === rawId || String(e.numericId) === rawId);
         if (!refEntry) return `<span class="text-[var(--danger)] text-xs font-semibold px-2 py-0.5 rounded bg-[var(--danger)]/10">[Broken Link: ${rawId}]</span>`;
         return `<span class="kb-embedded-ref" data-id="${refEntry.id}" title="${refEntry.title}">[Ref: ${refEntry.numericId}]</span>`;
@@ -323,11 +323,13 @@
       summary: 'A clean, local-first personal knowledge base with built-in Gemini AI copilots.',
       shortVersion: [
         'All data auto-saves non-destructively to your local JSON file with zero cloud lock-in.',
-        'Paste web links, YouTube videos, PDFs, or raw text into the input bar above the list.',
-        'Toggle AI Assistant with the top-right magic wand (Cmd+J / Ctrl+J) or settings above the document reader.',
-        'Use [[kb-ref:ID]] syntax or drag note cards into the editor to create instant interactive backlinks.'
+        'Add new Notes, Seeds, Prompts, and AI Chats from the action buttons row at the top of the entry list.',
+        'You must add notes first before generating Theme Prompts, as prompts require summarized notes to analyze.',
+        'Set your Gemini API key in Settings (sliders icon) — AI copilots, summaries, prompts, and chats require it.',
+        'Use [Ref: 1] syntax or drag note cards into the editor to create instant interactive backlinks.',
+        'Read the comprehensive [System Manual](readme.html) for shortcuts, architecture details, and usage guides.'
       ],
-      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with your selected local JSON file on your machine.\n\n### Core Features & Workflow\n* **Ingest Knowledge:** Paste any web article, YouTube URL, PDF document, or raw notes into the input bar above the note list for automated TL;DR summaries, key takeaways, and content extraction.\n* **Local-First & Non-Destructive Sync:** Your active file remains on your disk. Background saving occurs automatically, and you can undo actions anytime using `Cmd+Z` / `Ctrl+Z`.\n* **AI Assistant & Task Routing:** Toggle the AI Assistant in the top right (`Cmd+J` / `Ctrl+J`) using the magic wand button. Choose between **Whole Brain** mode (synthesizing across all notes) and **Current Entry** mode (deep diving into the active note). Models default to `gemini-flash-lite-latest` and can be customized per task in Settings.\n* **Theme Prompts & Reflection:** When your library has two or more notes, generate exploratory theme questions and reflection prompts that juxtapose ideas and check in on open threads.\n* **Interactive Backlinks:** Type `[[kb-ref:ID]]` (or drag any note card from the list into the content editor) to embed rich previewable backlinks.\n* **Taxonomy & Navigation:** Organize notes by Projects, Categories, and Tags in the collapsible left Library sidebar. Use the top toggle buttons to collapse or expand views seamlessly.',
+      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with your selected local JSON file on your machine.\n\n### Getting Started: Notes, Seeds & Prompts\nUse the quick-action buttons directly at the top of the entry list panel:\n* **+ Note:** Write your own markdown thoughts, journals, or references.\n* **+ Seed:** Create reusable prompt templates and instructions (shortcuts inspired by Gemini Gems). Seeds appear as one-click shortcut chips in the AI Assistant.\n* **+ Prompt:** Generate exploratory theme reflection questions that juxtapose ideas and loose ends across your notes. **Note:** You will need to add some summarized notes to your knowledge base first before Theme Prompts can analyze themes and generate questions!\n* **+ Chat:** Launch a full-width AI Chat session scoped to your active knowledge.\n\n### Scoped Whole Brain & Assistant Chat\n* **Whole Brain Chat:** Clicking **+ Chat** or the assistant drawer synthesizes across your knowledge base. Whole Brain chat dynamically honors your active filters — it scopes context to your **selected entry types, categories, and projects** so you can focus discussions on specific topics or your entire brain.\n* **Google Gemini API Key:** AI summaries, key takeaways, theme prompts, and chat copilots require a Gemini API key. Set your API key in **Settings** (sliders icon) or grab a free key at [Google AI Studio](https://aistudio.google.com/app/apikey). Features relying on AI will remain inactive until a key is saved.\n\n### Interactive Backlinks & References\n* Type `[Ref: 1]` (or `[ref: 1]`) to embed a live interactive citation to this note [Ref: 1]. Hovering previews the target note, and clicking navigates directly to it.\n* You can also drag any note card from the entry list directly into the content editor to insert its backlink.\n\n### Local-First & Non-Destructive Sync\nYour active file remains safely on your disk. Background saving occurs automatically, and you can undo actions anytime using `Cmd+Z` / `Ctrl+Z`.\n\n### Documentation & Manual\nFor the complete user manual, keyboard shortcuts, import/export workflows, and architecture documentation, open the [System Manual](readme.html).',
       categories: ['getting started'],
       tags: ['tutorial'],
       projects: [],
@@ -909,6 +911,11 @@ Respond with valid JSON ONLY matching this structure:
       }, []);
 
       const DEFAULT_MODEL = 'gemini-flash-lite-latest';
+      const STANDARD_MODELS = [
+        { id: 'gemini-flash-lite-latest', displayName: 'Gemini Flash-Lite Latest (Fastest & Default)' },
+        { id: 'gemini-flash-latest', displayName: 'Gemini Flash Latest (Balanced)' },
+        { id: 'gemini-pro-latest', displayName: 'Gemini Pro Latest (Deep Reasoning)' }
+      ];
       const [apiKeys, setApiKeys] = useState([]);
       const [model, setModel] = useState(DEFAULT_MODEL);
       const [taskModels, setTaskModels] = useState({
@@ -926,9 +933,6 @@ Respond with valid JSON ONLY matching this structure:
         prompts: DEFAULT_MODEL,
         assistant: DEFAULT_MODEL
       });
-      const [availableModels, setAvailableModels] = useState([]);
-      const [isFetchingModels, setIsFetchingModels] = useState(false);
-      const [fetchModelsError, setFetchModelsError] = useState(null);
       const [manualModelMode, setManualModelMode] = useState(false);
       const [tempTheme, setTempTheme] = useState('default');
 
@@ -1084,27 +1088,30 @@ Respond with valid JSON ONLY matching this structure:
         }
 
         // Clean up empty AI chat or empty manual note if clicking off / navigating away
-        const curActive = activeSingleEntryRef.current;
+        const curActiveId = activeSingleEntryRef.current?.id;
+        const curActive = (curActiveId && (entriesRef.current || []).find(e => e.id === curActiveId)) || activeSingleEntryRef.current;
         if (curActive && !ids.includes(curActive.id)) {
           if (isAiChatEntry(curActive)) {
             const msgs = Array.isArray(curActive.chatMessages) ? curActive.chatMessages : [];
             const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
             if (isEmpty) {
               const emptyId = curActive.id;
+              entriesRef.current = (entriesRef.current || []).filter(e => e.id !== emptyId);
               setEntries(prev => prev.filter(e => e.id !== emptyId));
               setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
             }
           } else {
             // Check if manual entry was created and left completely empty
             const staged = (editDataRef.current && editDataRef.current[curActive.id]) || {};
-            const liveText = contentTextareaRef.current?.value;
+            const liveText = (contentTextareaRef.current && activeSingleEntryRef.current?.id === curActive.id) ? contentTextareaRef.current.value : undefined;
             const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (curActive.fullContent || ''))).trim();
             const title = (staged.title !== undefined ? staged.title : (curActive.title || '')).trim();
-            const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+            const isTitleEmptyOrDefault = !title || /^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test(title);
             const isContentEmpty = !content;
             const isSourceEmpty = !curActive.sourceUrl;
             if (isContentEmpty && isTitleEmptyOrDefault && isSourceEmpty) {
               const emptyId = curActive.id;
+              entriesRef.current = (entriesRef.current || []).filter(e => e.id !== emptyId);
               setEntries(prev => prev.filter(e => e.id !== emptyId));
               setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
               setEditingEntries(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
@@ -1137,7 +1144,8 @@ Respond with valid JSON ONLY matching this structure:
 
       const handleNavBack = () => {
         if (canGoBack) {
-          const curActive = activeSingleEntryRef.current;
+          const curActiveId = activeSingleEntryRef.current?.id;
+          const curActive = (curActiveId && (entriesRef.current || []).find(e => e.id === curActiveId)) || activeSingleEntryRef.current;
           const newIdx = navIndex - 1;
           const targetIds = navHistory[newIdx] || [];
           if (curActive && !targetIds.includes(curActive.id)) {
@@ -1146,17 +1154,19 @@ Respond with valid JSON ONLY matching this structure:
               const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
               if (isEmpty) {
                 const emptyId = curActive.id;
+                entriesRef.current = (entriesRef.current || []).filter(e => e.id !== emptyId);
                 setEntries(prev => prev.filter(e => e.id !== emptyId));
                 setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
               }
             } else {
               const staged = (editDataRef.current && editDataRef.current[curActive.id]) || {};
-              const liveText = contentTextareaRef.current?.value;
+              const liveText = (contentTextareaRef.current && activeSingleEntryRef.current?.id === curActive.id) ? contentTextareaRef.current.value : undefined;
               const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (curActive.fullContent || ''))).trim();
               const title = (staged.title !== undefined ? staged.title : (curActive.title || '')).trim();
-              const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+              const isTitleEmptyOrDefault = !title || /^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test(title);
               if (!content && isTitleEmptyOrDefault && !curActive.sourceUrl) {
                 const emptyId = curActive.id;
+                entriesRef.current = (entriesRef.current || []).filter(e => e.id !== emptyId);
                 setEntries(prev => prev.filter(e => e.id !== emptyId));
                 setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
                 setEditingEntries(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
@@ -1172,7 +1182,8 @@ Respond with valid JSON ONLY matching this structure:
 
       const handleNavForward = () => {
         if (canGoForward) {
-          const curActive = activeSingleEntryRef.current;
+          const curActiveId = activeSingleEntryRef.current?.id;
+          const curActive = (curActiveId && (entriesRef.current || []).find(e => e.id === curActiveId)) || activeSingleEntryRef.current;
           const newIdx = navIndex + 1;
           const targetIds = navHistory[newIdx] || [];
           if (curActive && !targetIds.includes(curActive.id)) {
@@ -1181,17 +1192,19 @@ Respond with valid JSON ONLY matching this structure:
               const isEmpty = msgs.length === 0 || !msgs.some(m => m.text && m.text.trim());
               if (isEmpty) {
                 const emptyId = curActive.id;
+                entriesRef.current = (entriesRef.current || []).filter(e => e.id !== emptyId);
                 setEntries(prev => prev.filter(e => e.id !== emptyId));
                 setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
               }
             } else {
               const staged = (editDataRef.current && editDataRef.current[curActive.id]) || {};
-              const liveText = contentTextareaRef.current?.value;
+              const liveText = (contentTextareaRef.current && activeSingleEntryRef.current?.id === curActive.id) ? contentTextareaRef.current.value : undefined;
               const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (curActive.fullContent || ''))).trim();
               const title = (staged.title !== undefined ? staged.title : (curActive.title || '')).trim();
-              const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+              const isTitleEmptyOrDefault = !title || /^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test(title);
               if (!content && isTitleEmptyOrDefault && !curActive.sourceUrl) {
                 const emptyId = curActive.id;
+                entriesRef.current = (entriesRef.current || []).filter(e => e.id !== emptyId);
                 setEntries(prev => prev.filter(e => e.id !== emptyId));
                 setNavHistory(prev => prev.map(hist => hist.filter(id => id !== emptyId)).filter(h => h.length > 0));
                 setEditingEntries(prev => { const n = { ...prev }; delete n[emptyId]; return n; });
@@ -1295,11 +1308,11 @@ Respond with valid JSON ONLY matching this structure:
               }
             } else {
               const staged = (editDataRef.current && editDataRef.current[prevId]) || {};
-              const liveText = contentTextareaRef.current?.value;
-              const content = (liveText !== undefined ? liveText : (staged.fullContent !== undefined ? staged.fullContent : (prevEntry.fullContent || ''))).trim();
+              const content = (staged.fullContent !== undefined ? staged.fullContent : (prevEntry.fullContent || '')).trim();
               const title = (staged.title !== undefined ? staged.title : (prevEntry.title || '')).trim();
-              const isTitleEmptyOrDefault = !title || /^untitled(\s+note)?(\s*#?\d+)?$/i.test(title);
+              const isTitleEmptyOrDefault = !title || /^untitled(\s+(note|seed))?(\s*#?\d+)?$/i.test(title);
               if (!content && isTitleEmptyOrDefault && !prevEntry.sourceUrl) {
+                entriesRef.current = (entriesRef.current || []).filter(e => e.id !== prevId);
                 setEntries(prev => prev.filter(e => e.id !== prevId));
                 setNavHistory(prev => prev.map(hist => hist.filter(id => id !== prevId)).filter(h => h.length > 0));
                 setEditingEntries(prev => { const n = { ...prev }; delete n[prevId]; return n; });
@@ -1465,49 +1478,6 @@ Respond with valid JSON ONLY matching this structure:
         return await callGemini(activeKey, payload, activeModel);
       };
 
-      const fetchAvailableModels = async (keyToUse) => {
-        const activeKey = keyToUse || tempKeys?.[0]?.key || apiKeys?.[0]?.key;
-        if (!activeKey) {
-          setFetchModelsError("Please enter or select a Gemini API key first.");
-          return;
-        }
-        setIsFetchingModels(true);
-        setFetchModelsError(null);
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
-          const data = await res.json();
-          if (data.error) throw new Error(data.error.message);
-          if (!Array.isArray(data.models)) throw new Error("Unexpected response from Gemini API.");
-          
-          const contentModels = data.models
-            .filter(m => 
-              Array.isArray(m.supportedGenerationMethods) && 
-              m.supportedGenerationMethods.includes('generateContent') &&
-              (m.name || '').toLowerCase().includes('latest')
-            )
-            .map(m => ({
-              id: m.name.replace(/^models\//, ''),
-              displayName: m.displayName || m.name.replace(/^models\//, ''),
-              description: m.description || ''
-            }))
-            .sort((a, b) => a.id.localeCompare(b.id));
-
-          if (contentModels.length === 0) {
-            throw new Error("No 'latest' alias models returned for this key from Gemini API.");
-          }
-
-          setAvailableModels(contentModels);
-          if (typeof idbKeyval !== 'undefined') {
-            idbKeyval.set('kb_available_models', contentModels).catch(() => {});
-          }
-        } catch (err) {
-          console.error("Failed to fetch models from API:", err);
-          setFetchModelsError(err.message);
-        } finally {
-          setIsFetchingModels(false);
-        }
-      };
-
       // Auto-scroll assistant thread (Current Entry drawer)
       useEffect(() => {
         if (chatScrollRef.current) {
@@ -1586,15 +1556,6 @@ Respond with valid JSON ONLY matching this structure:
           idbKeyval.get('kb_stored_prompts').then(p => {
             if (Array.isArray(p) && p.length > 0 && isMounted) {
               setStoredPrompts(p);
-            }
-          }).catch(() => {});
-
-          idbKeyval.get('kb_available_models').then(m => {
-            if (Array.isArray(m) && m.length > 0 && isMounted) {
-              const latestOnly = m.filter(model => (model.id || '').toLowerCase().includes('latest'));
-              if (latestOnly.length > 0) {
-                setAvailableModels(latestOnly);
-              }
             }
           }).catch(() => {});
         }
@@ -2502,6 +2463,7 @@ Respond with valid JSON ONLY matching this structure:
           setTombstones({});
           tombstonesRef.current = {};
           setStoredPrompts([]);
+          setPromptConfig(DEFAULT_PROMPT_CONFIG);
           setApiKeys([]);
           setModel(DEFAULT_MODEL);
           setTaskModels({
@@ -4456,7 +4418,9 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
         const draggedId = e.dataTransfer.getData('kb-ref-id');
         if (draggedId && draggedId !== targetEntry.id) {
           e.preventDefault();
-          const refShortcode = `\n\n[[kb-ref:${draggedId}]]`;
+          const draggedEntry = entries.find(ent => ent.id === draggedId);
+          const refTag = draggedEntry?.numericId ? `[Ref: ${draggedEntry.numericId}]` : `[Ref: ${draggedId}]`;
+          const refShortcode = `\n\n${refTag}`;
           setEntries(prev => prev.map(ent =>
             ent.id === targetEntry.id
               ? { ...ent, fullContent: (ent.fullContent || '') + refShortcode, updatedAt: Date.now() }
@@ -5167,11 +5131,7 @@ ${expandedBlocks.join('\n\n')}`
         setTempTheme(theme);
         setTempPromptConfig({ ...DEFAULT_PROMPT_CONFIG, ...promptConfig });
         setMergeStatus(null);
-        setFetchModelsError(null);
         setShowKeyModal(true);
-        if (availableModels.length === 0 && currentKeys[0]?.key) {
-          fetchAvailableModels(currentKeys[0].key);
-        }
       };
 
       const saveSettings = () => {
@@ -5416,55 +5376,33 @@ ${expandedBlocks.join('\n\n')}`
                       <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
                         AI Models by Task
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => fetchAvailableModels(tempKeys?.[0]?.key)}
-                        disabled={isFetchingModels || (!tempKeys?.[0]?.key && !apiKeys?.[0]?.key)}
-                        className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1.5 font-mono disabled:opacity-40 cursor-pointer"
-                        title="Fetch live active 'latest' alias models directly from Google AI Studio"
-                      >
-                        <i className={`fa-solid fa-arrows-rotate text-[9px] ${isFetchingModels ? 'fa-spin' : ''}`}></i>
-                        {isFetchingModels ? 'Fetching...' : (availableModels.length > 0 ? 'Refresh Models' : 'Fetch Models from API')}
-                      </button>
+                      <span className="text-[10px] text-emerald-500 font-mono flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                        Live Google Aliases
+                      </span>
                     </div>
-
-                    {fetchModelsError && (
-                      <div className="mb-2.5 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] rounded font-mono flex items-start gap-1.5">
-                        <i className="fa-solid fa-circle-exclamation text-xs mt-0.5 shrink-0"></i>
-                        <span>{fetchModelsError}</span>
-                      </div>
-                    )}
-
-                    {availableModels.length > 0 && (
-                      <div className="text-[10px] text-[var(--text-muted)] font-mono mb-2 flex items-center justify-between px-1">
-                        <span>{availableModels.length} latest alias models fetched from Google AI Studio</span>
-                        <span className="text-[9px] text-emerald-400 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> API Connected
-                        </span>
-                      </div>
-                    )}
 
                     <div className="space-y-3 bg-[var(--bg-main)] p-3 rounded border border-[var(--border)]">
                       {/* Metadata Extraction */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
-                            <i className="fa-solid fa-bolt text-amber-500 text-[9px]"></i> Quick Metadata & Summaries
+                            <i className="fa-solid fa-bolt text-amber-500 text-[9px]"></i> Quick Metadata &amp; Summaries
                           </label>
                           <span className="text-[9px] text-[var(--text-muted)] font-mono">Titles, TL;DR, Takeaways, Tags</span>
                         </div>
-                        {!manualModelMode && availableModels.length > 0 ? (
+                        {!manualModelMode ? (
                           <select
                             value={tempTaskModels.metadata}
                             onChange={e => setTempTaskModels(prev => ({ ...prev, metadata: e.target.value }))}
                             className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
                           >
-                            {!availableModels.some(m => m.id === tempTaskModels.metadata) && (
+                            {!STANDARD_MODELS.some(m => m.id === tempTaskModels.metadata) && (
                               <option value={tempTaskModels.metadata}>{tempTaskModels.metadata} (custom)</option>
                             )}
-                            {availableModels.map(m => (
+                            {STANDARD_MODELS.map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
+                                {m.displayName}
                               </option>
                             ))}
                           </select>
@@ -5485,20 +5423,20 @@ ${expandedBlocks.join('\n\n')}`
                           <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
                             <i className="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-[9px]"></i> Theme Prompts
                           </label>
-                          <span className="text-[9px] text-[var(--text-muted)] font-mono">Synthesis & Reflection</span>
+                          <span className="text-[9px] text-[var(--text-muted)] font-mono">Synthesis &amp; Reflection</span>
                         </div>
-                        {!manualModelMode && availableModels.length > 0 ? (
+                        {!manualModelMode ? (
                           <select
                             value={tempTaskModels.prompts}
                             onChange={e => setTempTaskModels(prev => ({ ...prev, prompts: e.target.value }))}
                             className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
                           >
-                            {!availableModels.some(m => m.id === tempTaskModels.prompts) && (
+                            {!STANDARD_MODELS.some(m => m.id === tempTaskModels.prompts) && (
                               <option value={tempTaskModels.prompts}>{tempTaskModels.prompts} (custom)</option>
                             )}
-                            {availableModels.map(m => (
+                            {STANDARD_MODELS.map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
+                                {m.displayName}
                               </option>
                             ))}
                           </select>
@@ -5519,20 +5457,20 @@ ${expandedBlocks.join('\n\n')}`
                           <label className="text-[10px] font-bold text-[var(--text-main)] font-mono flex items-center gap-1.5">
                             <i className="fa-solid fa-comments text-sky-400 text-[9px]"></i> AI Assistant Copilot
                           </label>
-                          <span className="text-[9px] text-[var(--text-muted)] font-mono">Chat & Whole Brain Search</span>
+                          <span className="text-[9px] text-[var(--text-muted)] font-mono">Chat &amp; Whole Brain Search</span>
                         </div>
-                        {!manualModelMode && availableModels.length > 0 ? (
+                        {!manualModelMode ? (
                           <select
                             value={tempTaskModels.assistant}
                             onChange={e => setTempTaskModels(prev => ({ ...prev, assistant: e.target.value }))}
                             className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
                           >
-                            {!availableModels.some(m => m.id === tempTaskModels.assistant) && (
+                            {!STANDARD_MODELS.some(m => m.id === tempTaskModels.assistant) && (
                               <option value={tempTaskModels.assistant}>{tempTaskModels.assistant} (custom)</option>
                             )}
-                            {availableModels.map(m => (
+                            {STANDARD_MODELS.map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.displayName || m.id} {m.id === DEFAULT_MODEL ? '(Default Lite)' : ''}
+                                {m.displayName}
                               </option>
                             ))}
                           </select>
@@ -5561,7 +5499,7 @@ ${expandedBlocks.join('\n\n')}`
                           onClick={() => setTempTaskModels({ metadata: DEFAULT_MODEL, prompts: DEFAULT_MODEL, assistant: DEFAULT_MODEL })}
                           className="text-[var(--accent)] hover:underline cursor-pointer"
                         >
-                          Reset to Default Lite ({DEFAULT_MODEL})
+                          Reset to Default Lite
                         </button>
                       </div>
                     </div>
@@ -5595,15 +5533,33 @@ ${expandedBlocks.join('\n\n')}`
                             {formatPromptDateRangeLabel(tempPromptConfig?.dateRangeMonths)}
                           </span>
                         </div>
-                        <input
-                          type="range"
-                          min="1"
-                          max="25"
-                          step="1"
-                          value={Number(tempPromptConfig?.dateRangeMonths) || 2}
-                          onChange={(e) => setTempPromptConfig(prev => ({ ...prev, dateRangeMonths: Number(e.target.value) }))}
-                          className="w-full accent-[#059669] cursor-pointer"
-                        />
+                        {(() => {
+                          const steps = [1, 2, 6, 12, 24, 25];
+                          const currentMonths = Number(tempPromptConfig?.dateRangeMonths) || 2;
+                          let activeIdx = steps.findIndex(s => s === currentMonths);
+                          if (activeIdx === -1) {
+                            if (currentMonths >= 25) activeIdx = 5;
+                            else {
+                              // snap to closest step
+                              activeIdx = steps.reduce((prev, curr, idx) => 
+                                Math.abs(curr - currentMonths) < Math.abs(steps[prev] - currentMonths) ? idx : prev, 0);
+                            }
+                          }
+                          return (
+                            <input
+                              type="range"
+                              min="0"
+                              max="5"
+                              step="1"
+                              value={activeIdx}
+                              onChange={(e) => {
+                                const idx = Math.max(0, Math.min(5, Number(e.target.value)));
+                                setTempPromptConfig(prev => ({ ...prev, dateRangeMonths: steps[idx] }));
+                              }}
+                              className="w-full accent-[#059669] cursor-pointer"
+                            />
+                          );
+                        })()}
                         <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
                           <span>1 mo</span>
                           <span>2 mos</span>
@@ -6609,7 +6565,7 @@ ${expandedBlocks.join('\n\n')}`
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData('kb-ref-id', entry.id);
-                        e.dataTransfer.setData('text/plain', `[[kb-ref:${entry.id}]]`);
+                        e.dataTransfer.setData('text/plain', entry.numericId ? `[Ref: ${entry.numericId}]` : `[Ref: ${entry.id}]`);
                       }}
                       onClick={(e) => handleEntryClick(e, entry.id)}
                       onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
