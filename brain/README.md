@@ -50,6 +50,7 @@ The synchronization engine ensures safe, concurrent multi-device usage over fold
 The taxonomy and organization system categorizes your knowledge base into distinct functional entry types alongside multi-dimensional tags, categories, and projects:
 
 - **Notes (Yellow):** Manual user notes, outlines, and thoughts.
+- **Txt (Grey):** Dropped text and imported plain text snippets.
 - **Seeds (Navy Blue):** AI prompt shortcuts and instructions (reusable prompts inspired by Gemini Gems). Seeds have no summaries and no key takeaways; their full content acts as an instant shortcut in the AI Assistant.
 - **Prompts (Green):** AI-generated theme reflection notes and intellectual inquiries.
 - **Media (Red):** Multimedia links (YouTube, Vimeo) with embedded synchronized player.
@@ -64,7 +65,7 @@ The taxonomy and organization system categorizes your knowledge base into distin
 - **Pinning:** Pin essential notes to keep them anchored at the top of the list for fast reference.
 - **Fast Search & Clear:** Real-time text search filters across titles and note contents. An inline clear button and <kbd>Escape</kbd> shortcut instantly reset your query.
 - **Sort Toggle:** A toggle at the top right of the entry list switches between date created and date modified order (newest first). Pinned notes always stay on top.
-- **Type-Colored Interface:** The reader, editor and Focus Mode accent color follows the entry's type (Note amber, Media red, Web sky, Prompt green, AI Chat purple, Seed blue).
+- **Type-Colored Interface:** The reader, editor and Focus Mode accent color follows the entry's type (Note amber, Txt grey, Media red, Web sky, Prompt green, AI Chat purple, Seed blue).
 
 ---
 
@@ -187,4 +188,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.102** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.104** • Local-First Autonomous Knowledge Base*

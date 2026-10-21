@@ -17,7 +17,7 @@ Keep 3-digit versions (e.g. `v2.8.x`) only for the current active minor series. 
 ## Conventions
 
 - Single-file React app in `index.html` (Tailwind CDN) with styles in `style.css`; theme colors are CSS variables (`--bg-main`, `--bg-pane`, `--accent`, ...).
-- Entry types and their colors: Note amber, Media red, Web sky, Prompt green, AI Chat purple, Seed blue.
+- Entry types and their colors: Note amber, Txt grey, Media red, Web sky, Prompt green, AI Chat purple, Seed blue.
 - Preserve existing comments and docstrings unrelated to your change.
 
 

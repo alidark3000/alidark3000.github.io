@@ -128,11 +128,16 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.102";
+    const APP_VERSION = "v2.8.104";
 
     const isMediaSource = (url) => {
       if (!url) return false;
       return /(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|twitch\.tv|dailymotion\.com|spotify\.com|soundcloud\.com|\.(mp4|webm|ogg|mov|mp3|wav|m4a)$)/i.test(url);
+    };
+
+    const isTxtEntry = (entry) => {
+      if (!entry) return false;
+      return entry.type === 'txt' || (Array.isArray(entry.tags) && entry.tags.includes('txt')) || (Array.isArray(entry.categories) && entry.categories.includes('txt'));
     };
 
     const isPromptEntry = (entry) => {
@@ -152,6 +157,7 @@
 
     const ENTRY_TYPES = [
       { id: 'note', label: 'Notes', color: '#f59e0b', icon: 'fa-file-lines', description: 'Manual user thoughts, outlines, and notes' },
+      { id: 'txt', label: 'Txt', color: '#94a3b8', icon: 'fa-file-lines', description: 'Dropped text and imported text snippets' },
       { id: 'media', label: 'Media', color: '#ff5252', icon: 'fa-play', description: 'YouTube & Vimeo videos or audio with sync notes' },
       { id: 'web', label: 'Web', color: '#38bdf8', icon: 'fa-link', description: 'Scraped web articles, pages, and processed PDFs' },
       { id: 'prompt', label: 'Prompts', color: '#059669', icon: 'fa-brain', description: 'AI-generated reflection questions & syntheses' },
@@ -162,6 +168,7 @@
     // Keywords and aliases corresponding to entry types that should not be used as categories or tags
     const ENTRY_TYPE_TAXONOMY_KEYWORDS = new Set([
       'note', 'notes',
+      'txt', 'text', 'texts',
       'seed', 'seeds',
       'prompt', 'prompts',
       'media', 'video', 'videos', 'audio', 'podcast', 'podcasts',
@@ -181,6 +188,7 @@
       if (isAiChatEntry(entry)) return 'aiChat';
       if (isSeedEntry(entry)) return 'seed';
       if (isPromptEntry(entry)) return 'prompt';
+      if (isTxtEntry(entry)) return 'txt';
       if (isMediaSource(entry.sourceUrl)) return 'media';
       const isPdf = !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
       if (isPdf || entry.sourceUrl) return 'web';
@@ -189,6 +197,7 @@
 
     const ENTRY_TYPE_ACCENTS = {
       note: ['#f59e0b', '#d97706'],
+      txt: ['#94a3b8', '#64748b'],
       media: ['#ff5252', '#e03e3e'],
       web: ['#38bdf8', '#0ea5e9'],
       prompt: ['#059669', '#047857'],
@@ -999,7 +1008,7 @@ Respond with valid JSON ONLY matching this structure:
       const [activeProjects, setActiveProjects] = useState([]);
       const [activeCategories, setActiveCategories] = useState([]);
       const [activeTags, setActiveTags] = useState([]);
-      const [activeTypeFilters, setActiveTypeFilters] = useState(['note', 'media', 'web', 'prompt']);
+      const [activeTypeFilters, setActiveTypeFilters] = useState(['note', 'txt', 'media', 'web', 'prompt']);
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedEntryIds, setSelectedEntryIds] = useState([]);
       const [navHistory, setNavHistory] = useState([]);
@@ -1271,8 +1280,9 @@ Respond with valid JSON ONLY matching this structure:
         if (prevOpen === isAssistantOpen) return;
 
         if (isAssistantOpen) {
-          // If the AI Assistant is opening and taxonomy sidebar is currently open, remember to restore it and close it
-          if (isLeftSidebarOpenRef.current) {
+          // If the AI Assistant is opening and taxonomy sidebar is currently open, remember to restore it and close it (only when viewport width is under 1800px)
+          const isNarrowScreen = typeof window !== 'undefined' && window.innerWidth < 1800;
+          if (isNarrowScreen && isLeftSidebarOpenRef.current) {
             wasTaxonomyOpenBeforeAssistantRef.current = true;
             setIsLeftSidebarOpen(false);
           } else {
@@ -2629,6 +2639,7 @@ Respond with valid JSON ONLY matching this structure:
             maxNumericId += 1;
             const newEntry = {
               id: 'entry-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+              type: 'txt',
               numericId: maxNumericId,
               title: title,
               summary: '',
@@ -2645,6 +2656,9 @@ Respond with valid JSON ONLY matching this structure:
             };
             newEntries.push(newEntry);
           }
+
+          // Ensure txt filter is active so imported notes are visible
+          setActiveTypeFilters(prev => prev.includes('txt') ? prev : [...prev, 'txt']);
 
           // Add new text notes to library
           const updatedEntries = [...newEntries, ...currentEntries];
@@ -3032,9 +3046,12 @@ Respond with valid JSON ONLY matching this structure:
             .map(t => String(t).toLowerCase().trim())
             .filter(t => t && !isEntryTypeTaxonomy(t));
 
+          const isPlainText = !sourceUrl && (!file || file.type !== 'application/pdf');
+
           const newEntry = {
             id: 'entry-' + Date.now(),
             numericId: nextNumericId,
+            ...(isPlainText ? { type: 'txt' } : {}),
             title: cleanTitle(originalWebTitle || parsed.title || 'Untitled Note'),
             summary: cleanExecutiveSummary(parsed.summary || ''),
             shortVersion: Array.isArray(parsed.shortVersion) ? parsed.shortVersion : [],
@@ -3048,6 +3065,10 @@ Respond with valid JSON ONLY matching this structure:
             references: [],
             pinned: false
           };
+
+          if (isPlainText) {
+            setActiveTypeFilters(prev => prev.includes('txt') ? prev : [...prev, 'txt']);
+          }
 
           setEntries(prev => [newEntry, ...prev]);
           setSelectedEntryIds([newEntry.id]);
@@ -3415,6 +3436,8 @@ Respond with valid JSON ONLY matching this structure:
               provenance = 'Media [External Third-Hand Knowledge - Video/Audio]';
             } else if (type === 'web') {
               provenance = 'Web / Document [External Third-Hand Knowledge - Web/Text]';
+            } else if (type === 'txt') {
+              provenance = 'Text [External Third-Hand Knowledge - Dropped Text]';
             }
             const promptQuestionPart = (type === 'prompt' && e.promptQuestion) ? `\nPrompt Question: ${e.promptQuestion}` : '';
             const summaryPart = e.summary ? `\nSummary: ${e.summary}` : '';
@@ -4631,6 +4654,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
               if (docType === 'prompt') provLabel = 'Prompt Reply [User Content - Reflection Answer]';
               else if (docType === 'media') provLabel = 'Media [External Third-Hand Knowledge - Video/Audio]';
               else if (docType === 'web') provLabel = 'Web / Document [External Third-Hand Knowledge - Web/Text]';
+              else if (docType === 'txt') provLabel = 'Text [External Third-Hand Knowledge - Dropped Text]';
               let block = `--- PRIMARY DOCUMENT: ${ent.title} (ID: ${ent.numericId || ent.id}, Provenance: ${provLabel}) ---\n`;
               if (docType === 'prompt' && ent.promptQuestion) block += `Prompt Question: ${ent.promptQuestion}\n`;
               if (ent.summary) block += `Summary: ${ent.summary}\n`;
@@ -4686,6 +4710,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
                 if (relType === 'prompt') relLabel = 'Prompt Reply [User Content]';
                 else if (relType === 'media') relLabel = 'Media [External]';
                 else if (relType === 'web') relLabel = 'Web/Text [External]';
+                else if (relType === 'txt') relLabel = 'Text [External]';
                 let line = `• [[kb-ref:${e.id}]] [${relLabel}] "${e.title || 'Untitled'}"`;
                 if (e.summary) line += `\n  Executive Summary: ${e.summary}`;
                 if (Array.isArray(e.shortVersion) && e.shortVersion.length > 0) line += `\n  Key Takeaways: ${e.shortVersion.join(' | ')}`;
@@ -4929,6 +4954,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           if (type === 'prompt') typeTag = 'Prompt Reply [User Content]';
           else if (type === 'media') typeTag = 'Media [External Third-Hand]';
           else if (type === 'web') typeTag = 'Web/Text [External Third-Hand]';
+          else if (type === 'txt') typeTag = 'Text [External Third-Hand]';
           return `[kb-ref:${e.id}] [${typeTag}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum}`;
         }).join('\n');
 
@@ -5026,6 +5052,7 @@ ${candidateSummaries}`;
           if (type === 'prompt') typeTag = 'Prompt Reply [User Content]';
           else if (type === 'media') typeTag = 'Media [External Third-Hand Knowledge]';
           else if (type === 'web') typeTag = 'Web/Text [External Third-Hand Knowledge]';
+          else if (type === 'txt') typeTag = 'Text [External Third-Hand Knowledge]';
           const parts = [
             `--- [kb-ref:${e.id}] (Ref #${e.numericId || '?'}, Type: ${typeTag}) Title: "${e.title || 'Untitled'}" ---`,
             `Executive Summary: ${e.summary}`
@@ -6655,6 +6682,7 @@ ${expandedBlocks.join('\n\n')}`
                   const isAiChat = isAiChatEntry(entry);
                   const isSeed = !isAiChat && isSeedEntry(entry);
                   const isPrompt = !isAiChat && !isSeed && isPromptEntry(entry);
+                  const isTxt = !isAiChat && !isSeed && !isPrompt && isTxtEntry(entry);
                   const isPdf = !isAiChat && !entry.sourceUrl && entry.title?.toLowerCase().endsWith('.pdf');
                   const isMedia = !isAiChat && !isPdf && isMediaSource(entry.sourceUrl);
                   
@@ -6669,6 +6697,9 @@ ${expandedBlocks.join('\n\n')}`
                   } else if (isPrompt) {
                     typeColor = '#059669'; // Prompt (Muted Emerald)
                     typeIcon = 'fa-brain';
+                  } else if (isTxt) {
+                    typeColor = '#94a3b8'; // Txt (Grey)
+                    typeIcon = 'fa-file-lines';
                   } else if (isMedia) {
                     typeColor = '#ff5252'; // Media (Red)
                     typeIcon = 'fa-play';

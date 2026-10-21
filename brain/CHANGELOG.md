@@ -1,11 +1,15 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.102** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.104** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.102 (2026-10-21) — *Latest*
+## v2.8.104 (2026-10-21) — *Latest*
+
+- **Responsive Taxonomy Auto-Collapse on AI Drawer Toggle:** Limited automatic collapsing of the taxonomy sidebar when opening the AI assistant drawer to viewport widths under 1800px. On wider screens (1800px+), the taxonomy sidebar remains open alongside the AI drawer for uninterrupted multi-column viewing.
+
+- **New 'Txt' Entry Type with Slate Grey Color:** Introduced a distinct `txt` entry type with a dedicated slate grey theme color (`#94a3b8`) for dropped text and imported text snippets. Operates identically to manual notes for editing, takeaways, and AI synthesis while visually distinguishing dropped/imported text snippets from handwritten user thoughts in list cards, filter chips, and epistemology provenance.
 
 - **Text & Markdown File Multi-Select Library Merge:** The Merge External Library function now supports selecting multiple files at once and importing plain text (`.txt`) and Markdown (`.md`) files directly into your active workspace. Imported notes preserve their original file modification and creation timestamps (`createdAt` and `updatedAt`), set their note titles from the filename, and automatically generate executive summaries using Gemini.
 
