@@ -97,7 +97,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.104</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.116</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="changelog.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -364,7 +364,8 @@
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Current Entry Chat (Right Drawer):</strong>
           <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><em>Context:</em> Sends the active note's full text, summary, takeaways, and source URL, plus summaries and takeaways of up to 10 related notes in the same category or project.</li>
+            <li><em>Conversational Synthesis &amp; Active Note Discussion:</em> Discussions, brainstorming, questions, and feedback remain strictly within the chat conversation. The assistant has direct access to the active document's full content and context, answering queries without modifying user documents. When discussing the active note, circular self-references are suppressed so links remain clean and valid.</li>
+            <li><em>Context &amp; On-Demand Cross-Note Content:</em> Sends the active note's full Content field (including live staged editor text), summary, takeaways, and source URL (as well as its reflection question for Prompt entries). Other notes across your knowledge base are summarized with on-demand availability; the assistant dynamically requests and inspects the full Content fields of other notes in a second pass whenever cross-document comparison, reference verification, or multi-note synthesis is needed.</li>
             <li><em>Auto-Close &amp; Auto-Reopen:</em> Switching notes automatically closes the drawer if the new note has no prior chat, and automatically re-opens it if the note already has a saved conversation (<code>assistantChats[entry.id]</code>). Toggle manually anytime with <kbd>Cmd+J</kbd> / <kbd>Ctrl+J</kbd>.</li>
           </ul>
         </li>
@@ -379,7 +380,7 @@
         </li>
         <li><strong>Cumulative Input &amp; Output Token Tracking:</strong> Both AI Chat views display a live <code>Tokens In: X | Out: Y</code> counter at the top of the chat header, tracking and incrementing cumulative prompt (<code>inputTokens</code>) and response (<code>outputTokens</code>) tokens across every turn of the conversation (including two-pass context escalations).</li>
         <li><strong>Response Style &amp; Temperature (<code>0.3</code>):</strong> Uses a focused temperature of <code>0.3</code> for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline <code>[[kb-ref:ID]]</code> source citations.</li>
-        <li><strong>Knowledge Provenance Grounding:</strong> In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.</li>
+        <li><strong>Knowledge Provenance Grounding &amp; Prompt Questions:</strong> In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. For Theme Prompt entries, the reflection question is automatically supplied to the model alongside the user's answer so discussions remain grounded on the original question. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.</li>
       </ul>
     </section>
 
@@ -413,6 +414,13 @@
             <li><em>Metadata & Summaries:</em> High-speed models (e.g. <code>gemini-flash-lite-latest</code>) for fast titles, takeaways, and auto-tagging.</li>
             <li><em>Theme Prompts:</em> High-reasoning models for synthesizing loose ends and generating reflection questions.</li>
             <li><em>AI Assistant Copilot:</em> Interactive models for contextual chatting and knowledge-base synthesis.</li>
+          </ul>
+        <li><strong>AI Instructions &amp; User Context:</strong> Fine-tune instructions and inject personal profile context:
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li><em>User Context:</em> Background information, ongoing research/projects, and style preferences prepended into prompt and chat syntheses.</li>
+            <li><em>Theme Prompts:</em> Customizable rules controlling tension exploration, concept isolation, question style, and word limits with one-click reset to default.</li>
+            <li><em>AI Chat Rules:</em> Conversational rules, knowledge provenance assumptions, and style constraints for both Whole Brain and Single-Entry chats with one-click reset to default.</li>
+            <li><em>Deterministic Metadata:</em> Extraction rules for titles, summaries, and takeaways remain fixed for consistent cataloging.</li>
           </ul>
         </li>
         <li><strong>Install as App (PWA):</strong> The <strong>Install as App</strong> section in Settings installs Ali Brain as a standalone app (Install button in Chrome/Edge; File &gt; Add to Dock in Safari on macOS) and shows offline-cache status. A service worker caches the app files and CDN libraries so the app launches offline (AI calls and the Safari sync bridge are never cached; the offline cache needs the app served over http/https). Safari still needs the Local Sync Bridge to read and write your notes file.</li>
@@ -456,6 +464,10 @@
                 <tr>
                   <td class="py-2 pr-4 font-mono"><kbd>Cmd</kbd> + <kbd>Z</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Z</kbd></td>
                   <td class="py-2 text-[var(--text-muted)]">Undo note modification or deletion (active outside text input fields).</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono"><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Y</kbd></td>
+                  <td class="py-2 text-[var(--text-muted)]">Redo previously undone note modification or deletion (active outside text input fields).</td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4 font-mono"><kbd>Cmd</kbd> + <kbd>J</kbd> &nbsp;/&nbsp; <kbd>Cmd</kbd> + <kbd>L</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>J</kbd></td>
@@ -589,7 +601,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.104</strong></span>
+      <span>Version <strong>v2.8.116</strong></span>
       <a href="changelog.html">Changelog</a>
       <a href="index.html">Back to Brain App</a>
     </div>

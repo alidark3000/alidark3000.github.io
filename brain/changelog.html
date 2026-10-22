@@ -80,7 +80,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; Changelog</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.104</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.116</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="readme.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -105,18 +105,54 @@
   <!-- Timeline -->
   <main class="space-y-8 text-sm">
 
-    <!-- v2.8.104 (Current Active Series) -->
+    <!-- v2.8.116 (Current Active Series) -->
     <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
       <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--accent)] border-[var(--bg-main)]"></div>
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.104</h2>
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.116</h2>
           <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
         </div>
-        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-21</span>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-22</span>
       </div>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
         <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Exposed AI Instructions &amp; User Context in Settings:</strong> Added a dedicated <em>AI Instructions &amp; Context</em> section in Settings. Users can now view, modify, and fine-tune the system instructions for <strong>Theme Prompts</strong> (reflection questions, tension exploration, concept isolation) and <strong>AI Chat Rules</strong> (knowledge provenance, concise writing style, constraints), as well as provide their own <strong>User Context &amp; Profile</strong> (background, current research/projects, and style preferences) which is prepended into prompt syntheses and conversational chat copilots. Provided instant <em>Reset to Default</em> buttons for each instruction category and synced custom instructions into local JSON library saves and browser storage. Quick metadata extraction instructions (titles, summaries, takeaways, and taxonomies) remain deliberately fixed to guarantee fast, deterministic cataloging.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Entry Action Button Order (Seed Last):</strong> Repositioned the action buttons at the top of the entry list panel to place the Seed button last (<code>+ Note</code>, <code>+ Prompt</code>, <code>+ Chat</code>, <code>+ Seed</code>), aligning with the primary workflow where manual notes, prompts, and chats are the most frequently triggered entry creations.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Eliminated Truncated Summaries &amp; Trailing Ellipses:</strong> Resolved an issue where AI-generated executive summaries were prematurely truncated mid-sentence and appended with trailing ellipses (<code>...</code> or <code>…</code>) due to an aggressive proportional word cap on shorter notes. Removed the premature slicing cap in <code>cleanExecutiveSummary</code>, instructed the generation prompts and schema to mandate complete sentences and prohibit ellipses, and added automatic repair logic to trim existing truncated summaries back to the last complete sentence terminating in full punctuation (<code>.</code>, <code>!</code>, <code>?</code>).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Rolled Back AI Note Content Auto-Editing:</strong> Completely removed the AI assistant's ability to edit, update, or auto-apply changes to note content. The assistant is now strictly conversational, dedicated entirely to answering questions, brainstorming, synthesizing, and discussing notes within the chat drawer without modifying user documents. Removed <code>updatedContent</code> from API schemas, removed diff highlighting styles and markers, and pruned related modification state tracking.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Suppressed Self-References in Current Entry Assistant:</strong> Resolved broken link tags (<code>[Broken Link: ...]</code>) caused when the AI generated circular reference tags (<code>[[kb-ref:ID]]</code> or <code>[Ref: ID]</code>) pointing back to the active document itself. Instructed the assistant across prompts and schemas to never insert citation tags for the currently open note (referring to it naturally in plain English without brackets). Added an automatic sanitizer (<code>stripSelfReferences</code>) and reference injector safeguard that normalizes any circular or relative self-references (<code>current</code>, <code>this note</code>, <code>self</code>) into natural text.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Full Redo Support &amp; History Keyboard Shortcuts:</strong> Added a comprehensive redo stack (<code>future</code>) alongside existing undo capabilities. Users can now redo actions via <code>Cmd+Shift+Z</code> / <code>Ctrl+Shift+Z</code> or <code>Ctrl+Y</code> (<code>Cmd+Z</code> / <code>Ctrl+Z</code> for undo) and access the new "Redo (Cmd+Shift+Z)" button in the workspace options menu, maintaining up to 25 historical snapshots.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Full Redo Support &amp; History Keyboard Shortcuts:</strong> Added a comprehensive redo stack (<code>future</code>) alongside existing undo capabilities. Users can now redo actions via <code>Cmd+Shift+Z</code> / <code>Ctrl+Shift+Z</code> or <code>Ctrl+Y</code> (<code>Cmd+Z</code> / <code>Ctrl+Z</code> for undo) and access the new "Redo (Cmd+Shift+Z)" button in the workspace options menu, maintaining up to 25 historical snapshots.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Single-Entry AI Assistant Content Access &amp; On-Demand Cross-Note Escalation:</strong> Enhanced the single-entry AI assistant drawer to guarantee direct access to the active entry's full <code>content</code> field (<code>fullContent</code>, <code>.content</code>, or live staged editor text) on every turn. Added a two-pass on-demand escalation engine allowing the single-entry assistant to dynamically request and inspect the full <code>content</code> fields of other notes across the knowledge base whenever cross-document comparison, verification, or multi-note synthesis is required.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Prompt Reflection Question Sent to AI Chat Models:</strong> Ensured that for Theme Prompt entries, the reflection question (<code>promptQuestion</code>) is always passed to Gemini across both Current Entry AI Assistant chats and Whole Brain AI syntheses (Pass 1 summaries and Pass 2 on-demand details). Active prompt chat system instructions, primary document contexts, and related-entry taxonomies now explicitly ground discussions on the reflection question alongside user replies.</span>
+          </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
             <span><strong class="text-[var(--text-main)]">Responsive Taxonomy Auto-Collapse on AI Drawer Toggle:</strong> Limited automatic collapsing of the taxonomy sidebar when opening the AI assistant drawer to viewport widths under 1800px. On wider screens (1800px+), the taxonomy sidebar remains open alongside the AI drawer for uninterrupted multi-column viewing.</span>
@@ -626,7 +662,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.104</strong></span>
+      <span>Version <strong>v2.8.116</strong></span>
       <a href="readme.html">System Manual</a>
       <a href="index.html">Back to Brain App</a>
     </div>

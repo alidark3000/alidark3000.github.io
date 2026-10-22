@@ -128,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.104";
+    const APP_VERSION = "v2.8.116";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -142,7 +142,7 @@
 
     const isPromptEntry = (entry) => {
       if (!entry) return false;
-      return Boolean(entry.promptQuestion || (Array.isArray(entry.tags) && entry.tags.includes('prompt')) || (Array.isArray(entry.categories) && entry.categories.includes('prompt')));
+      return Boolean(entry.type === 'prompt' || entry.promptQuestion || (Array.isArray(entry.tags) && entry.tags.includes('prompt')) || (Array.isArray(entry.categories) && entry.categories.includes('prompt')));
     };
 
     const isSeedEntry = (entry) => {
@@ -284,30 +284,44 @@
       cleaned = cleaned.replace(/^(summary|executive\s+summary|tl;?dr):\s*/i, '');
       cleaned = cleaned.trim();
 
-      // Word count constraints:
-      // 1. Strictly no longer than 100 words
-      // 2. Not more than 50% longer than content (i.e. summary words <= Math.ceil(sourceWords * 1.5)) when source is substantive
-      const words = cleaned.split(/\s+/).filter(Boolean);
-      let maxAllowedWords = 100;
-      if (sourceContent && typeof sourceContent === 'string') {
-        const sourceWords = sourceContent.trim().split(/\s+/).filter(Boolean).length;
-        if (sourceWords > 0) {
-          const proportionalCap = Math.max(15, Math.ceil(sourceWords * 1.5));
-          maxAllowedWords = Math.min(100, proportionalCap);
+      // Clean up any trailing ellipses or dangling truncated fragments
+      if (/(\.\.\.|…)\s*$/.test(cleaned)) {
+        const withoutEllipsis = cleaned.replace(/(\.\.\.|…)\s*$/, '').trim();
+        const lastSentenceEnd = Math.max(
+          withoutEllipsis.lastIndexOf('.'),
+          withoutEllipsis.lastIndexOf('!'),
+          withoutEllipsis.lastIndexOf('?')
+        );
+        if (lastSentenceEnd > 0) {
+          cleaned = withoutEllipsis.slice(0, lastSentenceEnd + 1).trim();
+        } else {
+          cleaned = withoutEllipsis + '.';
         }
       }
 
+      // Ensure executive summary consists of complete sentences under 100 words
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      const maxAllowedWords = 100;
       if (words.length > maxAllowedWords) {
-        cleaned = words.slice(0, maxAllowedWords).join(' ');
-        // If cut off mid-sentence, finish with ellipsis or closest punctuation
-        if (!/[.!?]$/.test(cleaned)) {
-          const lastPunct = Math.max(cleaned.lastIndexOf('.'), cleaned.lastIndexOf('!'), cleaned.lastIndexOf('?'));
-          if (lastPunct > cleaned.length * 0.7) {
-            cleaned = cleaned.slice(0, lastPunct + 1);
-          } else {
-            cleaned += '...';
+        const wordBounded = words.slice(0, maxAllowedWords).join(' ');
+        const lastSentenceEnd = Math.max(
+          wordBounded.lastIndexOf('.'),
+          wordBounded.lastIndexOf('!'),
+          wordBounded.lastIndexOf('?')
+        );
+        if (lastSentenceEnd > 20) {
+          cleaned = wordBounded.slice(0, lastSentenceEnd + 1).trim();
+        } else {
+          cleaned = wordBounded.trim();
+          if (!/[.!?]$/.test(cleaned)) {
+            cleaned += '.';
           }
         }
+      }
+
+      // Ensure final summary ends with a clean punctuation mark
+      if (cleaned.length > 0 && !/[.!?]$/.test(cleaned)) {
+        cleaned += '.';
       }
 
       if (cleaned.length > 0) {
@@ -320,10 +334,82 @@
       if (!text) return '';
       return text.replace(/\[\[(?:kb-ref:|ref:\s*)?([^\]]+)\]\]|\[(?:kb-ref:|ref:\s*)([^\]]+)\](?!\()|\[(entry-[a-zA-Z0-9_-]+)\](?!\()/gi, (match, id1, id2, id3) => {
         const rawId = (id1 || id2 || id3 || '').trim();
+        const rawLower = rawId.toLowerCase();
+        if (
+          rawLower === 'current' ||
+          rawLower === 'current entry' ||
+          rawLower === 'current note' ||
+          rawLower === 'this note' ||
+          rawLower === 'this entry' ||
+          rawLower === 'this' ||
+          rawLower === 'self' ||
+          rawLower === 'active' ||
+          rawLower === 'active note' ||
+          rawLower === 'selected note'
+        ) {
+          return 'this note';
+        }
         const refEntry = (allEntries || []).find(e => e.id === rawId || String(e.numericId) === rawId);
         if (!refEntry) return `<span class="text-[var(--danger)] text-xs font-semibold px-2 py-0.5 rounded bg-[var(--danger)]/10">[Broken Link: ${rawId}]</span>`;
         return `<span class="kb-embedded-ref" data-id="${refEntry.id}" title="${refEntry.title}">[Ref: ${refEntry.numericId}]</span>`;
       });
+    };
+
+    const stripSelfReferences = (text, doc) => {
+      if (!text || !doc) return text;
+      const docId = String(doc.id || '').trim();
+      const numId = doc.numericId != null ? String(doc.numericId).trim() : '';
+      const title = String(doc.title || '').trim().toLowerCase();
+
+      const isSelfMatch = (raw) => {
+        if (!raw) return false;
+        const cleanRaw = raw.trim();
+        const rawLower = cleanRaw.toLowerCase();
+        return (
+          (docId && cleanRaw === docId) ||
+          (numId && cleanRaw === numId) ||
+          (title && (rawLower === title || rawLower === `"${title}"`)) ||
+          rawLower === 'current' ||
+          rawLower === 'current entry' ||
+          rawLower === 'current note' ||
+          rawLower === 'this note' ||
+          rawLower === 'this entry' ||
+          rawLower === 'active' ||
+          rawLower === 'active note' ||
+          rawLower === 'active entry' ||
+          rawLower === 'self' ||
+          rawLower === 'selected note'
+        );
+      };
+
+      // 1. Preposition + self-ref (e.g. "in [Ref: 4]" -> "in this note")
+      let res = text.replace(/\b(in|to|from|of|about|with|within|into|for)\s+(\[\[(?:kb-ref:|ref:\s*)?([^\]]+)\]\]|\[(?:kb-ref:|ref:\s*)([^\]]+)\](?!\())/gi, (match, prep, refTag, id1, id2) => {
+        const raw = (id1 || id2 || '').trim();
+        if (isSelfMatch(raw)) {
+          return `${prep} this note`;
+        }
+        return match;
+      });
+
+      // 2. Sentence-starting self-ref (e.g. "[Ref: 4] explores" -> "This note explores")
+      res = res.replace(/(^|[\n.!?]\s*)(\[\[(?:kb-ref:|ref:\s*)?([^\]]+)\]\]|\[(?:kb-ref:|ref:\s*)([^\]]+)\](?!\())/gi, (match, prefix, refTag, id1, id2) => {
+        const raw = (id1 || id2 || '').trim();
+        if (isSelfMatch(raw)) {
+          return `${prefix}This note`;
+        }
+        return match;
+      });
+
+      // 3. Trailing or standalone self-ref citation (e.g. "idea [Ref: 4]." -> "idea.")
+      res = res.replace(/(\s*)(\[\[(?:kb-ref:|ref:\s*)?([^\]]+)\]\]|\[(?:kb-ref:|ref:\s*)([^\]]+)\](?!\())/gi, (match, space, refTag, id1, id2) => {
+        const raw = (id1 || id2 || '').trim();
+        if (isSelfMatch(raw)) {
+          return '';
+        }
+        return match;
+      });
+
+      return res;
     };
 
     const INITIAL_ENTRY = {
@@ -332,13 +418,13 @@
       summary: 'A clean, local-first personal knowledge base with built-in Gemini AI copilots.',
       shortVersion: [
         'All data auto-saves non-destructively to your local JSON file with zero cloud lock-in.',
-        'Add new Notes, Seeds, Prompts, and AI Chats from the action buttons row at the top of the entry list.',
+        'Add new Notes, Prompts, AI Chats, and Seeds from the action buttons row at the top of the entry list.',
         'You must add notes first before generating Theme Prompts, as prompts require summarized notes to analyze.',
         'Set your Gemini API key in Settings (sliders icon) — AI copilots, summaries, prompts, and chats require it.',
         'Use [Ref: 1] syntax or drag note cards into the editor to create instant interactive backlinks.',
         'Read the comprehensive [System Manual](readme.html) for shortcuts, architecture details, and usage guides.'
       ],
-      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with your selected local JSON file on your machine.\n\n### Getting Started: Notes, Seeds & Prompts\nUse the quick-action buttons directly at the top of the entry list panel:\n* **+ Note:** Write your own markdown thoughts, journals, or references.\n* **+ Seed:** Create reusable prompt templates and instructions (shortcuts inspired by Gemini Gems). Seeds appear as one-click shortcut chips in the AI Assistant.\n* **+ Prompt:** Generate exploratory theme reflection questions that juxtapose ideas and loose ends across your notes. **Note:** You will need to add some summarized notes to your knowledge base first before Theme Prompts can analyze themes and generate questions!\n* **+ Chat:** Launch a full-width AI Chat session scoped to your active knowledge.\n\n### Scoped Whole Brain & Assistant Chat\n* **Whole Brain Chat:** Clicking **+ Chat** or the assistant drawer synthesizes across your knowledge base. Whole Brain chat dynamically honors your active filters — it scopes context to your **selected entry types, categories, and projects** so you can focus discussions on specific topics or your entire brain.\n* **Google Gemini API Key:** AI summaries, key takeaways, theme prompts, and chat copilots require a Gemini API key. Set your API key in **Settings** (sliders icon) or grab a free key at [Google AI Studio](https://aistudio.google.com/app/apikey). Features relying on AI will remain inactive until a key is saved.\n\n### Interactive Backlinks & References\n* Type `[Ref: 1]` (or `[ref: 1]`) to embed a live interactive citation to this note [Ref: 1]. Hovering previews the target note, and clicking navigates directly to it.\n* You can also drag any note card from the entry list directly into the content editor to insert its backlink.\n\n### Local-First & Non-Destructive Sync\nYour active file remains safely on your disk. Background saving occurs automatically, and you can undo actions anytime using `Cmd+Z` / `Ctrl+Z`.\n\n### Documentation & Manual\nFor the complete user manual, keyboard shortcuts, import/export workflows, and architecture documentation, open the [System Manual](readme.html).',
+      fullContent: 'Welcome! This application runs entirely in your browser and automatically syncs with your selected local JSON file on your machine.\n\n### Getting Started: Notes, Prompts, Chats & Seeds\nUse the quick-action buttons directly at the top of the entry list panel:\n* **+ Note:** Write your own markdown thoughts, journals, or references.\n* **+ Prompt:** Generate exploratory theme reflection questions that juxtapose ideas and loose ends across your notes. **Note:** You will need to add some summarized notes to your knowledge base first before Theme Prompts can analyze themes and generate questions!\n* **+ Chat:** Launch a full-width AI Chat session scoped to your active knowledge.\n* **+ Seed:** Create reusable prompt templates and instructions (shortcuts inspired by Gemini Gems). Seeds appear as one-click shortcut chips in the AI Assistant.\n\n### Scoped Whole Brain & Assistant Chat\n* **Whole Brain Chat:** Clicking **+ Chat** or the assistant drawer synthesizes across your knowledge base. Whole Brain chat dynamically honors your active filters — it scopes context to your **selected entry types, categories, and projects** so you can focus discussions on specific topics or your entire brain.\n* **Google Gemini API Key:** AI summaries, key takeaways, theme prompts, and chat copilots require a Gemini API key. Set your API key in **Settings** (sliders icon) or grab a free key at [Google AI Studio](https://aistudio.google.com/app/apikey). Features relying on AI will remain inactive until a key is saved.\n\n### Interactive Backlinks & References\n* Type `[Ref: 1]` (or `[ref: 1]`) to embed a live interactive citation to this note [Ref: 1]. Hovering previews the target note, and clicking navigates directly to it.\n* You can also drag any note card from the entry list directly into the content editor to insert its backlink.\n\n### Local-First & Non-Destructive Sync\nYour active file remains safely on your disk. Background saving occurs automatically, and you can undo actions anytime using `Cmd+Z` / `Ctrl+Z`.\n\n### Documentation & Manual\nFor the complete user manual, keyboard shortcuts, import/export workflows, and architecture documentation, open the [System Manual](readme.html).',
       categories: ['getting started'],
       tags: ['tutorial'],
       projects: [],
@@ -745,7 +831,7 @@
       const navBackBtnRef = useRef(null);
       const navForwardBtnRef = useRef(null);
       
-      const [historyState, setHistoryState] = useState({ past: [], present: [] });
+      const [historyState, setHistoryState] = useState({ past: [], present: [], future: [] });
       const entries = historyState.present;
 
       const [storedPrompts, setStoredPrompts] = useState([]);
@@ -816,6 +902,58 @@ Respond with valid JSON ONLY matching this structure:
   "content": "A conversational prompt (50 words max) isolating one concept per note, weaving [[kb-ref:ID]] citations naturally, and ending with one sharp open-ended question starting with Why or How."
 }`;
 
+      const DEFAULT_WHOLE_BRAIN_WRITING_RULES = `KNOWLEDGE PROVENANCE & USER PERSPECTIVE:
+- Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
+- Web, media, and text documents are assumed to be external and contextual third-hand knowledge (articles, podcasts, videos, or external docs collected for reference, NOT the user's personal thoughts or creations).
+- Seeds and AI chats are ignored as source knowledge.
+
+CONVERSATIONAL & CONCISE WRITING RULES:
+- Length: Under 50 words unless requested or necessary. Default to short.
+- Be concise, conversational, and direct. Go a step at a time.
+- Avoid spilling large amounts of text unless specifically requested.
+- Delete unnecessary words. Cut everything that doesn't add value.
+- Prefer short words. Use simple language over complex terms.
+- Stick to the active voice. It’s direct and impactful.
+- Avoid tired phrases. No clichés, similes, or metaphors.
+- Use plain English. Swap jargon and technical terms for everyday words.
+- Zero hyperbole. Stay honest. Avoid exaggeration.
+- No filler or prefaces. Skip "basically," "so," and introductory fluff.
+- Short, declarative sentences. One idea per sentence.
+- Use contractions. It keeps the tone natural.
+- Emojis in headings. Use them in headers to stay scannable, not the body.
+- Citations: Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
+- Format cleanly in Markdown.`;
+
+      const DEFAULT_AI_INSTRUCTIONS = {
+        userContext: '',
+        prompts: DEFAULT_PROMPT_INSTRUCTIONS,
+        chat: DEFAULT_WHOLE_BRAIN_WRITING_RULES
+      };
+
+      const [aiInstructions, setAiInstructions] = useState(() => {
+        try {
+          const saved = localStorage.getItem('kb_ai_instructions');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            return {
+              userContext: typeof parsed.userContext === 'string' ? parsed.userContext : DEFAULT_AI_INSTRUCTIONS.userContext,
+              prompts: typeof parsed.prompts === 'string' ? parsed.prompts : DEFAULT_AI_INSTRUCTIONS.prompts,
+              chat: typeof parsed.chat === 'string' ? parsed.chat : DEFAULT_AI_INSTRUCTIONS.chat
+            };
+          }
+        } catch (e) {}
+        return { ...DEFAULT_AI_INSTRUCTIONS };
+      });
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('kb_ai_instructions', JSON.stringify(aiInstructions));
+        } catch (e) {}
+      }, [aiInstructions]);
+
+      const [tempAiInstructions, setTempAiInstructions] = useState(DEFAULT_AI_INSTRUCTIONS);
+      const [aiInstructionTab, setAiInstructionTab] = useState('context');
+
       const DEFAULT_PROMPT_CONFIG = {
         dateRangeMonths: 2,
         poolSize: 10,
@@ -874,7 +1012,8 @@ Respond with valid JSON ONLY matching this structure:
           if (nextPresent === prev.present) return prev;
           return {
             past: [...prev.past.slice(-25), prev.present],
-            present: nextPresent
+            present: nextPresent,
+            future: []
           };
         });
       };
@@ -884,7 +1023,24 @@ Respond with valid JSON ONLY matching this structure:
           if (h.past.length === 0) return h;
           const previous = h.past[h.past.length - 1];
           const newPast = h.past.slice(0, h.past.length - 1);
-          return { past: newPast, present: previous };
+          return {
+            past: newPast,
+            present: previous,
+            future: [h.present, ...(h.future || [])].slice(0, 25)
+          };
+        });
+      };
+
+      const redoEntries = () => {
+        setHistoryState(h => {
+          if (!h.future || h.future.length === 0) return h;
+          const next = h.future[0];
+          const newFuture = h.future.slice(1);
+          return {
+            past: [...h.past.slice(-25), h.present],
+            present: next,
+            future: newFuture
+          };
         });
       };
 
@@ -892,10 +1048,19 @@ Respond with valid JSON ONLY matching this structure:
         const handleKeyDown = (e) => {
           const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
 
-          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-            if (isInput) return;
-            e.preventDefault();
-            undoEntries();
+          if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+            const isRedo = (e.key.toLowerCase() === 'z' && e.shiftKey) || (e.key.toLowerCase() === 'y' && !e.shiftKey);
+            if (isRedo) {
+              if (isInput) return;
+              e.preventDefault();
+              redoEntries();
+              return;
+            } else if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+              if (isInput) return;
+              e.preventDefault();
+              undoEntries();
+              return;
+            }
           }
           if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'j' || e.key.toLowerCase() === 'l')) {
             if (activeSingleEntryRef.current && isAiChatEntry(activeSingleEntryRef.current)) return;
@@ -1715,11 +1880,19 @@ Respond with valid JSON ONLY matching this structure:
           if (typeof data.promptConfig.instructions === 'string') loadedPromptConfig.instructions = data.promptConfig.instructions;
         }
 
+        let loadedAiInstructions = { ...DEFAULT_AI_INSTRUCTIONS };
+        if (data && data.aiInstructions && typeof data.aiInstructions === 'object') {
+          if (typeof data.aiInstructions.userContext === 'string') loadedAiInstructions.userContext = data.aiInstructions.userContext;
+          if (typeof data.aiInstructions.prompts === 'string') loadedAiInstructions.prompts = data.aiInstructions.prompts;
+          if (typeof data.aiInstructions.chat === 'string') loadedAiInstructions.chat = data.aiInstructions.chat;
+        }
+
         return {
           entries: migratedEntries,
           tombstones: loadedTombstones,
           storedPrompts: loadedStoredPrompts,
           promptConfig: loadedPromptConfig,
+          aiInstructions: loadedAiInstructions,
           apiKeys: parsedKeys,
           model: data.model || loadedTaskModels.assistant || DEFAULT_MODEL,
           taskModels: loadedTaskModels,
@@ -1740,6 +1913,7 @@ Respond with valid JSON ONLY matching this structure:
         tombstones,
         storedPrompts,
         promptConfig,
+        aiInstructions,
         apiKeys,
         model,
         taskModels,
@@ -1761,6 +1935,7 @@ Respond with valid JSON ONLY matching this structure:
           tombstones,
           storedPrompts,
           promptConfig,
+          aiInstructions,
           apiKeys,
           model,
           taskModels,
@@ -1775,7 +1950,7 @@ Respond with valid JSON ONLY matching this structure:
           isListSidebarOpen,
           isAssistantOpen
         };
-      }, [entries, tombstones, storedPrompts, promptConfig, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
+      }, [entries, tombstones, storedPrompts, promptConfig, aiInstructions, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
 
       // Non-Destructive Entry-Level 3-Way Merge Algorithm
       const mergeDatabases = (localState, incomingRawData) => {
@@ -1955,6 +2130,7 @@ Respond with valid JSON ONLY matching this structure:
           archivedAssistantChats: updatedArchived,
           storedPrompts: mergedPrompts,
           promptConfig: localState.promptConfig || incoming.promptConfig || DEFAULT_PROMPT_CONFIG,
+          aiInstructions: localState.aiInstructions || incoming.aiInstructions || DEFAULT_AI_INSTRUCTIONS,
           apiKeys: (localState.apiKeys && localState.apiKeys.length > 0) ? localState.apiKeys : incoming.apiKeys,
           model: localState.model || incoming.model || DEFAULT_MODEL,
           taskModels: localState.taskModels || incoming.taskModels || {
@@ -2013,6 +2189,7 @@ Respond with valid JSON ONLY matching this structure:
                     archivedAssistantChats: currentArchived,
                     storedPrompts: currentPrompts,
                     promptConfig: current.promptConfig,
+                    aiInstructions: current.aiInstructions,
                     apiKeys: currentKeys,
                     model: currentModel,
                     taskModels: currentTaskModels,
@@ -2043,6 +2220,7 @@ Respond with valid JSON ONLY matching this structure:
                 setArchivedAssistantChats(currentArchived);
                 setStoredPrompts(currentPrompts);
                 if (merged.promptConfig) setPromptConfig(merged.promptConfig);
+                if (merged.aiInstructions) setAiInstructions(merged.aiInstructions);
                 setTaskModels(currentTaskModels);
                 setModel(currentModel);
 
@@ -2073,6 +2251,7 @@ Respond with valid JSON ONLY matching this structure:
             tombstones: currentTombstones,
             storedPrompts: currentPrompts,
             promptConfig: current.promptConfig || DEFAULT_PROMPT_CONFIG,
+            aiInstructions: current.aiInstructions || DEFAULT_AI_INSTRUCTIONS,
             apiKeys: currentKeys,
             model: currentModel,
             taskModels: currentTaskModels,
@@ -2147,6 +2326,8 @@ Respond with valid JSON ONLY matching this structure:
                 assistantChats: current.assistantChats,
                 archivedAssistantChats: current.archivedAssistantChats,
                 storedPrompts: current.storedPrompts,
+                promptConfig: current.promptConfig,
+                aiInstructions: current.aiInstructions,
                 apiKeys: current.apiKeys,
                 model: current.model,
                 taskModels: current.taskModels,
@@ -2167,6 +2348,7 @@ Respond with valid JSON ONLY matching this structure:
             setArchivedAssistantChats(merged.archivedAssistantChats);
             setStoredPrompts(merged.storedPrompts);
             if (merged.promptConfig) setPromptConfig(merged.promptConfig);
+            if (merged.aiInstructions) setAiInstructions(merged.aiInstructions);
             if (merged.taskModels) setTaskModels(merged.taskModels);
             if (merged.model) setModel(merged.model);
             if (!isDirtyRef.current && merged.layout) {
@@ -2357,6 +2539,7 @@ Respond with valid JSON ONLY matching this structure:
           tombstonesRef.current = migrated.tombstones || {};
           setStoredPrompts(migrated.storedPrompts || []);
           if (migrated.promptConfig) setPromptConfig(migrated.promptConfig);
+          if (migrated.aiInstructions) setAiInstructions(migrated.aiInstructions);
           setApiKeys(migrated.apiKeys);
           setModel(migrated.model);
           setTaskModels(migrated.taskModels || {
@@ -2474,6 +2657,7 @@ Respond with valid JSON ONLY matching this structure:
           tombstonesRef.current = {};
           setStoredPrompts([]);
           setPromptConfig(DEFAULT_PROMPT_CONFIG);
+          setAiInstructions(DEFAULT_AI_INSTRUCTIONS);
           setApiKeys([]);
           setModel(DEFAULT_MODEL);
           setTaskModels({
@@ -2535,6 +2719,7 @@ Respond with valid JSON ONLY matching this structure:
             tombstonesRef.current = migrated.tombstones || {};
             setStoredPrompts(migrated.storedPrompts || []);
             if (migrated.promptConfig) setPromptConfig(migrated.promptConfig);
+            if (migrated.aiInstructions) setAiInstructions(migrated.aiInstructions);
             setApiKeys(migrated.apiKeys);
             setModel(migrated.model);
             setTaskModels(migrated.taskModels || {
@@ -2590,6 +2775,8 @@ Respond with valid JSON ONLY matching this structure:
               assistantChats: current.assistantChats,
               archivedAssistantChats: current.archivedAssistantChats,
               storedPrompts: current.storedPrompts,
+              promptConfig: current.promptConfig,
+              aiInstructions: current.aiInstructions,
               apiKeys: current.apiKeys,
               model: current.model,
               taskModels: current.taskModels,
@@ -2610,6 +2797,7 @@ Respond with valid JSON ONLY matching this structure:
           setArchivedAssistantChats(merged.archivedAssistantChats);
           setStoredPrompts(merged.storedPrompts);
           if (merged.promptConfig) setPromptConfig(merged.promptConfig);
+          if (merged.aiInstructions) setAiInstructions(merged.aiInstructions);
           if (merged.taskModels) setTaskModels(merged.taskModels);
           if (merged.model) setModel(merged.model);
           isDirtyRef.current = true;
@@ -3470,7 +3658,10 @@ Select 1 or 2 entries where isolating ONE single idea from an entry (whether fro
 
 Respond with valid JSON containing "title" (3-5 words) and "content" (50 words max ending with a Why or How question).`;
 
-          let systemPrompt = DEFAULT_PROMPT_INSTRUCTIONS;
+          let systemPrompt = (aiInstructions?.prompts && aiInstructions.prompts.trim()) ? aiInstructions.prompts.trim() : (promptConfig?.instructions && promptConfig.instructions.trim()) ? promptConfig.instructions.trim() : DEFAULT_PROMPT_INSTRUCTIONS;
+          if (aiInstructions?.userContext && aiInstructions.userContext.trim()) {
+            systemPrompt = `=== USER-PROVIDED PROFILE & PERSONAL CONTEXT ===\n${aiInstructions.userContext.trim()}\n\n${systemPrompt}`;
+          }
           if (filterFocusInstruction && !systemPrompt.includes('ACTIVE FILTER FOCUS:')) {
             systemPrompt += filterFocusInstruction;
           }
@@ -3642,13 +3833,13 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           getInstructions: (entry) => {
             const isPrompt = isPromptEntry(entry);
             if (isPrompt && entry?.promptQuestion) {
-              return "In 'summary': Provide a concise, thoughtful executive summary (1-2 sentences, strictly under 70 words, maximum 100 words, and never more than 50% longer than the user's response) directly synthesizing the answer. CRITICAL: Jump straight into substance; no meta-intros.";
+              return "In 'summary': Provide a concise, thoughtful executive summary (1-2 complete sentences, strictly under 70 words, maximum 100 words) directly synthesizing the answer. CRITICAL: Complete sentences only; never truncate mid-sentence or use ellipses (...). Jump straight into substance; no meta-intros.";
             }
-            return "In 'summary': Provide a concise, punchy executive summary (1-2 sentences, strictly under 70 words, maximum 100 words, and never more than 50% longer than the note content). CRITICAL: Jump straight into substance; no meta-intros.";
+            return "In 'summary': Provide a concise, punchy executive summary (1-2 complete sentences, strictly under 70 words, maximum 100 words). CRITICAL: Complete sentences only; never truncate mid-sentence or use ellipses (...). Jump straight into substance; no meta-intros.";
           },
           schemaProperty: {
             type: "STRING",
-            description: "Concise executive summary, strictly no longer than 100 words and proportional to content length."
+            description: "Concise executive summary (1-2 complete sentences, strictly under 100 words, no trailing ellipses or truncation)."
           },
           apply: (parsed, currentEntry, updates, contentToAnalyze) => {
             let candidate = null;
@@ -3756,7 +3947,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           : (Array.isArray(entry?.chatHistory) && entry.chatHistory.length > 0
               ? entry.chatHistory.map(m => `**${m.role === 'user' ? 'User' : 'Assistant'}:** ${m.text}`).join('\n\n')
               : '');
-        return (liveContent || stagedEdit?.fullContent || entry?.fullContent || chatContent || entry?.summary || '').trim();
+        return (liveContent || stagedEdit?.fullContent || stagedEdit?.content || entry?.fullContent || entry?.content || chatContent || entry?.summary || '').trim();
       };
 
       const buildMetadataPayload = (fieldKeys, entry, contentToAnalyze, taxContext) => {
@@ -4650,16 +4841,19 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           if (currentScope === 'selected' && targetDocs.length > 0) {
             let contextText = targetDocs.map(ent => {
               const docType = getEntryType(ent);
+              const isPrompt = docType === 'prompt' || isPromptEntry(ent) || Boolean(ent.promptQuestion);
               let provLabel = 'Note [User Content - Own Issues/Projects/Knowledge]';
-              if (docType === 'prompt') provLabel = 'Prompt Reply [User Content - Reflection Answer]';
+              if (isPrompt) provLabel = 'Prompt Reply [User Content - Reflection Answer]';
               else if (docType === 'media') provLabel = 'Media [External Third-Hand Knowledge - Video/Audio]';
               else if (docType === 'web') provLabel = 'Web / Document [External Third-Hand Knowledge - Web/Text]';
               else if (docType === 'txt') provLabel = 'Text [External Third-Hand Knowledge - Dropped Text]';
               let block = `--- PRIMARY DOCUMENT: ${ent.title} (ID: ${ent.numericId || ent.id}, Provenance: ${provLabel}) ---\n`;
-              if (docType === 'prompt' && ent.promptQuestion) block += `Prompt Question: ${ent.promptQuestion}\n`;
+              const promptQ = (ent.promptQuestion || editDataRef.current?.[ent.id]?.promptQuestion || editData?.[ent.id]?.promptQuestion || (activeSingleEntry?.id === ent.id ? activeSingleEntry.promptQuestion : '') || '').trim();
+              if (promptQ) block += `Prompt Question: ${promptQ}\n`;
               if (ent.summary) block += `Summary: ${ent.summary}\n`;
               if (ent.shortVersion && ent.shortVersion.length > 0) block += `Key Points:\n${ent.shortVersion.map(p => `- ${p}`).join('\n')}\n`;
-              if (ent.fullContent) block += `${docType === 'prompt' ? 'User Reply' : 'Content'}:\n${ent.fullContent}\n`;
+              const noteContent = getEntryContentForAnalysis(ent.id, ent);
+              block += `Content${isPrompt ? ' (User Reflection Reply)' : ''}:\n${noteContent || '(Empty content)'}\n`;
               if (ent.sourceUrl) block += `Source URL: ${ent.sourceUrl}\n`;
               return block;
             }).join('\n\n');
@@ -4667,104 +4861,244 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
             const primaryDoc = targetDocs[0];
             const primaryProjects = (Array.isArray(primaryDoc?.projects) ? primaryDoc.projects : []).map(p => String(p).toLowerCase().trim()).filter(Boolean);
             const primaryCategories = (Array.isArray(primaryDoc?.categories) ? primaryDoc.categories : []).map(c => String(c).toLowerCase().trim()).filter(Boolean);
+            const primaryTextForRefs = `${primaryDoc?.title || ''} ${primaryDoc?.summary || ''} ${getEntryContentForAnalysis(primaryDoc?.id, primaryDoc) || ''}`;
 
-            let relatedEntries = [];
-            if (primaryProjects.length > 0 || primaryCategories.length > 0) {
-              const matchedEntries = entries.filter(e => {
-                if (!e || targetDocs.some(se => se.id === e.id)) return false;
-                if (isAiChatEntry(e) || isSeedEntry(e)) return false;
-                if (typeof isWelcomeEntry === 'function' && isWelcomeEntry(e)) return false;
-                const matchesProj = primaryProjects.length > 0 && Array.isArray(e.projects) && e.projects.some(p => primaryProjects.includes(String(p).toLowerCase().trim()));
-                const matchesCat = primaryCategories.length > 0 && Array.isArray(e.categories) && e.categories.some(c => primaryCategories.includes(String(c).toLowerCase().trim()));
-                return matchesProj || matchesCat;
-              });
+            const otherNotes = entries.filter(e => {
+              if (!e || targetDocs.some(se => se.id === e.id)) return false;
+              if (isAiChatEntry(e) || isSeedEntry(e)) return false;
+              if (typeof isWelcomeEntry === 'function' && isWelcomeEntry(e)) return false;
+              return true;
+            });
 
-              const primNum = Number(primaryDoc?.numericId) || 0;
-              const primTime = Number(primaryDoc?.createdAt) || Number(primaryDoc?.updatedAt) || Date.now();
+            otherNotes.sort((a, b) => {
+              const aIsRef = primaryTextForRefs.includes(a.id) || (a.numericId && (primaryTextForRefs.includes(`Ref: ${a.numericId}`) || primaryTextForRefs.includes(`ref: ${a.numericId}`)));
+              const bIsRef = primaryTextForRefs.includes(b.id) || (b.numericId && (primaryTextForRefs.includes(`Ref: ${b.numericId}`) || primaryTextForRefs.includes(`ref: ${b.numericId}`)));
+              if (aIsRef && !bIsRef) return -1;
+              if (!aIsRef && bIsRef) return 1;
 
-              const priorMatches = matchedEntries.filter(e => {
-                const eNum = Number(e.numericId) || 0;
-                if (primNum && eNum) return eNum < primNum;
-                const eTime = Number(e.createdAt) || Number(e.updatedAt) || 0;
-                return eTime ? eTime <= primTime : true;
-              });
+              const aMatchesProj = primaryProjects.length > 0 && Array.isArray(a.projects) && a.projects.some(p => primaryProjects.includes(String(p).toLowerCase().trim()));
+              const aMatchesCat = primaryCategories.length > 0 && Array.isArray(a.categories) && a.categories.some(c => primaryCategories.includes(String(c).toLowerCase().trim()));
+              const aRelated = aMatchesProj || aMatchesCat;
 
-              const candidatePool = priorMatches.length > 0 ? priorMatches : matchedEntries;
-              candidatePool.sort((a, b) => {
-                const aNum = Number(a.numericId) || 0;
-                const bNum = Number(b.numericId) || 0;
-                if (aNum && bNum) return bNum - aNum;
-                const aTime = Number(a.createdAt) || Number(a.updatedAt) || 0;
-                const bTime = Number(b.createdAt) || Number(b.updatedAt) || 0;
-                return bTime - aTime;
-              });
+              const bMatchesProj = primaryProjects.length > 0 && Array.isArray(b.projects) && b.projects.some(p => primaryProjects.includes(String(p).toLowerCase().trim()));
+              const bMatchesCat = primaryCategories.length > 0 && Array.isArray(b.categories) && b.categories.some(c => primaryCategories.includes(String(c).toLowerCase().trim()));
+              const bRelated = bMatchesProj || bMatchesCat;
 
-              relatedEntries = candidatePool.slice(0, 10);
-            }
+              if (aRelated && !bRelated) return -1;
+              if (!aRelated && bRelated) return 1;
 
-            let archiveContextText = "";
-            if (relatedEntries.length > 0) {
-              archiveContextText = relatedEntries.map(e => {
-                const relType = getEntryType(e);
-                let relLabel = 'Note [User Content]';
-                if (relType === 'prompt') relLabel = 'Prompt Reply [User Content]';
-                else if (relType === 'media') relLabel = 'Media [External]';
-                else if (relType === 'web') relLabel = 'Web/Text [External]';
-                else if (relType === 'txt') relLabel = 'Text [External]';
-                let line = `• [[kb-ref:${e.id}]] [${relLabel}] "${e.title || 'Untitled'}"`;
-                if (e.summary) line += `\n  Executive Summary: ${e.summary}`;
-                if (Array.isArray(e.shortVersion) && e.shortVersion.length > 0) line += `\n  Key Takeaways: ${e.shortVersion.join(' | ')}`;
-                return line;
-              }).join('\n\n');
-            }
+              const aNum = Number(a.numericId) || 0;
+              const bNum = Number(b.numericId) || 0;
+              if (aNum && bNum) return bNum - aNum;
+              const aTime = Number(a.createdAt) || Number(a.updatedAt) || 0;
+              const bTime = Number(b.createdAt) || Number(b.updatedAt) || 0;
+              return bTime - aTime;
+            });
 
-            const payload = {
-              contents: [
-                ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
-                { role: 'user', parts: [{ text: queryText }] }
-              ],
-              generationConfig: { temperature: 0.3 },
-              systemInstruction: {
-                parts: [{
-                  text: `You are a helpful AI Assistant for the user's personal knowledge base.
-Focus primarily on the active document: "${targetDocs[0]?.title || 'Selected Note'}", using relevant notes in the same project or category for context and cross-references.
+            const otherNotesSummaries = otherNotes.map(e => {
+              const cleanSum = String(e.summary || '').trim();
+              const hasTakeawaysFlag = Array.isArray(e.shortVersion) && e.shortVersion.length > 0;
+              const hasContentFlag = Boolean((e.fullContent && String(e.fullContent).trim()) || (e.content && String(e.content).trim()));
+              const availMeta = [hasTakeawaysFlag ? 'takeaways' : null, hasContentFlag ? 'content' : null].filter(Boolean).join(', ');
+              const type = getEntryType(e);
+              const isPrompt = type === 'prompt' || isPromptEntry(e) || Boolean(e.promptQuestion);
+              let typeTag = 'Note [User Content]';
+              if (isPrompt) typeTag = 'Prompt Reply [User Content]';
+              else if (type === 'media') typeTag = 'Media [External Third-Hand]';
+              else if (type === 'web') typeTag = 'Web/Text [External Third-Hand]';
+              else if (type === 'txt') typeTag = 'Text [External Third-Hand]';
+              const promptQStr = (isPrompt && e.promptQuestion) ? ` | Prompt Question: "${e.promptQuestion}"` : '';
+              return `• [[kb-ref:${e.id}]] [${typeTag}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${promptQStr}${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum || '(No summary recorded)'}`;
+            }).join('\n');
 
-KNOWLEDGE PROVENANCE & USER PERSPECTIVE:
-- Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
-- Web, media, and text documents are assumed to be external and contextual third-hand knowledge (reference materials, articles, videos, or external docs collected for context, NOT the user's personal thoughts or creations).
-- Seeds and AI are ignored as source knowledge.
+            const primaryIsPrompt = primaryDoc && (getEntryType(primaryDoc) === 'prompt' || isPromptEntry(primaryDoc) || Boolean(primaryDoc.promptQuestion));
+            const primaryPromptQ = primaryDoc ? (primaryDoc.promptQuestion || editDataRef.current?.[primaryDoc.id]?.promptQuestion || editData?.[primaryDoc.id]?.promptQuestion || (activeSingleEntry?.id === primaryDoc.id ? activeSingleEntry.promptQuestion : '') || '').trim() : '';
+            const promptInstructionContext = (primaryIsPrompt && primaryPromptQ)
+              ? `\nNOTE: The active document is a Theme Reflection Prompt. Reflection Question: "${primaryPromptQ}". The user's reflection answer is provided under Content (User Reflection Reply).`
+              : '';
 
-CONVERSATIONAL & CONCISE WRITING RULES:
-- Length: Under 50 words unless requested or necessary. Default to short.
-- Be concise, conversational, and direct. Go a step at a time.
-- Avoid spilling large amounts of text unless specifically requested.
-- Delete unnecessary words. Cut everything that doesn't add value.
-- Prefer short words. Use simple language over complex terms.
-- Stick to the active voice. It’s direct and impactful.
-- Avoid tired phrases. No clichés, similes, or metaphors.
-- Use plain English. Swap jargon and technical terms for everyday words.
-- Zero hyperbole. Stay honest. Avoid exaggeration.
-- No filler or prefaces. Skip "basically," "so," and introductory fluff.
-- Short, declarative sentences. One idea per sentence.
-- Use contractions. It keeps the tone natural.
-- Emojis in headings. Use them in headers to stay scannable, not the body.
-- Citations: When cross-referencing OTHER notes, cite them using exact syntax [[kb-ref:ID]]. CRITICAL: Do NOT cite or tag the primary active document itself ([[kb-ref:${targetDocs[0]?.id || 'ID'}]]) since the user is already viewing it.
-- Format cleanly in Markdown.
+            let totalInputTokens = 0;
+            let totalOutputTokens = 0;
+
+            const pass1SystemText = `You are a helpful AI Assistant for the user's personal knowledge base.
+Focus primarily on the active document: "${primaryDoc?.title || 'Selected Note'}" whose full Content and metadata are provided in === PRIMARY ACTIVE DOCUMENT ===.${promptInstructionContext}
+
+DECISION & ON-DEMAND CONTENT PROTOCOL:
+1. FOCUS ON ACTIVE DOCUMENT (NO SELF-REFERENCES):
+   - You have direct access to the active document's full Content field below. Answer questions, provide feedback, brainstorm, and converse directly in the AI chat.
+   - DO NOT CITE OR REFERENCE THIS NOTE: When discussing the active document ("${primaryDoc?.title || 'Selected Note'}", Ref #${primaryDoc?.numericId || primaryDoc?.id}), NEVER insert reference tags or citations (such as [[kb-ref:...]] or [Ref: ...]). The user is already in this note, so reference tags to it are broken and redundant. Refer to it simply as "this note" or by its title without reference brackets.
+   - ONLY CITE OTHER NOTES: Only use [[kb-ref:ID]] citations when referencing OTHER notes from the knowledge base.
+2. ACCESSING OTHER ENTRIES' CONTENT FIELDS AS REQUIRED:
+   - Summaries of other notes across the knowledge base are provided in === AVAILABLE OTHER NOTES IN KNOWLEDGE BASE ===.
+   - If the active note's content and available summaries are sufficient to answer the user's query, write your complete Markdown response in "directReply" (following the writing rules below) and return empty arrays [] for "contentIds" and "takeawayIds" (1 API call).
+   - If the user asks to compare with, reference, pull details from, check contradictions against, or synthesize other notes from their knowledge base, and you need to inspect their full Content field to answer accurately, put those note IDs in "contentIds" (or "takeawayIds") and leave "directReply" as an empty string "".
+
+${WHOLE_BRAIN_WRITING_RULES}
 
 === PRIMARY ACTIVE DOCUMENT ===
 ${contextText}
 
-${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CATEGORY / PROJECT) ===\n${archiveContextText}` : ''}`
-                }]
+${otherNotesSummaries ? `=== AVAILABLE OTHER NOTES IN KNOWLEDGE BASE ===\n${otherNotesSummaries}` : ''}`;
+
+            const pass1Payload = {
+              contents: [
+                ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+                { role: 'user', parts: [{ text: queryText }] }
+              ],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: {
+                    directReply: {
+                      type: "STRING",
+                      description: "Your conversational Markdown response to the user in chat. Never cite or insert reference tags for the active document itself (no self-references). Only cite OTHER notes using [[kb-ref:ID]] when referencing information from them. Leave empty string if requesting contentIds or takeawayIds for other notes."
+                    },
+                    contentIds: {
+                      type: "ARRAY",
+                      items: { type: "STRING" },
+                      description: "Note IDs whose Full Content (content field) is needed on demand to answer the query (e.g. for cross-document comparison, detail verification, deep synthesis, or referenced notes). Empty array if directReply is provided."
+                    },
+                    takeawayIds: {
+                      type: "ARRAY",
+                      items: { type: "STRING" },
+                      description: "Note IDs whose Key Takeaways are needed on demand. Empty array if directReply is provided."
+                    }
+                  },
+                  required: ["directReply", "contentIds", "takeawayIds"]
+                },
+                temperature: 0.3
+              },
+              systemInstruction: {
+                parts: [{ text: pass1SystemText }]
               }
             };
 
             const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
-            const result = await handleGeminiCall(payload, activeAssistantModel);
-            const candidate = result.candidates?.[0];
-            const parts = candidate?.content?.parts || [];
-            const replyText = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
-            const { inputTokens, outputTokens } = extractUsageTokens(result, JSON.stringify(payload), replyText);
+            let directReply = '';
+            let contentIds = [];
+            let takeawayIds = [];
+
+            try {
+              const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
+              const p1Tokens = extractUsageTokens(pass1Res, JSON.stringify(pass1Payload), '');
+              totalInputTokens += p1Tokens.inputTokens;
+              totalOutputTokens += p1Tokens.outputTokens;
+
+              const parsedP1 = parseAIJson(pass1Res.candidates?.[0]);
+              if (parsedP1 && typeof parsedP1 === 'object' && !Array.isArray(parsedP1)) {
+                if (typeof parsedP1.directReply === 'string') directReply = stripSelfReferences(parsedP1.directReply.trim(), primaryDoc);
+                if (Array.isArray(parsedP1.contentIds)) contentIds = parsedP1.contentIds;
+                if (Array.isArray(parsedP1.takeawayIds)) takeawayIds = parsedP1.takeawayIds;
+              } else {
+                const rawText = getCandidateText(pass1Res.candidates?.[0] || pass1Res);
+                if (rawText && !rawText.trim().startsWith('{')) {
+                  directReply = stripSelfReferences(rawText.trim(), primaryDoc);
+                }
+              }
+            } catch (p1Err) {
+              console.warn("Pass 1 single-entry escalation error:", p1Err);
+            }
+
+            const requestedSet = new Set([...contentIds, ...takeawayIds]);
+            const matchedOtherNotes = otherNotes.filter(e => requestedSet.has(e.id));
+
+            let finalReplyText = directReply;
+
+            // If Pass 1 requested other notes' full content or takeaways, run Pass 2!
+            if (matchedOtherNotes.length > 0 || !finalReplyText) {
+              const expandedBlocks = (matchedOtherNotes.length > 0 ? matchedOtherNotes : []).map(e => {
+                const wantTakeaways = takeawayIds.includes(e.id);
+                const wantContent = contentIds.includes(e.id) || !wantTakeaways;
+                const type = getEntryType(e);
+                const isPrompt = type === 'prompt' || isPromptEntry(e) || Boolean(e.promptQuestion);
+                let typeTag = 'Note [User Content]';
+                if (isPrompt) typeTag = 'Prompt Reply [User Content]';
+                else if (type === 'media') typeTag = 'Media [External Third-Hand Knowledge]';
+                else if (type === 'web') typeTag = 'Web/Text [External Third-Hand Knowledge]';
+                else if (type === 'txt') typeTag = 'Text [External Third-Hand Knowledge]';
+                const parts = [
+                  `--- [kb-ref:${e.id}] (Ref #${e.numericId || '?'}, Type: ${typeTag}) Title: "${e.title || 'Untitled'}" ---`
+                ];
+                if (isPrompt && e.promptQuestion) {
+                  parts.push(`Prompt Question: ${e.promptQuestion}`);
+                }
+                if (e.summary) {
+                  parts.push(`Executive Summary: ${e.summary}`);
+                }
+                if (wantTakeaways && Array.isArray(e.shortVersion) && e.shortVersion.length > 0) {
+                  parts.push(`Key Takeaways:\n${e.shortVersion.map(t => `- ${t}`).join('\n')}`);
+                }
+                if (wantContent) {
+                  const otherContent = getEntryContentForAnalysis(e.id, e);
+                  parts.push(`Content${isPrompt ? ' (User Reflection Reply)' : ''}:\n${otherContent || '(No content recorded)'}`);
+                }
+                return parts.join('\n');
+              });
+
+              const pass2Payload = {
+                contents: [
+                  ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+                  { role: 'user', parts: [{ text: queryText }] }
+                ],
+                generationConfig: {
+                  responseMimeType: "application/json",
+                  responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                      directReply: {
+                        type: "STRING",
+                        description: "Your complete Markdown response to the user. Never cite or insert reference tags for the active document itself (no self-references). Only cite OTHER notes using [[kb-ref:ID]]."
+                      }
+                    },
+                    required: ["directReply"]
+                  },
+                  temperature: 0.3
+                },
+                systemInstruction: {
+                  parts: [{
+                    text: `You are a helpful AI Assistant for the user's personal knowledge base.
+Focus primarily on the active document: "${primaryDoc?.title || 'Selected Note'}" whose full Content and metadata are provided in === PRIMARY ACTIVE DOCUMENT ===.${promptInstructionContext}
+
+- NO SELF-REFERENCES: When referring to this active document ("${primaryDoc?.title || 'Selected Note'}", Ref #${primaryDoc?.numericId || primaryDoc?.id}), NEVER insert citation or reference tags (such as [[kb-ref:...]] or [Ref: ...]). The user is already in this note, so reference tags to it are broken and redundant. Refer to it as "this note" or by its title without reference brackets. Only cite OTHER notes using [[kb-ref:ID]].
+
+${WHOLE_BRAIN_WRITING_RULES}
+
+=== PRIMARY ACTIVE DOCUMENT ===
+${contextText}
+
+${expandedBlocks.length > 0 ? `=== REQUESTED OTHER NOTES (FULL CONTENT ON-DEMAND) ===\n${expandedBlocks.join('\n\n')}` : ''}`
+                  }]
+                }
+              };
+
+              try {
+                const p2Res = await handleGeminiCall(pass2Payload, activeAssistantModel);
+                const p2Tokens = extractUsageTokens(p2Res, JSON.stringify(pass2Payload), '');
+                totalInputTokens += p2Tokens.inputTokens;
+                totalOutputTokens += p2Tokens.outputTokens;
+                const parsedP2 = parseAIJson(p2Res.candidates?.[0]);
+                if (parsedP2 && typeof parsedP2 === 'object' && !Array.isArray(parsedP2)) {
+                  if (typeof parsedP2.directReply === 'string' && parsedP2.directReply.trim()) {
+                    finalReplyText = stripSelfReferences(parsedP2.directReply.trim(), primaryDoc);
+                  }
+                } else {
+                  const p2Cand = p2Res.candidates?.[0];
+                  const p2Parts = p2Cand?.content?.parts || [];
+                  const rawP2 = p2Parts.map(p => p.text || '').filter(Boolean).join('\n').trim();
+                  if (rawP2) finalReplyText = stripSelfReferences(rawP2, primaryDoc);
+                }
+              } catch (p2Err) {
+                console.warn("Pass 2 single-entry escalation error:", p2Err);
+                if (!finalReplyText) throw p2Err;
+              }
+            }
+
+            if (primaryDoc && finalReplyText) {
+              finalReplyText = stripSelfReferences(finalReplyText, primaryDoc);
+            }
+
+            finalReplyText = finalReplyText || directReply || "Done.";
 
             setAssistantChats(prev => ({
               ...prev,
@@ -4773,11 +5107,11 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
                 {
                   id: 'msg-' + (Date.now() + 1),
                   role: 'model',
-                  text: replyText,
+                  text: finalReplyText,
                   timestamp: Date.now(),
                   model: activeAssistantModel,
-                  inputTokens,
-                  outputTokens
+                  inputTokens: totalInputTokens,
+                  outputTokens: totalOutputTokens
                 }
               ]
             }));
@@ -4867,21 +5201,23 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
       // Filter-scoped Whole Brain candidate pool & single-pass / on-demand escalation engine
       const getWholeBrainCandidateNotes = (excludeId = null) => {
         // Draw candidate pool from currently selected entry types and active taxonomy/search filters (just like generatePromptNote),
-        // strictly requiring an executive summary (e.summary) and NEVER feeding previous AI Chat sessions or seeds into context.
+        // strictly requiring an executive summary (e.summary) or prompt question, and NEVER feeding previous AI Chat sessions or seeds into context.
         let pool = filteredEntries.filter(e =>
           !isWelcomeEntry(e) &&
           !isAiChatEntry(e) &&
           !isSeedEntry(e) &&
           e.id !== excludeId &&
-          Boolean(e.summary && String(e.summary).trim())
+          Boolean((e.summary && String(e.summary).trim()) || (isPromptEntry(e) && e.promptQuestion))
         );
 
         // Edge case: if the user solo-selected 'aiChat' or 'seed' in the entry type filter bar so non-chat notes are hidden,
-        // fall back to non-chat/non-seed entries matching the active taxonomy & search filters that have a summary.
+        // fall back to non-chat/non-seed entries matching the active taxonomy & search filters that have a summary or prompt question.
         if (pool.length === 0 && activeTypeFilters.every(t => t === 'aiChat' || t === 'seed')) {
           pool = entries.filter(entry => {
             if (!entry || isWelcomeEntry(entry) || isAiChatEntry(entry) || isSeedEntry(entry) || entry.id === excludeId) return false;
-            if (!entry.summary || !String(entry.summary).trim()) return false;
+            if (!entry.summary || !String(entry.summary).trim()) {
+              if (!(isPromptEntry(entry) && entry.promptQuestion)) return false;
+            }
             const matchesProject = activeProjects.length === 0 || (Array.isArray(entry.projects) && entry.projects.some(p => activeProjects.some(ap => normTax(ap) === normTax(p))));
             const matchesCat = activeCategories.length === 0 || (Array.isArray(entry.categories) && entry.categories.some(c => activeCategories.some(ac => normTax(ac) === normTax(c))));
             const matchesTag = activeTags.length === 0 || (Array.isArray(entry.tags) && entry.tags.some(t => activeTags.some(at => normTax(at) === normTax(t))));
@@ -4897,27 +5233,15 @@ ${archiveContextText ? `=== RELATED TAXONOMY CONTEXT (PREVIOUS NOTES IN SAME CAT
         return pool;
       };
 
-      const WHOLE_BRAIN_WRITING_RULES = `KNOWLEDGE PROVENANCE & USER PERSPECTIVE:
-- Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
-- Web, media, and text documents are assumed to be external and contextual third-hand knowledge (articles, podcasts, videos, or external docs collected for reference, NOT the user's personal thoughts or creations).
-- Seeds and AI chats are ignored as source knowledge.
+      const getEffectiveWritingRules = () => {
+        const baseRules = (aiInstructions?.chat && aiInstructions.chat.trim()) ? aiInstructions.chat.trim() : DEFAULT_WHOLE_BRAIN_WRITING_RULES;
+        if (aiInstructions?.userContext && aiInstructions.userContext.trim()) {
+          return `=== USER-PROVIDED PROFILE & PERSONAL CONTEXT ===\n${aiInstructions.userContext.trim()}\n\n${baseRules}`;
+        }
+        return baseRules;
+      };
 
-CONVERSATIONAL & CONCISE WRITING RULES:
-- Length: Under 50 words unless requested or necessary. Default to short.
-- Be concise, conversational, and direct. Go a step at a time.
-- Avoid spilling large amounts of text unless specifically requested.
-- Delete unnecessary words. Cut everything that doesn't add value.
-- Prefer short words. Use simple language over complex terms.
-- Stick to the active voice. It’s direct and impactful.
-- Avoid tired phrases. No clichés, similes, or metaphors.
-- Use plain English. Swap jargon and technical terms for everyday words.
-- Zero hyperbole. Stay honest. Avoid exaggeration.
-- No filler or prefaces. Skip "basically," "so," and introductory fluff.
-- Short, declarative sentences. One idea per sentence.
-- Use contractions. It keeps the tone natural.
-- Emojis in headings. Use them in headers to stay scannable, not the body.
-- Citations: Always cite sources using exact syntax [[kb-ref:ID]] (e.g. [[kb-ref:entry-1234]]).
-- Format cleanly in Markdown.`;
+      const WHOLE_BRAIN_WRITING_RULES = getEffectiveWritingRules();
 
       const runWholeBrainQuery = async (queryText, recentMsgs, candidateNotes, activeAssistantModel) => {
         const filterScopeParts = [
@@ -4950,12 +5274,14 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           const hasContentFlag = Boolean(e.fullContent && String(e.fullContent).trim());
           const availMeta = [hasTakeawaysFlag ? 'takeaways' : null, hasContentFlag ? 'content' : null].filter(Boolean).join(', ');
           const type = getEntryType(e);
+          const isPrompt = type === 'prompt' || isPromptEntry(e) || Boolean(e.promptQuestion);
           let typeTag = 'Note [User Content]';
-          if (type === 'prompt') typeTag = 'Prompt Reply [User Content]';
+          if (isPrompt) typeTag = 'Prompt Reply [User Content]';
           else if (type === 'media') typeTag = 'Media [External Third-Hand]';
           else if (type === 'web') typeTag = 'Web/Text [External Third-Hand]';
           else if (type === 'txt') typeTag = 'Text [External Third-Hand]';
-          return `[kb-ref:${e.id}] [${typeTag}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum}`;
+          const promptQStr = (isPrompt && e.promptQuestion) ? ` | Prompt Question: "${e.promptQuestion}"` : '';
+          return `[kb-ref:${e.id}] [${typeTag}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${promptQStr}${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum || '(No summary recorded)'}`;
         }).join('\n');
 
         // Pass 1: Single-Pass Direct Synthesis OR On-Demand Escalation
@@ -5048,20 +5374,26 @@ ${candidateSummaries}`;
           const wantTakeaways = takeawayIds.includes(e.id);
           const wantContent = contentIds.includes(e.id);
           const type = getEntryType(e);
+          const isPrompt = type === 'prompt' || isPromptEntry(e) || Boolean(e.promptQuestion);
           let typeTag = 'Note [User Content]';
-          if (type === 'prompt') typeTag = 'Prompt Reply [User Content]';
+          if (isPrompt) typeTag = 'Prompt Reply [User Content]';
           else if (type === 'media') typeTag = 'Media [External Third-Hand Knowledge]';
           else if (type === 'web') typeTag = 'Web/Text [External Third-Hand Knowledge]';
           else if (type === 'txt') typeTag = 'Text [External Third-Hand Knowledge]';
           const parts = [
-            `--- [kb-ref:${e.id}] (Ref #${e.numericId || '?'}, Type: ${typeTag}) Title: "${e.title || 'Untitled'}" ---`,
-            `Executive Summary: ${e.summary}`
+            `--- [kb-ref:${e.id}] (Ref #${e.numericId || '?'}, Type: ${typeTag}) Title: "${e.title || 'Untitled'}" ---`
           ];
+          if (isPrompt && e.promptQuestion) {
+            parts.push(`Prompt Question: ${e.promptQuestion}`);
+          }
+          if (e.summary) {
+            parts.push(`Executive Summary: ${e.summary}`);
+          }
           if (wantTakeaways && Array.isArray(e.shortVersion) && e.shortVersion.length > 0) {
             parts.push(`Key Takeaways:\n${e.shortVersion.map(t => `- ${t}`).join('\n')}`);
           }
           if (wantContent && e.fullContent && String(e.fullContent).trim()) {
-            parts.push(`${type === 'prompt' ? 'User Reply' : 'Full Content'}:\n${String(e.fullContent).trim()}`);
+            parts.push(`${isPrompt ? 'User Reply' : 'Full Content'}:\n${String(e.fullContent).trim()}`);
           }
           return parts.join('\n');
         });
@@ -5282,6 +5614,8 @@ ${expandedBlocks.join('\n\n')}`
         });
         setTempTheme(theme);
         setTempPromptConfig({ ...DEFAULT_PROMPT_CONFIG, ...promptConfig });
+        setTempAiInstructions({ ...DEFAULT_AI_INSTRUCTIONS, ...aiInstructions });
+        setAiInstructionTab('context');
         setMergeStatus(null);
         setShowKeyModal(true);
       };
@@ -5298,6 +5632,7 @@ ${expandedBlocks.join('\n\n')}`
         setModel(resolvedTaskModels.assistant);
         setTheme(tempTheme);
         setPromptConfig(tempPromptConfig);
+        setAiInstructions(tempAiInstructions);
         setShowKeyModal(false);
       };
 
@@ -5750,6 +6085,109 @@ ${expandedBlocks.join('\n\n')}`
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* AI Instructions & User Context */}
+                  <div className="p-3.5 bg-[var(--bg-main)] rounded border border-[var(--border)]">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <i className="fa-solid fa-sliders text-[#8b5cf6]"></i> AI Instructions &amp; Context
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (aiInstructionTab === 'context') {
+                            setTempAiInstructions(prev => ({ ...prev, userContext: '' }));
+                          } else if (aiInstructionTab === 'prompts') {
+                            setTempAiInstructions(prev => ({ ...prev, prompts: DEFAULT_PROMPT_INSTRUCTIONS }));
+                          } else if (aiInstructionTab === 'chat') {
+                            setTempAiInstructions(prev => ({ ...prev, chat: DEFAULT_WHOLE_BRAIN_WRITING_RULES }));
+                          }
+                        }}
+                        className="text-[10px] text-[var(--text-muted)] hover:text-[#8b5cf6] underline cursor-pointer font-mono"
+                        title="Reset current instruction view to default"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] mb-3 leading-relaxed font-mono">
+                      Customize system instructions and add your personal context/preferences for Theme Prompts and AI Chat syntheses (metadata extraction instructions remain fixed for consistency).
+                    </p>
+
+                    {/* Navigation Tabs */}
+                    <div className="flex gap-1 mb-2.5 p-1 bg-[var(--bg-pane)] rounded border border-[var(--border)] font-mono text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setAiInstructionTab('context')}
+                        className={`flex-1 py-1 px-2 rounded text-center transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${aiInstructionTab === 'context' ? 'bg-[#8b5cf6] text-white font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        <i className="fa-solid fa-user text-[10px]"></i> User Context
+                        {tempAiInstructions?.userContext?.trim() && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiInstructionTab('prompts')}
+                        className={`flex-1 py-1 px-2 rounded text-center transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${aiInstructionTab === 'prompts' ? 'bg-[#059669] text-white font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        <i className="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Theme Prompts
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiInstructionTab('chat')}
+                        className={`flex-1 py-1 px-2 rounded text-center transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${aiInstructionTab === 'chat' ? 'bg-[#a855f7] text-white font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        <i className="fa-solid fa-comment-dots text-[10px]"></i> AI Chat Rules
+                      </button>
+                    </div>
+
+                    {/* Tab Panes */}
+                    {aiInstructionTab === 'context' && (
+                      <div className="space-y-1.5 font-mono">
+                        <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)]">
+                          <span>Personal Background, Current Projects &amp; Style Preferences</span>
+                          <span>Injected into Prompts &amp; Chats</span>
+                        </div>
+                        <textarea
+                          rows="5"
+                          value={tempAiInstructions?.userContext || ''}
+                          onChange={(e) => setTempAiInstructions(prev => ({ ...prev, userContext: e.target.value }))}
+                          placeholder="e.g. I am an independent researcher working on distributed systems. Prefer concrete practical examples over abstract theory, active voice, and concise bullet points."
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded p-2.5 font-mono focus:border-[#8b5cf6] focus:outline-none leading-relaxed resize-y"
+                        />
+                      </div>
+                    )}
+
+                    {aiInstructionTab === 'prompts' && (
+                      <div className="space-y-1.5 font-mono">
+                        <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)]">
+                          <span>Theme Reflection Questions Instructions</span>
+                          <span>Concept isolation &amp; tensions</span>
+                        </div>
+                        <textarea
+                          rows="6"
+                          value={tempAiInstructions?.prompts || ''}
+                          onChange={(e) => setTempAiInstructions(prev => ({ ...prev, prompts: e.target.value }))}
+                          placeholder={DEFAULT_PROMPT_INSTRUCTIONS}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded p-2.5 font-mono focus:border-[#059669] focus:outline-none leading-relaxed resize-y"
+                        />
+                      </div>
+                    )}
+
+                    {aiInstructionTab === 'chat' && (
+                      <div className="space-y-1.5 font-mono">
+                        <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)]">
+                          <span>Chat Writing &amp; Knowledge Provenance Rules</span>
+                          <span>Whole Brain &amp; Entry Assistant</span>
+                        </div>
+                        <textarea
+                          rows="6"
+                          value={tempAiInstructions?.chat || ''}
+                          onChange={(e) => setTempAiInstructions(prev => ({ ...prev, chat: e.target.value }))}
+                          placeholder={DEFAULT_WHOLE_BRAIN_WRITING_RULES}
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded p-2.5 font-mono focus:border-[#a855f7] focus:outline-none leading-relaxed resize-y"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Library Merge */}
@@ -6365,6 +6803,13 @@ ${expandedBlocks.join('\n\n')}`
                             <i className="fa-solid fa-rotate-left w-4 text-[var(--text-muted)]"></i> Undo (Cmd+Z)
                           </button>
                           <button 
+                            onClick={() => { redoEntries(); setShowWorkspaceOptions(false); }} 
+                            disabled={!historyState.future || historyState.future.length === 0} 
+                            className="w-full text-left px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-40 flex items-center gap-2"
+                          >
+                            <i className="fa-solid fa-rotate-right w-4 text-[var(--text-muted)]"></i> Redo (Cmd+Shift+Z)
+                          </button>
+                          <button 
                             onClick={() => {
                               const exportEntries = entries.filter(e => {
                                 if (isAiChatEntry(e)) {
@@ -6447,15 +6892,6 @@ ${expandedBlocks.join('\n\n')}`
                   </button>
                   <button 
                     type="button"
-                    onClick={() => handleNewSeed()} 
-                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
-                    title="Seed: AI prompt shortcuts &amp; instructions&#10;&#10;Create a new prompt shortcut without summaries or takeaways"
-                  >
-                    <i className="fa-solid fa-plus text-[10px]"></i>
-                    <span>Seed</span>
-                  </button>
-                  <button 
-                    type="button"
                     onClick={generatePromptNote}
                     disabled={promptState.isGenerating || !filteredEntries.some(e => !isWelcomeEntry(e) && !isSeedEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e))}
                     className="flex-1 h-7 px-2.5 text-xs rounded bg-[#059669] hover:bg-[#047857] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -6472,6 +6908,15 @@ ${expandedBlocks.join('\n\n')}`
                   >
                     <i className="fa-solid fa-plus text-[10px]"></i>
                     <span>Chat</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => handleNewSeed()} 
+                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
+                    title="Seed: AI prompt shortcuts &amp; instructions&#10;&#10;Create a new prompt shortcut without summaries or takeaways"
+                  >
+                    <i className="fa-solid fa-plus text-[10px]"></i>
+                    <span>Seed</span>
                   </button>
                 </div>
 
@@ -7560,9 +8005,14 @@ ${expandedBlocks.join('\n\n')}`
                               e.stopPropagation();
                               if (!isAiChat) startEditing(activeSingleEntry);
                             }}
-                            className={`prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono min-h-[60px] ${isAiChat ? 'select-text cursor-default' : 'cursor-text'}`}
+                            className={`prose prose-player max-w-none text-[var(--text-main)] leading-[1.4] font-mono min-h-[60px] transition-all duration-200 ${isAiChat ? 'select-text cursor-default' : 'cursor-text'}`}
                             title={isAiChat ? undefined : (isSeed ? "Double-click to edit seed prompt" : "Double-click to edit content")}
-                            dangerouslySetInnerHTML={{ __html: injectReferences(parseMarkdown(noteMarkdown), entries) }} 
+                            dangerouslySetInnerHTML={{
+                              __html: injectReferences(
+                                parseMarkdown(noteMarkdown),
+                                entries
+                              )
+                            }} 
                           />
                         ) : (
                           <div 

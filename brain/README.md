@@ -112,7 +112,8 @@ The Theme Prompt Generator analyzes your notes to surface connections, contradic
 The AI Assistant lets you chat with either a single open note or your broader knowledge base:
 
 - **Current Entry Chat (Right Drawer):**
-  - **Context:** Sends the active note's full text, summary, takeaways, and source URL, plus summaries and takeaways of up to 10 related notes in the same category or project.
+  - **Conversational Synthesis & Active Note Discussion:** Discussions, brainstorming, questions, and feedback remain strictly within the chat conversation. The assistant has direct access to the active document's full content and context, answering queries without modifying user documents. When discussing the active note, circular self-references are suppressed so links remain clean and valid.
+  - **Context & On-Demand Cross-Note Content Access:** Sends the active note's full Content field (including live staged editor text), summary, takeaways, and source URL (as well as its reflection question for Theme Prompts). Other notes in your knowledge base are summarized with on-demand availability; the assistant dynamically requests and inspects the full Content fields of other notes in a second pass whenever cross-document comparison, reference verification, or multi-note synthesis is needed.
   - **Auto-Close & Auto-Reopen:** Switching notes automatically closes the drawer if the new note has no prior chat, and automatically re-opens it if the note already has a saved conversation (`assistantChats[entry.id]`). Toggle manually anytime with <kbd>Cmd+J</kbd> / <kbd>Ctrl+J</kbd>.
 - **Whole Brain / Scoped AI Chat (Full-Width Purple View):**
   - **Dynamic Scope, Inline Editing & Title Auto-Generation:** Named automatically after your active Entry Type and Taxonomy filters (e.g., `Whole Brain AI Chat` or `Project: X AI Chat`), with double-click inline editing and an on-hover auto-generate refresh button beside the title to synthesize a descriptive title from the conversation transcript.
@@ -122,7 +123,7 @@ The AI Assistant lets you chat with either a single open note or your broader kn
   - **In-Place Taxonomy Editing:** Includes an interactive taxonomy row directly below the metadata subtitle. Clicking anywhere on the row opens the standard in-place taxonomy editor to assign or remove Projects, Categories, and Tags (or auto-generate tags via Gemini) for the chat session.
 - **Cumulative Input & Output Token Tracking:** Both the full-width **AI Chat** header and the **Current Entry AI Assistant** drawer header display a live `Tokens In: X | Out: Y` counter that records and increments prompt input tokens and generated output tokens (`usageMetadata.promptTokenCount` and `candidatesTokenCount` / `thoughtsTokenCount`) across every turn (including two-pass escalations).
 - **Response Style & Temperature (`0.3`):** Uses a focused temperature of `0.3` for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline `[[kb-ref:ID]]` source citations.
-- **Knowledge Provenance Grounding:** In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.
+- **Knowledge Provenance Grounding & Prompt Questions:** In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. For Theme Prompt entries, the reflection question is automatically supplied to the model alongside the user's answer so discussions remain grounded on the original question. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.
 
 ---
 
@@ -138,6 +139,12 @@ The AI Assistant lets you chat with either a single open note or your broader kn
 
 - **API Key Management:** Store and rotate multiple Google Gemini API keys to distribute usage across quotas.
 - **Task-Specific Model Assignment:** Assign distinct Gemini models for Metadata & Summaries, Theme Prompts, and AI Assistant Copilot.
+- **AI Instructions & User Context:** Customize system instructions and inject personal profile background:
+  - **User Context & Profile:** Provide your personal background, ongoing research/projects, and communication preferences (automatically prepended into Theme Prompts and conversational AI chats).
+  - **Theme Prompts Instructions:** Fine-tune the underlying prompt instructions controlling tension exploration, concept isolation, question style, and word limits.
+  - **AI Chat Rules:** Customize conversational rules, knowledge provenance assumptions, and style constraints for both Whole Brain and Single-Entry assistant chats.
+  - **Reset to Default:** Instant one-click reset buttons for each instruction category.
+  - *Note:* Quick metadata extraction instructions (titles, summaries, takeaways, and taxonomies) remain fixed for deterministic cataloging.
 - **Live Model Discovery:** Dynamically fetch available models directly from Google AI Studio.
 - **Install as App (PWA):** The **Install as App** section in Settings installs Ali Brain as a standalone app (Install button in Chrome/Edge; File > Add to Dock in Safari on macOS) and shows offline-cache status. A service worker caches the app files and CDN libraries so the app launches offline (AI calls and the Safari sync bridge are never cached; the offline cache needs the app served over http/https). Safari still needs the Local Sync Bridge to read and write your notes file.
 - **Workspace Merging & Text File Import:** Merge secondary JSON knowledge bases or import multiple plain text (`.txt`) and Markdown (`.md`) files directly into your active workspace. Imported text files preserve their original file modification and creation timestamps (`createdAt` and `updatedAt`), name notes after the filename, and automatically generate executive summaries with Gemini. Multiple files can be selected simultaneously.
@@ -155,6 +162,7 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 | <kbd>Alt</kbd> + <kbd>&larr;</kbd> &nbsp;/&nbsp; <kbd>Cmd</kbd> + <kbd>[</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>[</kbd> | Navigate backward in note selection history (triggers floating on-screen Back button) |
 | <kbd>Alt</kbd> + <kbd>&rarr;</kbd> &nbsp;/&nbsp; <kbd>Cmd</kbd> + <kbd>]</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>]</kbd> | Navigate forward in note selection history (triggers floating on-screen Forward button) |
 | <kbd>Cmd</kbd> + <kbd>Z</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Undo note modification or deletion (when not in a text input) |
+| <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Y</kbd> | Redo previously undone note modification (when not in a text input) |
 | <kbd>Cmd</kbd> + <kbd>J</kbd> &nbsp;/&nbsp; <kbd>Cmd</kbd> + <kbd>L</kbd> &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>J</kbd> | Toggle contextual AI Assistant drawer for the active note |
 
 ### Note Editing & Focus Mode
@@ -188,4 +196,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.104** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.116** • Local-First Autonomous Knowledge Base*

@@ -143,45 +143,99 @@ const LEGACY_META_NAMES = ['baseplayer_meta.json', '.baseplayer_meta.json', 'lib
 // Load cached metadata (durations, waveforms, tags, artwork) directly from the user's selected folder
 async function loadFolderMetaFile(dirHandle) {
     if (!dirHandle) return false;
-    for (const name of LEGACY_META_NAMES) {
-        try {
-            const metaHandle = await dirHandle.getFileHandle(name);
-            const file = await metaHandle.getFile();
-            const text = await file.text();
-            const parsed = JSON.parse(text);
-            if (parsed && typeof parsed === 'object') {
-                for (const k in parsed) {
-                    if (parsed[k] && parsed[k].artworkUrl && parsed[k].artworkUrl.startsWith('blob:')) {
-                        delete parsed[k].artworkUrl;
-                    }
+
+    // First attempt to load the canonical file
+    let loaded = false;
+    try {
+        const metaHandle = await dirHandle.getFileHandle(META_FILE_NAME);
+        const file = await metaHandle.getFile();
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === 'object') {
+            for (const k in parsed) {
+                if (parsed[k] && parsed[k].artworkUrl && parsed[k].artworkUrl.startsWith('blob:')) {
+                    delete parsed[k].artworkUrl;
                 }
-                Object.assign(State.meta, parsed);
-                console.log(`[BasePlayer] Successfully loaded metadata file (${name}) directly from selected folder (${Object.keys(parsed).length} tracks ready)`);
-                return true;
             }
-        } catch (e) {
-            // File not present or unreadable, check next candidate
+            Object.assign(State.meta, parsed);
+            console.log(`[BasePlayer] Successfully loaded metadata file (${META_FILE_NAME}) (${Object.keys(parsed).length} tracks ready)`);
+            loaded = true;
+        }
+    } catch (e) {
+        // Fallback to legacy names
+        for (const name of LEGACY_META_NAMES) {
+            try {
+                const metaHandle = await dirHandle.getFileHandle(name);
+                const file = await metaHandle.getFile();
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+                if (parsed && typeof parsed === 'object') {
+                    for (const k in parsed) {
+                        if (parsed[k] && parsed[k].artworkUrl && parsed[k].artworkUrl.startsWith('blob:')) {
+                            delete parsed[k].artworkUrl;
+                        }
+                    }
+                    Object.assign(State.meta, parsed);
+                    console.log(`[BasePlayer] Loaded legacy metadata file (${name}) (${Object.keys(parsed).length} tracks ready)`);
+                    loaded = true;
+                    break;
+                }
+            } catch (err) {}
         }
     }
-    return false;
+
+    // Auto-clean any stray duplicate copies created by sync conflicts (e.g., baseplayer_meta 2.json)
+    try {
+        cleanDuplicateMetaFiles(dirHandle);
+    } catch (e) {}
+
+    return loaded;
 }
 
-// Save metadata file directly into the user's selected folder
+// Clean up duplicate numbered metadata files left by iCloud / sync conflicts
+async function cleanDuplicateMetaFiles(dirHandle) {
+    if (!dirHandle) return;
+    const dupRegex = /^baseplayer_meta(\s+\d+|\s*\(\d+\))?\.json$/i;
+    try {
+        for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file' && entry.name !== META_FILE_NAME && dupRegex.test(entry.name)) {
+                try {
+                    await dirHandle.removeEntry(entry.name);
+                    console.log(`[BasePlayer] Cleaned up duplicate metadata file: ${entry.name}`);
+                } catch (e) {
+                    // Ignore remove failures
+                }
+            }
+        }
+    } catch (e) {}
+}
+
+// Save metadata file directly into the user's selected folder with serialisation & debouncing
 let folderSaveTimer = null;
 let isSavingFolder = false;
+let hasPendingSave = false;
+let lastSavedHash = null;
 
 function queueMetaSave(path) {
     if (folderSaveTimer) clearTimeout(folderSaveTimer);
-    folderSaveTimer = setTimeout(saveFolderMetaFile, 400);
+    folderSaveTimer = setTimeout(saveFolderMetaFile, 2500);
 }
 
 async function saveFolderMetaFile() {
-    if (!State.dirHandle || isSavingFolder) return;
+    if (!State.dirHandle) return;
+    if (folderSaveTimer) {
+        clearTimeout(folderSaveTimer);
+        folderSaveTimer = null;
+    }
+    
+    // If a save is already in-flight, flag pending and return so concurrent writers never conflict
+    if (isSavingFolder) {
+        hasPendingSave = true;
+        return;
+    }
+    
     isSavingFolder = true;
     try {
-        const handle = await State.dirHandle.getFileHandle(META_FILE_NAME, { create: true });
-        const writable = await handle.createWritable();
-        
         // Strip non-persistent blob URLs before saving to disk
         const cleanMeta = {};
         for (const k in State.meta) {
@@ -191,9 +245,19 @@ async function saveFolderMetaFile() {
             }
             cleanMeta[k] = item;
         }
+
+        const serialized = JSON.stringify(cleanMeta, null, 2);
         
-        await writable.write(JSON.stringify(cleanMeta, null, 2));
+        // Skip writing if nothing actually changed (prevents hammering cloud daemons like iCloud)
+        if (lastSavedHash === serialized) {
+            return;
+        }
+
+        const handle = await State.dirHandle.getFileHandle(META_FILE_NAME, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(serialized);
         await writable.close();
+        lastSavedHash = serialized;
         console.log(`[BasePlayer] Persisted metadata directly to "${META_FILE_NAME}" in user folder`);
     } catch (e) {
         console.warn(`[BasePlayer] Could not write "${META_FILE_NAME}" to folder:`, e);
@@ -201,6 +265,11 @@ async function saveFolderMetaFile() {
         await saveLocalIndexedDBCache();
     } finally {
         isSavingFolder = false;
+        if (hasPendingSave) {
+            hasPendingSave = false;
+            // Schedule the queued save
+            queueMetaSave();
+        }
     }
 }
 
@@ -209,6 +278,10 @@ async function saveMetaFile() {
 }
 
 async function flushMetaSaves() {
+    if (folderSaveTimer) {
+        clearTimeout(folderSaveTimer);
+        folderSaveTimer = null;
+    }
     await saveFolderMetaFile();
 }
 
@@ -668,8 +741,8 @@ async function loadLibrary(dirHandle) {
 
 async function walkDirectory(dirHandle, treeNode, currentPath) {
     for await (const entry of dirHandle.values()) {
-        // Skip metadata cache files from appearing in tracks or tree
-        if (entry.name === 'baseplayer_meta.json' || entry.name === '.baseplayer_meta.json' || entry.name === 'library_meta.json') {
+        // Skip metadata cache files and duplicate numbered copies from appearing in tracks or tree
+        if (/^baseplayer_meta(\s+\d+|\s*\(\d+\))?\.json$/i.test(entry.name) || entry.name === '.baseplayer_meta.json' || entry.name === 'library_meta.json') {
             continue;
         }
         
