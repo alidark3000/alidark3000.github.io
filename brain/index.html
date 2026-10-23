@@ -128,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.116";
+    const APP_VERSION = "v2.8.125";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -219,21 +219,62 @@
       return null;
     };
 
+    const ensureLinksTargetBlank = (html) => {
+      if (!html || typeof html !== 'string') return '';
+      return html.replace(/<a\b([^>]*?)href=(['"])([^'"]+)\2([^>]*)>/gi, (match, before, quote, href, after) => {
+        if (/target=/i.test(before) || /target=/i.test(after)) {
+          if (!/rel=/i.test(before) && !/rel=/i.test(after)) {
+            return `<a${before}href="${href}" rel="noopener noreferrer"${after}>`;
+          }
+          return match;
+        }
+        return `<a${before}href="${href}" target="_blank" rel="noopener noreferrer"${after}>`;
+      });
+    };
+
+    if (typeof marked !== 'undefined') {
+      try {
+        const renderer = {
+          link(arg1, title, text) {
+            let href = arg1;
+            let linkText = text;
+            let linkTitle = title;
+            if (typeof arg1 === 'object' && arg1 !== null) {
+              href = arg1.href;
+              linkTitle = arg1.title;
+              linkText = (typeof this?.parser?.parseInline === 'function' && arg1.tokens)
+                ? this.parser.parseInline(arg1.tokens)
+                : (arg1.text || href);
+            }
+            const titleAttr = linkTitle ? ` title="${linkTitle}"` : '';
+            return `<a href="${href}" target="_blank" rel="noopener noreferrer"${titleAttr}>${linkText}</a>`;
+          }
+        };
+        if (typeof marked.use === 'function') {
+          marked.use({ renderer });
+        }
+      } catch (e) {
+        console.warn("Could not configure marked renderer:", e);
+      }
+    }
+
     const parseMarkdown = (content) => {
       if (typeof marked !== 'undefined' && marked.parse) {
-        return marked.parse(content || '');
+        return ensureLinksTargetBlank(marked.parse(content || ''));
       }
-      return (content || '')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br />');
+      return ensureLinksTargetBlank(
+        (content || '')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/\n/g, '<br />')
+      );
     };
 
     const parseMarkdownInline = (content) => {
       if (typeof marked !== 'undefined' && marked.parseInline) {
-        return marked.parseInline(content || '');
+        return ensureLinksTargetBlank(marked.parseInline(content || ''));
       }
-      return content || '';
+      return ensureLinksTargetBlank(content || '');
     };
 
     const cleanTitle = (text) => {
@@ -638,6 +679,28 @@
       };
     };
 
+    const isWebSearchRequested = (text) => {
+      if (!text || typeof text !== 'string') return false;
+      const q = text.toLowerCase().trim();
+      return /\b(web\s*search|search\s*(the\s*)?(web|internet)|search\s*online|look\s*online|check\s*(the\s*)?(web|internet)|find\s*online|browse\s*(the\s*)?(web|internet)|google\s*(this|it|search|for)?|look\s*outside(\s*of)?\s*(the\s*)?(library|knowledge\s*base|notes|brain)|search\s*outside(\s*of)?\s*(the\s*)?(library|knowledge\s*base|notes|brain)|outside(\s*of)?\s*(the\s*)?(library|knowledge\s*base|notes|brain)|look\s*(for\s*)?external\s*(info|information|sources|data|context))\b/i.test(q);
+    };
+
+    const formatGroundingSources = (candidate) => {
+      const chunks = candidate?.groundingMetadata?.groundingChunks || [];
+      const validWeb = chunks.map(c => c.web).filter(w => w && w.uri && w.title);
+      if (validWeb.length === 0) return '';
+      const uniqueUrls = new Set();
+      const deduped = [];
+      for (const w of validWeb) {
+        if (!uniqueUrls.has(w.uri)) {
+          uniqueUrls.add(w.uri);
+          deduped.push(w);
+        }
+      }
+      if (deduped.length === 0) return '';
+      return '\n\n**Sources:**\n' + deduped.slice(0, 5).map(w => `- [${w.title}](${w.uri})`).join('\n');
+    };
+
     const getCandidateText = (cand) => {
       if (!cand) return '';
       if (typeof cand === 'string') return cand;
@@ -906,6 +969,10 @@ Respond with valid JSON ONLY matching this structure:
 - Assume ONLY the content of Notes and Prompt replies is user-generated content that reflects their own issues, projects, and personal knowledge.
 - Web, media, and text documents are assumed to be external and contextual third-hand knowledge (articles, podcasts, videos, or external docs collected for reference, NOT the user's personal thoughts or creations).
 - Seeds and AI chats are ignored as source knowledge.
+
+EXTERNAL KNOWLEDGE & WEB SEARCH POLICY:
+- Default focus: Focus strictly on the user's knowledge base library by default. Do NOT perform web searches or look outside the library unless the user explicitly requests you to look outside the library or specifically do a web search.
+- When requested: When the user explicitly asks you to search the web, look outside the library, or find external online information, you can and should use web search to provide current external information. Never claim that you cannot do a web search.
 
 CONVERSATIONAL & CONCISE WRITING RULES:
 - Length: Under 50 words unless requested or necessary. Default to short.
@@ -1464,6 +1531,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
 
       useEffect(() => { isContentFocusedRef.current = isContentFocused; }, [isContentFocused]);
       useEffect(() => { entriesRef.current = entries; }, [entries]);
+      const handleGenerateTLDRRef = useRef(null);
 
       const prevSelectedEntryIdsRef = useRef(selectedEntryIds);
       useEffect(() => {
@@ -1480,6 +1548,13 @@ CONVERSATIONAL & CONCISE WRITING RULES:
               if (isEmpty) {
                 setEntries(prev => prev.filter(e => e.id !== prevId));
                 setNavHistory(prev => prev.map(hist => hist.filter(id => id !== prevId)).filter(h => h.length > 0));
+              } else {
+                // Auto-generate executive summary when clicking out of an AI chat session if summary is empty or default
+                const curSummary = (prevEntry.summary || '').trim();
+                const isDefaultSummary = !curSummary || curSummary.endsWith(' AI conversation session.') || curSummary.startsWith('Archived Whole Brain AI');
+                if (isDefaultSummary && handleGenerateTLDRRef.current) {
+                  handleGenerateTLDRRef.current(prevId);
+                }
               }
             } else {
               const staged = (editDataRef.current && editDataRef.current[prevId]) || {};
@@ -1641,6 +1716,42 @@ CONVERSATIONAL & CONCISE WRITING RULES:
       const [activeRefModal, setActiveRefModal] = useState(null);
       const [isTagsOpen, setIsTagsOpen] = useState(false);
       const [showWorkspaceOptions, setShowWorkspaceOptions] = useState(false);
+      const [entryContextMenu, setEntryContextMenu] = useState(null); // { entryId: string, x: number, y: number }
+
+      useEffect(() => {
+        if (!entryContextMenu) return;
+        const handleDismiss = () => setEntryContextMenu(null);
+        const handleKeyDown = (e) => { if (e.key === 'Escape') setEntryContextMenu(null); };
+        window.addEventListener('click', handleDismiss);
+        window.addEventListener('contextmenu', handleDismiss);
+        window.addEventListener('scroll', handleDismiss, true);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+          window.removeEventListener('click', handleDismiss);
+          window.removeEventListener('contextmenu', handleDismiss);
+          window.removeEventListener('scroll', handleDismiss, true);
+          window.removeEventListener('keydown', handleKeyDown);
+        };
+      }, [entryContextMenu]);
+
+      // Open links across the app (content, AI chat, etc.) in a new tab by default
+      useEffect(() => {
+        const handleGlobalLinkClick = (e) => {
+          const anchor = e.target.closest('a[href]');
+          if (!anchor) return;
+          const href = anchor.getAttribute('href');
+          if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+          if (anchor.classList.contains('kb-embedded-ref')) return;
+          if (!anchor.getAttribute('target')) {
+            anchor.setAttribute('target', '_blank');
+            anchor.setAttribute('rel', 'noopener noreferrer');
+          }
+        };
+        document.addEventListener('click', handleGlobalLinkClick, true);
+        return () => {
+          document.removeEventListener('click', handleGlobalLinkClick, true);
+        };
+      }, []);
 
       const chatScrollRef = useRef(null);
 
@@ -4541,6 +4652,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           setGeneratingField(null);
         }
       };
+      handleGenerateTLDRRef.current = handleGenerateTLDR;
 
       const handleGenerateAnswerSummary = handleGenerateTLDR;
 
@@ -4829,6 +4941,80 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
         }));
 
         try {
+          if (isWebSearchRequested(queryText)) {
+            const primaryDoc = selectedEntries.length > 0 ? selectedEntries[0] : (activeSingleEntry || null);
+            const primaryContent = primaryDoc ? getEntryContentForAnalysis(primaryDoc.id, primaryDoc) : '';
+            const webSearchSystemText = `You are a helpful AI Assistant for the user's personal knowledge base.
+The user has explicitly requested to look outside their library or specifically perform a web search.
+Use the Google Search tool to find accurate, up-to-date external information from the web to answer their query.
+Ground your response on current web search results.
+
+${WHOLE_BRAIN_WRITING_RULES}
+
+${primaryDoc ? `Active Document Reference (connect or compare if relevant to the user query):
+Title: "${primaryDoc.title || 'Untitled'}" (Ref #${primaryDoc.numericId || primaryDoc.id})
+${primaryDoc.summary ? `Summary: ${primaryDoc.summary}` : ''}
+${primaryContent ? `Content: ${primaryContent.substring(0, 3000)}` : ''}` : ''}`;
+
+            const webSearchPayload = {
+              contents: [
+                ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+                { role: 'user', parts: [{ text: queryText }] }
+              ],
+              tools: [{ google_search: {} }],
+              generationConfig: { temperature: 0.3 },
+              systemInstruction: {
+                parts: [{ text: webSearchSystemText }]
+              }
+            };
+
+            const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
+            let finalReply = '';
+            let totalIn = 0;
+            let totalOut = 0;
+
+            try {
+              const res = await handleGeminiCall(webSearchPayload, activeAssistantModel);
+              const pTokens = extractUsageTokens(res, JSON.stringify(webSearchPayload), '');
+              totalIn = pTokens.inputTokens;
+              totalOut = pTokens.outputTokens;
+              const cand = res.candidates?.[0];
+              finalReply = cand?.content?.parts?.map(p => p.text || '').filter(Boolean).join('\n').trim() || '';
+              const sources = formatGroundingSources(cand);
+              if (sources && !finalReply.includes(sources.trim())) {
+                finalReply += sources;
+              }
+            } catch (err) {
+              console.warn("Assistant drawer web search failed with tool, falling back without tool:", err);
+              const fallbackPayload = { ...webSearchPayload };
+              delete fallbackPayload.tools;
+              const res = await handleGeminiCall(fallbackPayload, activeAssistantModel);
+              const pTokens = extractUsageTokens(res, JSON.stringify(fallbackPayload), '');
+              totalIn = pTokens.inputTokens;
+              totalOut = pTokens.outputTokens;
+              const cand = res.candidates?.[0];
+              finalReply = cand?.content?.parts?.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
+            }
+
+            if (!finalReply) finalReply = "No response received from web search.";
+
+            const aiMsg = {
+              id: 'msg-' + Date.now(),
+              role: 'model',
+              text: finalReply,
+              timestamp: Date.now(),
+              inputTokens: totalIn,
+              outputTokens: totalOut
+            };
+
+            setAssistantChats(prev => ({
+              ...prev,
+              [chatKey]: [...updatedMessages, aiMsg]
+            }));
+            setIsAssistantThinking(false);
+            return;
+          }
+
           const currentScope = assistantScope;
           let targetDocs = [];
 
@@ -4932,6 +5118,9 @@ DECISION & ON-DEMAND CONTENT PROTOCOL:
    - Summaries of other notes across the knowledge base are provided in === AVAILABLE OTHER NOTES IN KNOWLEDGE BASE ===.
    - If the active note's content and available summaries are sufficient to answer the user's query, write your complete Markdown response in "directReply" (following the writing rules below) and return empty arrays [] for "contentIds" and "takeawayIds" (1 API call).
    - If the user asks to compare with, reference, pull details from, check contradictions against, or synthesize other notes from their knowledge base, and you need to inspect their full Content field to answer accurately, put those note IDs in "contentIds" (or "takeawayIds") and leave "directReply" as an empty string "".
+3. EXTERNAL KNOWLEDGE & WEB SEARCH POLICY:
+   - Stay inside the knowledge base by default. Do NOT look outside the library unless the user explicitly requests you to look outside the library or specifically do a web search.
+   - Never state that you cannot do a web search.
 
 ${WHOLE_BRAIN_WRITING_RULES}
 
@@ -5244,6 +5433,60 @@ ${expandedBlocks.length > 0 ? `=== REQUESTED OTHER NOTES (FULL CONTENT ON-DEMAND
       const WHOLE_BRAIN_WRITING_RULES = getEffectiveWritingRules();
 
       const runWholeBrainQuery = async (queryText, recentMsgs, candidateNotes, activeAssistantModel) => {
+        if (isWebSearchRequested(queryText)) {
+          const webSearchSystemText = `You are an overarching Knowledge Base Assistant.
+The user has explicitly requested to look outside of their knowledge base library or specifically perform a web search.
+Use the Google Search tool to search the web for accurate, up-to-date external information to answer their query.
+Ground your response on current web search results.
+
+${WHOLE_BRAIN_WRITING_RULES}`;
+
+          const webSearchPayload = {
+            contents: [
+              ...(recentMsgs || []).slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+              { role: 'user', parts: [{ text: queryText }] }
+            ],
+            tools: [{ google_search: {} }],
+            generationConfig: { temperature: 0.3 },
+            systemInstruction: {
+              parts: [{ text: webSearchSystemText }]
+            }
+          };
+
+          let finalReply = '';
+          let totalIn = 0;
+          let totalOut = 0;
+
+          try {
+            const res = await handleGeminiCall(webSearchPayload, activeAssistantModel);
+            const pTokens = extractUsageTokens(res, JSON.stringify(webSearchPayload), '');
+            totalIn = pTokens.inputTokens;
+            totalOut = pTokens.outputTokens;
+            const cand = res.candidates?.[0];
+            finalReply = cand?.content?.parts?.map(p => p.text || '').filter(Boolean).join('\n').trim() || '';
+            const sources = formatGroundingSources(cand);
+            if (sources && !finalReply.includes(sources.trim())) {
+              finalReply += sources;
+            }
+          } catch (err) {
+            console.warn("Whole Brain Web search failed with tool, falling back without tool:", err);
+            const fallbackPayload = { ...webSearchPayload };
+            delete fallbackPayload.tools;
+            const res = await handleGeminiCall(fallbackPayload, activeAssistantModel);
+            const pTokens = extractUsageTokens(res, JSON.stringify(fallbackPayload), '');
+            totalIn = pTokens.inputTokens;
+            totalOut = pTokens.outputTokens;
+            const cand = res.candidates?.[0];
+            finalReply = cand?.content?.parts?.map(p => p.text || '').filter(Boolean).join('\n').trim() || "No response received.";
+          }
+
+          return {
+            replyText: finalReply || "No response received from web search.",
+            inputTokens: totalIn,
+            outputTokens: totalOut
+          };
+        }
+
         const filterScopeParts = [
           activeProjects.length > 0 ? `Projects: ${activeProjects.join(', ')}` : '',
           activeCategories.length > 0 ? `Categories: ${activeCategories.join(', ')}` : '',
@@ -5300,6 +5543,9 @@ DECISION & EFFICIENCY PROTOCOL:
    - Prefer requesting Key Takeaways first: put the needed note IDs in "takeawayIds".
    - Only request Full Content if full body text is strictly needed: put the needed note IDs in "contentIds".
    - When requesting any "takeawayIds" or "contentIds", leave "directReply" as an empty string "".
+3. EXTERNAL KNOWLEDGE & WEB SEARCH POLICY:
+   - Stay inside the knowledge base library by default. Do NOT search the web or look outside the library unless the user explicitly requests you to look outside the library or specifically do a web search.
+   - Never state that you cannot do a web search.
 
 ${WHOLE_BRAIN_WRITING_RULES}
 
@@ -5470,7 +5716,7 @@ ${expandedBlocks.join('\n\n')}`
           type: 'aiChat',
           title: scopedDefaultTitle,
           numericId: nextNumericId,
-          summary: `${activeBrainChatScopeLabel} AI conversation session.`,
+          summary: '',
           shortVersion: [],
           fullContent: '',
           chatMessages: [],
@@ -5573,6 +5819,13 @@ ${expandedBlocks.join('\n\n')}`
               updatedAt: Date.now()
             };
           }));
+
+          // Auto-generate title after the first message exchange completes
+          if (existingMsgs.length === 0) {
+            setTimeout(() => {
+              handleSuggestTitle(targetId);
+            }, 100);
+          }
         } catch (err) {
           const errMsg = {
             id: 'msg-' + (Date.now() + 1),
@@ -6884,39 +7137,39 @@ ${expandedBlocks.join('\n\n')}`
                 <div className="flex gap-2 items-center h-7">
                   <button 
                     onClick={handleNewNote} 
-                    className="flex-1 h-7 px-3 text-xs rounded bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
+                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold transition-colors flex items-center justify-center gap-1 font-mono shadow-xs cursor-pointer shrink-0 whitespace-nowrap" 
                     title="Note: Manual user thoughts, outlines, and notes&#10;&#10;Create a new blank note" 
                   >
-                    <i className="fa-solid fa-plus text-[10px]"></i>
-                    <span>Note</span>
+                    <i className="fa-solid fa-plus text-[10px] shrink-0"></i>
+                    <span className="whitespace-nowrap break-normal [overflow-wrap:normal]">Note</span>
                   </button>
                   <button 
                     type="button"
                     onClick={generatePromptNote}
                     disabled={promptState.isGenerating || !filteredEntries.some(e => !isWelcomeEntry(e) && !isSeedEntry(e) && !isAiChatEntry(e) && hasSummaryOrTakeaways(e))}
-                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#059669] hover:bg-[#047857] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-1 h-7 px-2 text-xs rounded bg-[#059669] hover:bg-[#047857] text-white font-semibold transition-colors flex items-center justify-center gap-1 font-mono shadow-xs cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap" 
                     title={`Prompt: AI theme reflection questions\u000A\u000AGenerate a new prompt from ${activeListScopeSummary ? `notes matching ${activeListScopeSummary}` : 'your recent notes'} (pool and timeframe in Prompt Settings)`}
                   >
-                    <i className="fa-solid fa-plus text-[10px]"></i>
-                    <span>Prompt</span>
+                    <i className="fa-solid fa-plus text-[10px] shrink-0"></i>
+                    <span className="whitespace-nowrap break-normal [overflow-wrap:normal]">Prompt</span>
                   </button>
                   <button 
                     type="button"
                     onClick={() => startWholeBrainChat()} 
-                    className="flex-1 h-7 px-3 text-xs rounded bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors flex items-center justify-center gap-1.5 font-mono font-semibold cursor-pointer shrink-0 shadow-xs" 
+                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#a855f7] hover:bg-[#9333ea] text-white transition-colors flex items-center justify-center gap-1 font-mono font-semibold cursor-pointer shrink-0 shadow-xs whitespace-nowrap" 
                     title={`AI Chat: Archived AI conversations &amp; syntheses&#10;&#10;Start new ${activeBrainChatTitle}`}
                   >
-                    <i className="fa-solid fa-plus text-[10px]"></i>
-                    <span>Chat</span>
+                    <i className="fa-solid fa-plus text-[10px] shrink-0"></i>
+                    <span className="whitespace-nowrap break-normal [overflow-wrap:normal]">Chat</span>
                   </button>
                   <button 
                     type="button"
                     onClick={() => handleNewSeed()} 
-                    className="flex-1 h-7 px-2.5 text-xs rounded bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold transition-colors flex items-center justify-center gap-1.5 font-mono shadow-xs cursor-pointer shrink-0" 
+                    className="flex-1 h-7 px-2 text-xs rounded bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold transition-colors flex items-center justify-center gap-1 font-mono shadow-xs cursor-pointer shrink-0 whitespace-nowrap" 
                     title="Seed: AI prompt shortcuts &amp; instructions&#10;&#10;Create a new prompt shortcut without summaries or takeaways"
                   >
-                    <i className="fa-solid fa-plus text-[10px]"></i>
-                    <span>Seed</span>
+                    <i className="fa-solid fa-plus text-[10px] shrink-0"></i>
+                    <span className="whitespace-nowrap break-normal [overflow-wrap:normal]">Seed</span>
                   </button>
                 </div>
 
@@ -7170,6 +7423,17 @@ ${expandedBlocks.join('\n\n')}`
                         e.dataTransfer.setData('text/plain', entry.numericId ? `[Ref: ${entry.numericId}]` : `[Ref: ${entry.id}]`);
                       }}
                       onClick={(e) => handleEntryClick(e, entry.id)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const clickX = e.clientX;
+                        const clickY = e.clientY;
+                        const menuWidth = 190;
+                        const menuHeight = 130;
+                        const x = (clickX + menuWidth > window.innerWidth) ? Math.max(10, window.innerWidth - menuWidth - 10) : clickX;
+                        const y = (clickY + menuHeight > window.innerHeight) ? Math.max(10, window.innerHeight - menuHeight - 10) : clickY;
+                        setEntryContextMenu({ entryId: entry.id, x, y });
+                      }}
                       onDragOver={(e) => { e.preventDefault(); setDragOverEntryId(entry.id); }}
                       onDragLeave={() => setDragOverEntryId(null)}
                       onDrop={(e) => handleEntryDrop(e, entry.id)}
@@ -7187,16 +7451,16 @@ ${expandedBlocks.join('\n\n')}`
                           borderBottom: '1px solid transparent'
                         })
                       }}
-                      className={`group relative p-3.5 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 cursor-pointer ${
+                      className={`group relative p-3.5 rounded-md shadow-[var(--track-card-shadow)] transition-all duration-150 cursor-pointer min-w-0 max-w-full overflow-hidden break-words [overflow-wrap:anywhere] ${
                         isSelected
                           ? 'bg-[var(--track-card-active)] shadow-md'
                           : 'bg-[var(--track-card-bg)] hover:bg-[var(--bg-hover)]'
                       } ${dragOverEntryId === entry.id ? 'scale-[0.98] bg-[var(--bg-hover)]' : ''}`}
                     >
-                      <div className="flex justify-between items-start gap-2 mb-1">
-                        <h4 className="text-sm font-semibold leading-snug line-clamp-2 flex-1 text-[var(--text-main)] font-mono">
-                          <i className={`fa-solid ${typeIcon} mr-1.5 text-xs`} style={{ color: typeColor }}></i>
-                          {entry.title || (isSeed ? 'Untitled Seed' : 'Untitled Note')}
+                      <div className="flex justify-between items-start gap-2 mb-1 min-w-0">
+                        <h4 className="text-sm font-semibold leading-snug line-clamp-2 flex-1 min-w-0 break-words [overflow-wrap:anywhere] text-[var(--text-main)] font-mono">
+                          <i className={`fa-solid ${typeIcon} mr-1.5 text-xs shrink-0`} style={{ color: typeColor }}></i>
+                          <span className="min-w-0 break-words [overflow-wrap:anywhere]">{entry.title || (isSeed ? 'Untitled Seed' : 'Untitled Note')}</span>
                         </h4>
                         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
@@ -7220,28 +7484,28 @@ ${expandedBlocks.join('\n\n')}`
                         )}
                       </div>
 
-                      {/* For seed, prompt, or aiChat entries, show fullContent or summary preview */}
+                      {/* For seed, prompt, or aiChat entries, show summary or fullContent preview */}
                       {(isSeed || isPrompt || isAiChat) ? (
-                        (entry.fullContent || entry.summary) && (
-                          <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
-                            {entry.fullContent || entry.summary}
+                        (entry.summary || entry.fullContent) && (
+                          <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono min-w-0 break-words [overflow-wrap:anywhere]">
+                            {entry.summary || entry.fullContent}
                           </p>
                         )
                       ) : (
                         entry.summary && (
-                          <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono">
+                          <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2 font-normal font-mono min-w-0 break-words [overflow-wrap:anywhere]">
                             {entry.summary}
                           </p>
                         )
                       )}
 
-                      <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                        <span className="text-[var(--text-muted)] font-mono mr-1">#{entry.numericId}</span>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] min-w-0">
+                        <span className="text-[var(--text-muted)] font-mono mr-1 shrink-0">#{entry.numericId}</span>
                         {Array.isArray(entry.projects) && entry.projects.slice(0, 1).map(p => (
-                          <span key={p} className="badge text-[10px]">{p}</span>
+                          <span key={p} className="badge text-[10px] min-w-0 break-words [overflow-wrap:anywhere]">{p}</span>
                         ))}
                         {Array.isArray(entry.categories) && entry.categories.slice(0, 1).map(c => (
-                          <span key={c} className="badge text-[10px]">{c}</span>
+                          <span key={c} className="badge text-[10px] min-w-0 break-words [overflow-wrap:anywhere]">{c}</span>
                         ))}
                       </div>
                     </div>
@@ -7404,48 +7668,52 @@ ${expandedBlocks.join('\n\n')}`
                             {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
                           </span>
                           <span>•</span>
-                          <span className="badge text-[10px] bg-[#a855f7]/10 text-[var(--text-main)] border-[#a855f7]/30 flex items-center gap-1.5" title="Cumulative Input & Output Tokens in this AI Chat">
+                          <span className="badge text-[10px] bg-[#a855f7]/10 text-[var(--text-main)] border-[#a855f7]/30 flex items-center gap-1.5" title="Cumulative Tokens: Out (Prompt to Model) & In (Response from Model)">
                             <span className="text-[#a855f7] font-semibold">Tokens</span>
-                            <span>In: {chatTokenTotals.inputTokens.toLocaleString()}</span>
+                            <span>Out: {chatTokenTotals.inputTokens.toLocaleString()}</span>
                             <span className="opacity-40">|</span>
-                            <span>Out: {chatTokenTotals.outputTokens.toLocaleString()}</span>
+                            <span>In: {chatTokenTotals.outputTokens.toLocaleString()}</span>
                           </span>
                         </div>
 
                         {/* Taxonomies Row for AI Chat */}
                         {renderTaxonomySection(activeSingleEntry, { showSourceUrl: false })}
 
-                        {/* Expandable Session Summary & Key Takeaways Panel */}
+                        {/* Persistent Executive Summary Field for AI Chat */}
+                        <div className="relative group bg-[var(--card-bg)] border-l-4 border-l-[#a855f7] rounded p-3 text-[var(--text-main)] text-xs leading-relaxed shadow-xs font-mono mt-2">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#a855f7] flex items-center gap-1.5">
+                              <i className="fa-solid fa-lightbulb"></i> Executive Summary
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateTLDR(activeSingleEntry.id)}
+                              disabled={isAnalyzing}
+                              className="text-[10px] text-[#a855f7] hover:underline flex items-center gap-1 cursor-pointer"
+                              title="Auto-generate summary from chat transcript"
+                            >
+                              <i className={`fa-solid fa-rotate-right ${isAnalyzing && generatingField === 'summary' ? 'animate-spin' : ''}`}></i>
+                              Generate
+                            </button>
+                          </div>
+                          <EditableText 
+                            key={`chat-summary-${activeSingleEntry.id}`}
+                            tag="p"
+                            multiline={true}
+                            className="text-xs leading-relaxed text-[var(--text-main)] cursor-text"
+                            text={activeSingleEntry.summary || ''} 
+                            placeholder="Double-click to write summary of this chat session..."
+                            onSave={(newText) => {
+                              const targetId = activeSingleEntry.id;
+                              setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
+                            }} 
+                          />
+                        </div>
+
+                        {/* Expandable Key Takeaways Panel */}
                         {showChatSummary && (
-                          <div className="p-3.5 rounded bg-[var(--card-bg)] border border-[#a855f7]/30 space-y-3 font-mono shadow-xs mt-2">
+                          <div className="p-3.5 rounded bg-[var(--card-bg)] border border-[#a855f7]/30 space-y-2 font-mono shadow-xs mt-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#a855f7] flex items-center gap-1">
-                                <i className="fa-solid fa-lightbulb"></i> Executive Summary
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleGenerateTLDR(activeSingleEntry.id)}
-                                disabled={isAnalyzing}
-                                className="text-[10px] text-[#a855f7] hover:underline flex items-center gap-1 cursor-pointer"
-                                title="Auto-generate summary from chat transcript"
-                              >
-                                <i className={`fa-solid fa-rotate-right ${isAnalyzing && generatingField === 'summary' ? 'animate-spin' : ''}`}></i>
-                                Generate
-                              </button>
-                            </div>
-                            <EditableText 
-                              key={`chat-summary-${activeSingleEntry.id}`}
-                              tag="p"
-                              multiline={true}
-                              className="text-xs leading-relaxed text-[var(--text-main)] cursor-text"
-                              text={activeSingleEntry.summary || ''} 
-                              placeholder="Double-click to write summary of this chat session..."
-                              onSave={(newText) => {
-                                const targetId = activeSingleEntry.id;
-                                setEntries(prev => prev.map(e => e.id === targetId ? { ...e, summary: newText, updatedAt: Date.now() } : e));
-                              }} 
-                            />
-                            <div className="pt-2 border-t border-[var(--border)]/40 flex justify-between items-center">
                               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1">
                                 <i className="fa-solid fa-list-check text-[#a855f7]"></i> Key Takeaways
                               </span>
@@ -7536,13 +7804,13 @@ ${expandedBlocks.join('\n\n')}`
                           <div className="space-y-4 max-w-3xl mx-auto w-full">
                             {currentChatMessages.map((msg, mIdx) => (
                               <div key={msg.id || mIdx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] rounded p-4 shadow-[var(--track-card-shadow)] leading-relaxed ${
+                                <div className={`max-w-[85%] rounded p-4 shadow-[var(--track-card-shadow)] leading-relaxed min-w-0 break-words [overflow-wrap:anywhere] ${
                                   msg.role === 'user'
                                     ? 'bg-[var(--card-bg)] text-[var(--text-main)]'
                                     : 'bg-[#a855f7]/10 text-[var(--text-main)]'
                                 }`}>
                                   {msg.role === 'user' ? (
-                                    <div className="whitespace-pre-wrap text-xs font-mono">{msg.text}</div>
+                                    <div className="whitespace-pre-wrap text-xs font-mono min-w-0 break-words [overflow-wrap:anywhere]">{msg.text}</div>
                                   ) : (
                                     <div>
                                       <div 
@@ -8083,10 +8351,10 @@ ${expandedBlocks.join('\n\n')}`
                           {(taskModels.assistant || model || DEFAULT_MODEL).replace('gemini-', '')}
                         </span>
                       </div>
-                      <span className="badge text-[10px] font-mono flex items-center gap-1 text-[var(--text-muted)]" title="Cumulative Input & Output Tokens in this chat">
-                        <span>In: {drawerTokens.inputTokens.toLocaleString()}</span>
+                      <span className="badge text-[10px] font-mono flex items-center gap-1 text-[var(--text-muted)]" title="Cumulative Tokens: Out (Prompt to Model) & In (Response from Model)">
+                        <span>Out: {drawerTokens.inputTokens.toLocaleString()}</span>
                         <span className="opacity-40">|</span>
-                        <span>Out: {drawerTokens.outputTokens.toLocaleString()}</span>
+                        <span>In: {drawerTokens.outputTokens.toLocaleString()}</span>
                       </span>
                     </div>
                   );
@@ -8127,13 +8395,13 @@ ${expandedBlocks.join('\n\n')}`
                   <div className="space-y-3.5">
                     {assistantMessages.map(msg => (
                       <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[90%] rounded px-3.5 py-2.5 shadow-[var(--track-card-shadow)] leading-relaxed ${
+                        <div className={`max-w-[90%] rounded px-3.5 py-2.5 shadow-[var(--track-card-shadow)] leading-relaxed min-w-0 break-words [overflow-wrap:anywhere] ${
                           msg.role === 'user' 
                             ? 'bg-[var(--bg-main)] text-[var(--text-main)]' 
                             : 'bg-[#a855f7]/10 text-[var(--text-main)]'
                         }`}>
                           {msg.role === 'user' ? (
-                            <div className="whitespace-pre-wrap">{msg.text}</div>
+                            <div className="whitespace-pre-wrap min-w-0 break-words [overflow-wrap:anywhere]">{msg.text}</div>
                           ) : (
                             <div>
                               <div 
@@ -8336,6 +8604,63 @@ ${expandedBlocks.join('\n\n')}`
             </div>,
             document.body
           )}
+
+          {/* Entry Card Context Menu */}
+          {entryContextMenu && (() => {
+            const ctxEntry = entries.find(e => e.id === entryContextMenu.entryId);
+            if (!ctxEntry) return null;
+            const isPinned = Boolean(ctxEntry.pinned);
+            const refText = ctxEntry.numericId ? `[Ref: ${ctxEntry.numericId}]` : `[Ref: ${ctxEntry.id}]`;
+
+            return (
+              <div 
+                className="fixed z-[9999] w-48 bg-[var(--card-bg)] rounded-md shadow-2xl py-1 text-xs font-mono border border-[var(--border)] animate-in fade-in zoom-in-95 duration-100 select-none"
+                style={{ top: `${entryContextMenu.y}px`, left: `${entryContextMenu.x}px` }}
+                onClick={(e) => e.stopPropagation()}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                <div className="px-3 py-1.5 text-[10px] text-[var(--text-muted)] border-b border-[var(--border)] truncate font-semibold">
+                  {ctxEntry.title || 'Note Actions'}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText(refText);
+                    }
+                    setEntryContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[var(--text-main)] hover:bg-[var(--bg-hover)] flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <i className="fa-solid fa-copy w-4 text-[var(--text-muted)]"></i>
+                  <span>Copy Reference ({refText})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    togglePin(e, ctxEntry.id);
+                    setEntryContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[var(--text-main)] hover:bg-[var(--bg-hover)] flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <i className={`fa-solid fa-thumbtack w-4 ${isPinned ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}></i>
+                  <span>{isPinned ? 'Unpin Note' : 'Pin Note'}</span>
+                </button>
+                <div className="my-1 border-t border-[var(--border)]"></div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteEntry(ctxEntry.id);
+                    setEntryContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[var(--danger)] hover:bg-[var(--danger)]/10 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <i className="fa-solid fa-trash-can w-4 text-[var(--danger)]"></i>
+                  <span>Delete Note</span>
+                </button>
+              </div>
+            );
+          })()}
 
         </div>
       );

@@ -97,7 +97,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; System Manual</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.116</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Local-First Autonomous Knowledge Base &bull; Version <span class="font-bold text-[var(--text-main)]">v2.8.125</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="changelog.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -371,16 +371,18 @@
         </li>
         <li><strong>Whole Brain / Scoped AI Chat (Full-Width Purple View):</strong>
           <ul class="list-disc pl-5 mt-1 space-y-1">
-            <li><em>Dynamic Scope, Inline Editing &amp; Title Auto-Generation:</em> Named automatically after your active Entry Type and Taxonomy filters (e.g., <code>Whole Brain AI Chat</code> or <code>Project: X AI Chat</code>), with double-click inline editing and an on-hover auto-generate refresh button beside the title to synthesize a descriptive title from the conversation transcript.</li>
+            <li><em>Dynamic Scope, Inline Editing &amp; Auto-Generated Titles:</em> Named automatically after your active Entry Type and Taxonomy filters (e.g., <code>Whole Brain AI Chat</code> or <code>Project: X AI Chat</code>), with double-click inline editing and automatic title generation once the first AI response arrives, distilling the conversation into a concise 3–6 word title.</li>
+            <li><em>Persistent Executive Summary Field &amp; Auto-Generation:</em> Global AI chat sessions feature a persistent, directly editable Executive Summary section with an on-demand "Generate" button. Navigating or clicking out of an AI chat automatically generates an AI summary in the background if left unsummarized, which also displays as the entry preview in sidebar cards.</li>
             <li><em>Uncapped Summaries First, Details On Demand:</em> Sends <strong>all</strong> matching note <strong>Executive Summaries</strong> (<code>summary</code>) with no artificial count limit&mdash;you control the scope via your type and taxonomy selections. If summaries are enough to answer, the AI replies in a <strong>single pass</strong> (<code>directReply</code>). If deeper detail is required, it automatically fetches <strong>Key Takeaways</strong> (<code>takeawayIds</code>) or <strong>Full Content</strong> (<code>contentIds</code>) for specific notes in a second pass.</li>
             <li><em>Auto-Selected Type &amp; Excluded Prior Chats:</em> Clicking the purple <strong>Chat</strong> / <strong>New Chat</strong> button automatically enables the <em>AI Chat</em> entry type in the list so your chat sessions are visible, while strictly excluding previous <em>AI Chat</em> entries from being fed into context for new chats.</li>
             <li><em>Persistent &amp; Self-Cleaning:</em> Conversations save automatically to their <em>AI Chat</em> entry and resume when clicked. Empty chats that you navigate away from without sending a message are pruned automatically.</li>
             <li><em>In-Place Taxonomy Editing:</em> An interactive taxonomy row sits directly under the metadata subtitle, allowing you to click and open the standard taxonomy editor to assign or remove Projects, Categories, and Tags (or auto-generate tags) for the chat session.</li>
           </ul>
         </li>
-        <li><strong>Cumulative Input &amp; Output Token Tracking:</strong> Both AI Chat views display a live <code>Tokens In: X | Out: Y</code> counter at the top of the chat header, tracking and incrementing cumulative prompt (<code>inputTokens</code>) and response (<code>outputTokens</code>) tokens across every turn of the conversation (including two-pass context escalations).</li>
+        <li><strong>Cumulative AI Token Tracking (Out / In):</strong> Both AI Chat views display a live <code>Tokens Out: X | In: Y</code> counter at the top of the chat header, representing the application's perspective: tracking cumulative prompt tokens sent out to the model (<code>inputTokens</code> &rarr; <strong>Out</strong>) and response tokens arriving into the app (<code>outputTokens</code> &rarr; <strong>In</strong>) across every turn of the conversation (including two-pass context escalations).</li>
         <li><strong>Response Style &amp; Temperature (<code>0.3</code>):</strong> Uses a focused temperature of <code>0.3</code> for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline <code>[[kb-ref:ID]]</code> source citations.</li>
         <li><strong>Knowledge Provenance Grounding &amp; Prompt Questions:</strong> In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. For Theme Prompt entries, the reflection question is automatically supplied to the model alongside the user's answer so discussions remain grounded on the original question. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.</li>
+        <li><strong>On-Demand Web Search Policy:</strong> By default, the AI assistant focuses strictly on synthesizing the user's local knowledge base library and does not perform web searches. When the user explicitly requests to look outside of the library or specifically requests a web search (e.g., <em>"search the web"</em>, <em>"look online"</em>, <em>"search outside my library"</em>), the app activates live Google Search grounding (<code>tools: [{ google_search: {} }]</code>), synthesizes up-to-date web results with clickable source links, and ensures the assistant never erroneously claims it is unable to perform web searches.</li>
       </ul>
     </section>
 
@@ -394,6 +396,7 @@
       </p>
       <ul class="list-disc pl-5 space-y-2 text-xs text-[var(--text-muted)]">
         <li><strong>Interactive Backlinks &amp; Citations:</strong> Using <code>[Ref: 23]</code> (or lowercase <code>[ref: 23]</code>, as well as legacy <code>[[kb-ref:ENTRY_ID]]</code>) establishes an interactive link matching the rendered display format directly. Hovering over the reference renders an instant summary popover, while clicking navigates directly to the referenced note.</li>
+        <li><strong>External Links Open in New Tab:</strong> All web URLs and markdown links across note contents, markdown previews, prompt responses, and AI chat messages automatically open in a new browser tab (<code>target="_blank" rel="noopener noreferrer"</code>), keeping your active workspace open and undisturbed.</li>
         <li><strong>Drag to Reference:</strong> Drag any note card from the sidebar list and drop it into the Markdown editor to automatically insert a clean <code>[Ref: ID]</code> reference link.</li>
         <li><strong>Chronological Decimal IDs:</strong> Notes use stable decimal identifiers (e.g. <code>#1</code>, <code>#2</code>, <code>#2.1</code>), permitting chronological insertions into intermediate timeline gaps while maintaining stable referencing.</li>
       </ul>
@@ -563,6 +566,10 @@
               </thead>
               <tbody class="divide-y divide-[var(--border)]">
                 <tr>
+                  <td class="py-2 pr-4 font-mono">Right-Click / Secondary Click Entry Card</td>
+                  <td class="py-2 text-[var(--text-muted)]">Opens desktop context menu with quick options to <strong>Copy Reference</strong> (<code>[Ref: ID]</code>), <strong>Pin / Unpin Note</strong>, and <strong>Delete Note</strong>.</td>
+                </tr>
+                <tr>
                   <td class="py-2 pr-4 font-mono"><kbd>Shift</kbd> + Click Entry Type</td>
                   <td class="py-2 text-[var(--text-muted)]"><strong>Solo Filter:</strong> Instantly isolates that specific entry type (Notes, Prompts, Media, Web, AI Chat), hiding all others. Shift-clicking the active solo type restores all default types.</td>
                 </tr>
@@ -601,7 +608,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.116</strong></span>
+      <span>Version <strong>v2.8.125</strong></span>
       <a href="changelog.html">Changelog</a>
       <a href="index.html">Back to Brain App</a>
     </div>

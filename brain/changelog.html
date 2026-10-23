@@ -80,7 +80,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; Changelog</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.116</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.125</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="readme.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -105,18 +105,50 @@
   <!-- Timeline -->
   <main class="space-y-8 text-sm">
 
-    <!-- v2.8.116 (Current Active Series) -->
+    <!-- v2.8.125 (Current Active Series) -->
     <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
       <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--accent)] border-[var(--bg-main)]"></div>
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.116</h2>
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.125</h2>
           <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
         </div>
         <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-22</span>
       </div>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
         <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Action Buttons Non-Breaking Labels:</strong> Added <code>whitespace-nowrap</code>, explicit normal wrapping (<code>[overflow-wrap:normal]</code>), and adjusted padding/gaps across the entry list action buttons (<code>+ Note</code>, <code>+ Prompt</code>, <code>+ Chat</code>, <code>+ Seed</code>) and global <code>button</code> styles to prevent narrow columns or word-break rules from splitting button labels across multiple lines (e.g. <code>Promp / t</code>).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Persistent Summary &amp; Auto-Generation for Global AI Chat:</strong> Added a persistent executive summary field to Whole Brain / Global AI Chat sessions (<code>aiChat</code>), mirroring standard note cards with direct in-place editing (<code>EditableText</code>) and an on-demand "Generate" button. Global AI chat sessions automatically generate an executive summary when navigating or clicking out of the entry if left unsummarized. In sidebar entry cards, the generated chat summary is displayed prominently as the card preview.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Auto-Generate Title After First AI Response:</strong> In Whole Brain AI Chat, once the first response arrives from the model, an intelligent title generation request is automatically dispatched in the background to summarize the exchange into a punchy 3–6 word title, immediately replacing default or raw prompt placeholders without requiring manual title generation.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Universal Word Wrapping &amp; Inner Entry-Card Overflow Hardening:</strong> Hardened word-breaking and layout boundaries across the entire application to prevent long unbroken strings (unspaced URLs, cryptographic hashes, continuous alphanumeric strings, and inline tokens) from overflowing or breaking flex layouts. Applied universal <code>overflow-wrap: anywhere;</code> and <code>word-break: break-word;</code> across typography, tag badges, and global resets while preserving horizontal scrolling on <code>&lt;pre&gt;</code> code blocks. Reinforced entry cards with <code>min-w-0 max-w-full overflow-hidden break-words [overflow-wrap:anywhere]</code> across card headers, title headings, summary previews, and taxonomy chips, ensuring list items stay neatly contained and wrap cleanly in all views.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Links Open in New Tab by Default:</strong> Configured the markdown engine (<code>marked.js</code>), HTML sanitizers, and link click delegation so all external web links across note contents, markdown views, prompt responses, and AI chat messages (both full-width AI Chat and the single-entry assistant drawer) open in a new browser tab by default (<code>target="_blank" rel="noopener noreferrer"</code>). Prevents accidental page navigation away from the active knowledge base workspace when exploring citations, sources, or external references.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">On-Demand Web Search &amp; External Knowledge Policy:</strong> Clarified and enhanced AI web search capabilities across both the full-width <strong>AI Chat</strong> and the <strong>Current Entry AI Assistant</strong> drawer. By default, the AI assistant focuses strictly on synthesizing the user's local knowledge base library and does not perform web searches. When the user explicitly requests to look outside of the library or specifically requests a web search (e.g., <em>"search the web"</em>, <em>"look online"</em>, <em>"search outside my library"</em>), the app activates live Google Search grounding (<code>tools: [{ google_search: {} }]</code>), synthesizes up-to-date web results with clickable source links, and ensures the assistant never erroneously claims it is unable to perform web searches.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">App-Centric AI Token Counter Labels (Out / In):</strong> Aligned token counter naming with the application's perspective across both the full-width <strong>AI Chat</strong> view and the <strong>Current Entry AI Assistant</strong> drawer header. Tokens sent to the model (prompts) go out from the app and are now designated <strong>Out</strong>, while tokens received from the model (responses/completions) arrive into the app and are designated <strong>In</strong> (<code>Out: &lt;prompt&gt; | In: &lt;response&gt;</code>).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Secondary-Click (Right-Click) Entry Card Context Menu:</strong> Added a desktop-style context menu triggered on secondary click (right-click or two-finger tap) on any note card in the list panel. Features instantaneous options to <strong>Copy Reference (<code>[Ref: ID]</code>)</strong>, <strong>Pin / Unpin Note</strong>, and <strong>Delete Note</strong> with full undo/redo support. Preserves active note selection without switching entries on right-click, includes boundary collision prevention, and dismisses cleanly on outside clicks, scroll, or <kbd>Esc</kbd>.</span>
+          </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
             <span><strong class="text-[var(--text-main)]">Exposed AI Instructions &amp; User Context in Settings:</strong> Added a dedicated <em>AI Instructions &amp; Context</em> section in Settings. Users can now view, modify, and fine-tune the system instructions for <strong>Theme Prompts</strong> (reflection questions, tension exploration, concept isolation) and <strong>AI Chat Rules</strong> (knowledge provenance, concise writing style, constraints), as well as provide their own <strong>User Context &amp; Profile</strong> (background, current research/projects, and style preferences) which is prepended into prompt syntheses and conversational chat copilots. Provided instant <em>Reset to Default</em> buttons for each instruction category and synced custom instructions into local JSON library saves and browser storage. Quick metadata extraction instructions (titles, summaries, takeaways, and taxonomies) remain deliberately fixed to guarantee fast, deterministic cataloging.</span>
@@ -662,7 +694,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.116</strong></span>
+      <span>Version <strong>v2.8.125</strong></span>
       <a href="readme.html">System Manual</a>
       <a href="index.html">Back to Brain App</a>
     </div>

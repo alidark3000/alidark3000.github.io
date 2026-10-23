@@ -116,20 +116,23 @@ The AI Assistant lets you chat with either a single open note or your broader kn
   - **Context & On-Demand Cross-Note Content Access:** Sends the active note's full Content field (including live staged editor text), summary, takeaways, and source URL (as well as its reflection question for Theme Prompts). Other notes in your knowledge base are summarized with on-demand availability; the assistant dynamically requests and inspects the full Content fields of other notes in a second pass whenever cross-document comparison, reference verification, or multi-note synthesis is needed.
   - **Auto-Close & Auto-Reopen:** Switching notes automatically closes the drawer if the new note has no prior chat, and automatically re-opens it if the note already has a saved conversation (`assistantChats[entry.id]`). Toggle manually anytime with <kbd>Cmd+J</kbd> / <kbd>Ctrl+J</kbd>.
 - **Whole Brain / Scoped AI Chat (Full-Width Purple View):**
-  - **Dynamic Scope, Inline Editing & Title Auto-Generation:** Named automatically after your active Entry Type and Taxonomy filters (e.g., `Whole Brain AI Chat` or `Project: X AI Chat`), with double-click inline editing and an on-hover auto-generate refresh button beside the title to synthesize a descriptive title from the conversation transcript.
+  - **Dynamic Scope, Inline Editing & Auto-Generated Titles:** Named automatically after your active Entry Type and Taxonomy filters (e.g., `Whole Brain AI Chat` or `Project: X AI Chat`), with double-click inline editing and automatic title generation as soon as the first AI response arrives, distilling the conversation into a concise 3–6 word title.
+  - **Persistent Executive Summary Field & Auto-Generation:** Global AI chat entries feature a persistent, directly editable Executive Summary section with an on-demand "Generate" button. Navigating or clicking out of an AI chat automatically generates an AI summary in the background if left unsummarized, which also displays as the entry preview in sidebar cards.
   - **Uncapped Summaries First, Details On Demand:** Sends **all** matching note **Executive Summaries** (`summary`) with no artificial count limit—you control the scope via your type and taxonomy selections. If summaries are enough to answer, the AI replies in a **single pass** (`directReply`). If deeper detail is required, it automatically fetches **Key Takeaways** (`takeawayIds`) or **Full Content** (`contentIds`) for specific notes in a second pass.
   - **Auto-Selected Type & Excluded Prior Chats:** Clicking the purple **Chat** / **New Chat** button automatically enables the `AI Chat` entry type in the list so your chat sessions are visible, while strictly excluding previous `AI Chat` entries from being fed into context for new chats.
   - **Persistent & Self-Cleaning:** Conversations save automatically to their `AI Chat` entry and resume when clicked. Empty chats that you navigate away from without sending a message are pruned automatically.
   - **In-Place Taxonomy Editing:** Includes an interactive taxonomy row directly below the metadata subtitle. Clicking anywhere on the row opens the standard in-place taxonomy editor to assign or remove Projects, Categories, and Tags (or auto-generate tags via Gemini) for the chat session.
-- **Cumulative Input & Output Token Tracking:** Both the full-width **AI Chat** header and the **Current Entry AI Assistant** drawer header display a live `Tokens In: X | Out: Y` counter that records and increments prompt input tokens and generated output tokens (`usageMetadata.promptTokenCount` and `candidatesTokenCount` / `thoughtsTokenCount`) across every turn (including two-pass escalations).
+- **Cumulative AI Token Tracking (Out / In):** Both the full-width **AI Chat** header and the **Current Entry AI Assistant** drawer header display a live `Tokens Out: X | In: Y` counter from the application's perspective: recording prompt tokens sent out to the model (`Out: <prompts>`) and completion tokens received in from the model (`In: <responses>`) across every turn (including two-pass escalations).
 - **Response Style & Temperature (`0.3`):** Uses a focused temperature of `0.3` for factual accuracy, plain conversational English, a 50-word default target (100-word ceiling unless asked for detail), and inline `[[kb-ref:ID]]` source citations.
 - **Knowledge Provenance Grounding & Prompt Questions:** In both Current Entry and Whole Brain chat modes, the AI strictly assumes only Notes and Prompt replies are user-generated content reflecting personal thinking, projects, and issues. For Theme Prompt entries, the reflection question is automatically supplied to the model alongside the user's answer so discussions remain grounded on the original question. Web, Media, and Text documents provide external third-hand context, while Seeds and prior AI chats are never used as knowledge context.
+- **On-Demand Web Search Policy:** By default, the AI assistant focuses strictly on synthesizing the user's local knowledge base library and does not perform web searches. When the user explicitly requests to look outside of the library or specifically requests a web search (e.g., *"search the web"*, *"look online"*, *"search outside my library"*), the app activates live Google Search grounding (`tools: [{ google_search: {} }]`), synthesizes up-to-date web results with clickable source citations, and ensures the assistant never claims it is unable to perform web searches.
 
 ---
 
 ## 8. Backlinks & Decimal Numeric IDs
 
 - **Interactive Backlinks & Citations:** Using `[Ref: 23]` (or lowercase `[ref: 23]`, as well as legacy `[[kb-ref:ENTRY_ID]]`) establishes an interactive bi-directional citation. The syntax matches the rendered display text exactly. Hovering renders an instant summary popover, while clicking navigates directly to the referenced note.
+- **External Links Open in New Tab:** All web URLs and markdown links across note bodies, markdown previews, prompt replies, and AI chat messages automatically open in a new browser tab (`target="_blank" rel="noopener noreferrer"`), ensuring your active workspace remains open uninterrupted.
 - **Drag to Reference:** Drag any note card from the sidebar list and drop it into the Markdown editor to insert a clean `[Ref: ID]` reference tag.
 - **Chronological Decimal IDs:** Notes use stable decimal identifiers (e.g. `#1`, `#2`, `#2.1`), permitting chronological insertions into intermediate timeline gaps while maintaining stable referencing.
 
@@ -187,6 +190,7 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 | Gesture / Modifier | Description |
 |---|---|
+| Right-Click / Secondary Click Entry Card | Opens desktop context menu with quick options to **Copy Reference** (`[Ref: ID]`), **Pin / Unpin Note**, and **Delete Note** |
 | <kbd>Shift</kbd> + Click Entry Type | **Solo Filter:** Isolates that entry type (Notes, Prompts, Media, Web, AI Chat), hiding all others. Shift-clicking active solo type restores defaults |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + Click Note | Toggle multi-selection of notes in the sidebar list |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + Click Taxonomy | Multi-select projects, categories, or tags in sidebar for composite filtering |
@@ -196,4 +200,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.116** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.125** • Local-First Autonomous Knowledge Base*

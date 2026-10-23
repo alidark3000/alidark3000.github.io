@@ -95,8 +95,9 @@
   }
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 ::selection {
@@ -112,6 +113,35 @@ body {
   overflow: hidden;
   margin: 0;
   padding: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Ensure long unbroken strings break everywhere across the app without clipping layouts */
+h1, h2, h3, h4, h5, h6, p, span, a, label, li, td, th, blockquote, dd, dt {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+pre {
+  overflow-x: auto;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+pre code {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+button {
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 /* Links */
@@ -219,6 +249,9 @@ input:focus, textarea:focus, select:focus {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .app-brand-header {
