@@ -1,7 +1,7 @@
 # Ali Brain • System Manual & Architecture
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.69** • [Online App](index.html) • [HTML Documentation](readme.html) • [Changelog](changelog.html)
+> Current Version: **v2.8.128** • [Online App](index.html) • [HTML Documentation](readme.html) • [Changelog](changelog.html)
 
 ---
 
@@ -29,7 +29,7 @@ Ali Brain is an autonomous, serverless personal knowledge management system that
 - **Temporary Swap Files (`.crswap`):** Chromium-based browsers (Chrome, Edge, Brave) write data atomically by creating a temporary swap file (e.g., `*.crswap`) in the same directory before renaming it to your JSON file. If your folder is synced by cloud services like iCloud Drive, OneDrive, or Dropbox, the sync agent can temporarily lock these scratch files while uploading, leaving behind orphaned `.crswap` files. These files contain no final state and **can be safely deleted at any time**. Storing your library in a dedicated folder keeps them contained and prevents folder clutter.
 - **IndexedDB Persistence:** File handles are retained via `idb-keyval` so you can resume your active workspace upon reload without picking the file again. An automatic backup snapshot is also written to IndexedDB on every save.
 - **Safari Local File Sync Bridge (Fallback for Non-Chromium Browsers):** When the browser supports the native File System Access API (Chrome, Edge, Brave), Brain reads and writes directly to your local `.json` file. When `window.showOpenFilePicker` is unavailable (such as in Safari), Brain automatically activates a local file bridge client (`127.0.0.1:8765`) paired with a one-time downloadable macOS setup archive ([`Enable-Safari-Sync.zip`](Enable-Safari-Sync.zip) → [`Enable-Safari-Sync.command`](Enable-Safari-Sync.command)). Running the script installs a lightweight local Python LaunchAgent (`~/.alibrain/bridge.py`) that provides native macOS file pickers, in-place auto-saving, startup auto-resume, and 3-way external change polling in Safari.
-- **Privacy by Default:** Zero telemetry, zero analytics, zero external database servers. Communication occurs solely between your browser and the Google Gemini API when using AI features.
+- **Privacy by Default:** Zero telemetry, zero analytics, zero external database servers. With Gemini AI, communication occurs solely between your browser and Google's API. With local models (LM Studio, Ollama, etc.), all AI processing stays entirely on your machine with no external network calls.
 
 ---
 
@@ -140,8 +140,9 @@ The AI Assistant lets you chat with either a single open note or your broader kn
 
 ## 9. Settings & Workspace Management
 
+- **AI Provider Selection:** Choose between **Gemini API** (Google's cloud models) or **Local Model** (any OpenAI-compatible endpoint like LM Studio, Ollama, or llama.cpp). Local models run entirely on your machine — no API key or internet required. When using a local provider, enter your server's endpoint URL (e.g. `http://localhost:1234/v1/chat/completions`) and optionally specify a model name. Web search and PDF ingestion remain Gemini-only features.
 - **API Key Management:** Store and rotate multiple Google Gemini API keys to distribute usage across quotas.
-- **Task-Specific Model Assignment:** Assign distinct Gemini models for Metadata & Summaries, Theme Prompts, and AI Assistant Copilot.
+- **Task-Specific Model Assignment:** Assign distinct Gemini models for Metadata & Summaries, Theme Prompts, and AI Assistant Copilot (Gemini-only).
 - **AI Instructions & User Context:** Customize system instructions and inject personal profile background:
   - **User Context & Profile:** Provide your personal background, ongoing research/projects, and communication preferences (automatically prepended into Theme Prompts and conversational AI chats).
   - **Theme Prompts Instructions:** Fine-tune the underlying prompt instructions controlling tension exploration, concept isolation, question style, and word limits.
@@ -200,4 +201,4 @@ Ali Brain is built for high-speed, keyboard-driven navigation, writing, and cura
 
 ---
 
-*Ali Brain • Documentation updated for **v2.8.125** • Local-First Autonomous Knowledge Base*
+*Ali Brain • Documentation updated for **v2.8.128** • Local-First Autonomous Knowledge Base*

@@ -80,7 +80,7 @@
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Ali Brain &bull; Changelog</h1>
       </div>
-      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.125</span></p>
+      <p class="text-xs text-[var(--text-muted)] mt-2">Release History &amp; Architecture Milestones &bull; Current Version <span class="font-bold text-[var(--text-main)]">v2.8.135</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="readme.html" class="px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-pane)] text-[var(--text-main)] text-xs font-semibold no-underline hover:border-[var(--accent)] transition-colors flex items-center gap-1.5">
@@ -105,18 +105,45 @@
   <!-- Timeline -->
   <main class="space-y-8 text-sm">
 
-    <!-- v2.8.125 (Current Active Series) -->
+    <!-- v2.8.128 (Current Active Series) -->
     <section class="relative pl-6 pb-2 border-l-2 border-[var(--accent)]/40">
       <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 bg-[var(--accent)] border-[var(--bg-main)]"></div>
       <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <div class="flex items-center gap-2">
-          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.125</h2>
+          <h2 class="font-bold text-base text-[var(--text-main)] font-mono">v2.8.135</h2>
           <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)]">Latest</span>
         </div>
-        <span class="text-xs text-[var(--text-muted)] font-mono">2026-10-22</span>
+        <span class="text-xs text-[var(--text-muted)] font-mono">2026-11-09</span>
       </div>
       <div class="p-4 rounded bg-[var(--bg-pane)] border border-[var(--border)]">
         <ul class="space-y-2.5 text-xs text-[var(--text-muted)]">
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Single Entry Chat Fix for Local Models:</strong> Fixed single entry AI Assistant chat returning &quot;Done.&quot; for local models (Ollama, LM Studio, etc.). Lightweight local models couldn't follow the complex JSON schema instructions used by Gemini, so they'd just echo back placeholder text. Local models now use a simplified plain-text system prompt without JSON schema wrapping, producing proper conversational responses. Gemini retains the full on-demand content escalation pipeline.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Local Settings Retained Across Provider Switches:</strong> Fixed issue where local model settings (endpoint URL and model name) could be lost when switching between AI providers. The <code>executeLibraryMerge</code> function now passes <code>aiProvider</code>, <code>localEndpoint</code>, and <code>localModel</code> to the database merger so library merges preserve your local configuration. Merged settings now use nullish coalescing (<code>??</code>) instead of logical OR (<code>||</code>) so empty strings are no longer treated as missing values.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Settings PWA Section Moved:</strong> Moved PWA / Install App section to the bottom of the Settings modal, after Library Merge.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Local Model Summary Generation Fix:</strong> Fixed summary (TL;DR) generation for local models. <code>parseAIJson</code> now detects and skips schema definitions when the model echoes back the JSON schema before its actual response. Improved regex for escaped quotes. Added smart fallback that extracts the actual response JSON even when the model repeats the schema.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Local Model Context Overflow Fix:</strong> Whole Brain chat now automatically trims candidate notes to fit within your local model's context window (defaults to 8192 tokens). Shows a warning when trimming occurs and advises increasing context size in your local server settings. Pass 2 (expanded note details) is also trimmed to prevent overflow.</span>
+          </li>
+          <li>
+            <span><strong class="text-[var(--text-main)]">Local Model Response Fix:</strong> Fixed local model (Ollama, LM Studio, etc.) returning empty responses for structured outputs (prompts, summaries, metadata). The <code>response_format</code> field is now omitted for local models entirely — Ollama supports <code>json</code> but not <code>json_schema</code>, while LM Studio requires <code>json_schema</code> and rejects <code>json</code>. Instead, schema instructions are embedded in the prompt and <code>parseAIJson</code> robustly extracts structured data from free-text JSON responses. Improved error messages to include the raw server response for easier debugging.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
+            <span><strong class="text-[var(--text-main)]">Local Model Support (OpenAI-Compatible):</strong> Added the ability to use locally running models (LM Studio, Ollama, llama.cpp, etc.) via their OpenAI-compatible API endpoint. Configure in Settings: switch AI Provider to &quot;Local Model&quot;, enter your server&apos;s endpoint URL (e.g. <code>http://localhost:1234/v1/chat/completions</code>), and optionally specify a model name. All chat, summaries, metadata extraction, and theme prompts work with local models. Web search and PDF ingestion remain Gemini-only features.</span>
+          </li>
           <li class="flex items-start gap-2">
             <span class="text-[var(--accent)] font-bold leading-none mt-1">&bull;</span>
             <span><strong class="text-[var(--text-main)]">Action Buttons Non-Breaking Labels:</strong> Added <code>whitespace-nowrap</code>, explicit normal wrapping (<code>[overflow-wrap:normal]</code>), and adjusted padding/gaps across the entry list action buttons (<code>+ Note</code>, <code>+ Prompt</code>, <code>+ Chat</code>, <code>+ Seed</code>) and global <code>button</code> styles to prevent narrow columns or word-break rules from splitting button labels across multiple lines (e.g. <code>Promp / t</code>).</span>
@@ -694,7 +721,7 @@
       Ali Brain &bull; <a href="https://alidark.com" target="_blank" rel="noopener">alidark.com</a>
     </div>
     <div class="flex items-center gap-4">
-      <span>Version <strong>v2.8.125</strong></span>
+      <span>Version <strong>v2.8.135</strong></span>
       <a href="readme.html">System Manual</a>
       <a href="index.html">Back to Brain App</a>
     </div>

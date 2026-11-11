@@ -1,11 +1,25 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.125** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.135** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.125 (2026-10-22) — *Latest*
+## v2.8.135 (2026-11-09) — *Latest*
+
+- **Single Entry Chat Fix for Local Models:** Fixed single entry AI Assistant chat returning "Done." for local models (Ollama, LM Studio, etc.). Lightweight local models couldn't follow the complex JSON schema instructions used by Gemini, so they'd just echo back placeholder text. Local models now use a simplified plain-text system prompt without JSON schema wrapping, producing proper conversational responses. Gemini retains the full on-demand content escalation pipeline.
+
+- **Local Settings Retained Across Provider Switches:** Fixed issue where local model settings (endpoint URL and model name) could be lost when switching between AI providers. The `executeLibraryMerge` function now passes `aiProvider`, `localEndpoint`, and `localModel` to the database merger so library merges preserve your local configuration. Merged settings now use nullish coalescing (`??`) instead of logical OR (`||`) so empty strings are no longer treated as missing values.
+
+- **Settings PWA Section Moved:** Moved PWA / Install App section to the bottom of the Settings modal, after Library Merge.
+
+- **Local Model Summary Generation Fix:** Fixed summary (TL;DR) generation for local models. `parseAIJson` now detects and skips schema definitions when the model echoes back the JSON schema before its actual response. Improved regex for escaped quotes. Added smart fallback that extracts the actual response JSON even when the model repeats the schema.
+
+- **Local Model Context Overflow Fix:** Whole Brain chat now automatically trims candidate notes to fit within your local model's context window (defaults to 8192 tokens). Shows a warning when trimming occurs and advises increasing context size in your local server settings. Pass 2 (expanded note details) is also trimmed to prevent overflow.
+
+- **Local Model Response Fix:** Fixed local model (Ollama, LM Studio, etc.) returning empty responses for structured outputs (prompts, summaries, metadata). The `response_format` field is now omitted for local models entirely — Ollama supports `json` but not `json_schema`, while LM Studio requires `json_schema` and rejects `json`. Instead, schema instructions are embedded in the prompt and `parseAIJson` robustly extracts structured data from free-text JSON responses. Improved error messages to include the raw server response for easier debugging.
+
+- **Local Model Support (OpenAI-Compatible):** Added the ability to use locally running models (LM Studio, Ollama, llama.cpp, etc.) via their OpenAI-compatible API endpoint. Configure in Settings: switch AI Provider to "Local Model", enter your server's endpoint URL (e.g. `http://localhost:1234/v1/chat/completions`), and optionally specify a model name. All chat, summaries, metadata extraction, and theme prompts work with local models. Web search and PDF ingestion remain Gemini-only features.
 
 - **Action Buttons Non-Breaking Labels:** Added `whitespace-nowrap`, explicit normal wrapping (`[overflow-wrap:normal]`), and adjusted padding/gaps across the entry list action buttons (`+ Note`, `+ Prompt`, `+ Chat`, `+ Seed`) and global `button` styles to prevent narrow columns or word-break rules from splitting button labels across multiple lines (e.g. `Promp / t`).
 - **Persistent Summary & Auto-Generation for Global AI Chat:** Added a persistent executive summary field to Whole Brain / Global AI Chat sessions (`aiChat`), mirroring standard note cards with direct in-place editing (`EditableText`) and an on-demand "Generate" button. Global AI chat sessions automatically generate an executive summary when navigating or clicking out of the entry if left unsummarized. In sidebar entry cards, the generated chat summary is displayed prominently as the card preview.

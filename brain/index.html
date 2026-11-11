@@ -128,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.125";
+    const APP_VERSION = "v2.8.135";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -461,7 +461,7 @@
         'All data auto-saves non-destructively to your local JSON file with zero cloud lock-in.',
         'Add new Notes, Prompts, AI Chats, and Seeds from the action buttons row at the top of the entry list.',
         'You must add notes first before generating Theme Prompts, as prompts require summarized notes to analyze.',
-        'Set your Gemini API key in Settings (sliders icon) — AI copilots, summaries, prompts, and chats require it.',
+        'Configure your AI provider in Settings (sliders icon) — AI copilots, summaries, prompts, and chats require it.',
         'Use [Ref: 1] syntax or drag note cards into the editor to create instant interactive backlinks.',
         'Read the comprehensive [System Manual](readme.html) for shortcuts, architecture details, and usage guides.'
       ],
@@ -645,6 +645,110 @@
       }
       return result;
     };
+    // Convert Gemini payload to OpenAI-compatible format and call local endpoint.
+    // Normalizes the response back to Gemini shape so callers need no changes.
+    const callLocalModel = async (endpoint, payload, model) => {
+      const activeModel = model || '';
+      const url = endpoint.replace(/\/$/, '');
+
+      // Build OpenAI messages from Gemini contents
+      const messages = [];
+
+      // System instruction -> system message
+      if (payload.systemInstruction) {
+        const sysText = payload.systemInstruction.parts?.map(p => p.text || '').join('\n').trim();
+        if (sysText) messages.push({ role: 'system', content: sysText });
+      }
+
+      // Contents -> messages
+      if (payload.contents && Array.isArray(payload.contents)) {
+        for (const c of payload.contents) {
+          const role = (c.role === 'model' || c.role === 'function') ? 'assistant' : 'user';
+          const textParts = c.parts?.filter(p => p.text).map(p => p.text).join('\n') || '';
+          if (textParts) {
+            messages.push({ role, content: textParts });
+          }
+        }
+      }
+
+      // Build generation config
+      const genConfig = payload.generationConfig || {};
+      const body = {
+        model: activeModel,
+        messages,
+        temperature: genConfig.temperature ?? 0.7,
+        max_tokens: genConfig.maxOutputTokens ?? 4096
+      };
+
+      // JSON mode for structured outputs
+      if (genConfig.responseMimeType === 'application/json') {
+        // Do NOT send response_format — local backends disagree on what values are valid:
+        //   Ollama supports 'json' but not 'json_schema'
+        //   LM Studio requires 'json_schema' and rejects 'json'
+        //   Others vary. Safer to omit entirely and rely on prompt instructions.
+        // The schema is appended to the prompt so the model knows the expected shape,
+        // and parseAIJson robustly extracts structured data from free-text JSON responses.
+        const normalizeSchema = (s) => {
+          if (!s || typeof s !== 'object') return s;
+          const out = {};
+          for (const [k, v] of Object.entries(s)) {
+            if (k === 'type' && typeof v === 'string') out[k] = v.toLowerCase();
+            else if (Array.isArray(v)) out[k] = v.map(normalizeSchema);
+            else out[k] = normalizeSchema(v);
+          }
+          return out;
+        };
+        const schema = normalizeSchema(genConfig.responseSchema || {});
+        // Append schema instructions to prompt so the model knows the expected shape
+        const schemaText = JSON.stringify(schema, null, 2);
+        if (schemaText && schemaText !== '{}') {
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg && lastMsg.role === 'user') {
+            lastMsg.content += '\n\nRespond strictly as valid JSON matching this schema:\n' + schemaText;
+          }
+        }
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || result.error?.message?.message || ('Local model error (' + response.status + '): ' + JSON.stringify(result).substring(0, 200)));
+      }
+
+      // Normalize OpenAI response to Gemini shape
+      const choice = result.choices?.[0];
+      if (!choice) {
+        const snippet = JSON.stringify(result).substring(0, 300);
+        throw new Error('Local model returned no response choices. Server replied: ' + snippet);
+      }
+
+      const assistantText = choice.message?.content || '';
+      if (!assistantText && choice.finish_reason === 'stop') {
+        const snippet = JSON.stringify(result).substring(0, 300);
+        throw new Error('Local model returned empty content. Server replied: ' + snippet);
+      }
+      const usage = result.usage || {};
+
+      return {
+        candidates: [{
+          content: {
+            parts: [{ text: assistantText }]
+          }
+        }],
+        usageMetadata: {
+          promptTokenCount: usage.prompt_tokens || 0,
+          candidatesTokenCount: usage.completion_tokens || 0,
+          totalTokenCount: usage.total_tokens || 0
+        }
+      };
+    };
+
 
     const extractUsageTokens = (result, fallbackInputText = '', fallbackOutputText = '') => {
       const usage = result?.usageMetadata;
@@ -736,11 +840,47 @@
           t = t.substring(firstBrace, lastBrace + 1).trim();
         }
       }
+      // If there are multiple JSON objects (e.g. model echoed the schema then the response),
+      // skip any leading schema-like objects and use the last one.
+      let parsed = null;
       try {
-        return JSON.parse(t);
+        parsed = JSON.parse(t);
       } catch (e) {
-        // Fallback for truncated or slightly malformed JSON
-        try {
+        // Will be handled by fallback below
+      }
+      // If the text contains multiple top-level objects, the model may have repeated the schema.
+      // Try to find the last valid JSON object that isn't a schema definition.
+      if (t.includes('}') && t.split('{').length > 2) {
+        // Extract all potential JSON objects and prefer the last non-schema one
+        const braceRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
+        let match;
+        let candidates = [];
+        while ((match = braceRegex.exec(t)) !== null) {
+          try {
+            const obj = JSON.parse(match[0]);
+            // Skip schema-like objects
+            if (obj.type === 'object' && obj.properties && !obj.summary && !obj.title && !obj.content && !obj.shortVersion) {
+              continue;
+            }
+            candidates.push(obj);
+          } catch (parseErr) {
+            // Not valid JSON, skip
+          }
+        }
+        if (candidates.length > 0) {
+          return candidates[candidates.length - 1];
+        }
+      }
+      if (parsed) {
+        // Skip schema-like objects
+        if (parsed.type === 'object' && parsed.properties && !parsed.summary && !parsed.title && !parsed.content && !parsed.shortVersion) {
+          // Fall through to regex fallback
+        } else {
+          return parsed;
+        }
+      }
+      // Fallback for truncated or slightly malformed JSON
+      try {
           let fixed = t;
           if (!fixed.endsWith('}')) {
             if (fixed.lastIndexOf('"') > fixed.lastIndexOf(':')) {
@@ -754,12 +894,12 @@
           const extracted = {};
           const titleMatch = t.match(/["']?(?:title|Title|suggestedTitle|suggested_title|headline|name)["']?\s*:\s*["']?([^"',}\n]+)/i);
           if (titleMatch) extracted.title = titleMatch[1].replace(/^["']+|["']+$/g, '').trim();
-          const summaryMatch = t.match(/"summary"\s*:\s*"([\s\S]*?)(?:"|\Z)/i);
-          if (summaryMatch) extracted.summary = summaryMatch[1];
-          const contentMatch = t.match(/"(?:content|question|prompt|reflection|inquiry)"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
-          if (contentMatch) extracted.content = contentMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim();
-          const themeMatch = t.match(/"theme"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
-          if (themeMatch) extracted.theme = themeMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim();
+          const summaryMatch = t.match(/"summary"\s*:\s*((?:[^"\\]|\\.)*)(?:"\s*,|"\s*\}|"\s*$)/i);
+          if (summaryMatch) extracted.summary = summaryMatch[1].replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\').trim();
+          const contentMatch = t.match(/"(?:content|question|prompt|reflection|inquiry)"\s*:\s*((?:[^"\\]|\\.)*)(?:"\s*,|"\s*\}|"\s*$)/i);
+          if (contentMatch) extracted.content = contentMatch[1].replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\').trim();
+          const themeMatch = t.match(/"theme"\s*:\s*((?:[^"\\]|\\.)*)(?:"\s*,|"\s*\}|"\s*$)/i);
+          if (themeMatch) extracted.theme = themeMatch[1].replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\').trim();
           const selectedIdsMatch = t.match(/"selectedIds"\s*:\s*\[([\s\S]*?)\]/i);
           if (selectedIdsMatch) {
             try {
@@ -791,10 +931,9 @@
             } catch (tErr) {}
           }
           if (Object.keys(extracted).length > 0) return extracted;
-          console.warn('Failed to parse AI JSON:', t, e);
+          console.warn('Failed to parse AI JSON:', t, e2);
           return null;
         }
-      }
     };
 
     const EditableText = ({ text, onSave, className = '', tag = 'span', multiline = false, stripPrefix = '', renderView = null, placeholder = '', disabled = false }) => {
@@ -1175,6 +1314,12 @@ CONVERSATIONAL & CONCISE WRITING RULES:
         assistant: DEFAULT_MODEL
       });
       const [manualModelMode, setManualModelMode] = useState(false);
+      const [aiProvider, setAiProvider] = useState('gemini');
+      const [localEndpoint, setLocalEndpoint] = useState('http://localhost:1234/v1/chat/completions');
+      const [localModel, setLocalModel] = useState('');
+      const [tempAiProvider, setTempAiProvider] = useState('gemini');
+      const [tempLocalEndpoint, setTempLocalEndpoint] = useState('http://localhost:1234/v1/chat/completions');
+      const [tempLocalModel, setTempLocalModel] = useState('');
       const [tempTheme, setTempTheme] = useState('default');
 
       // PWA install + offline support
@@ -1755,7 +1900,16 @@ CONVERSATIONAL & CONCISE WRITING RULES:
 
       const chatScrollRef = useRef(null);
 
-      const handleGeminiCall = async (payload, customModel) => {
+      const handleAiCall = async (payload, customModel) => {
+        if (aiProvider === 'local') {
+          if (!localEndpoint || localEndpoint.trim() === '') {
+            throw new Error("Local endpoint URL is not configured. Set it in Settings.");
+          }
+          // Local provider always uses localModel (task-specific models are Gemini-only)
+          const activeModel = localModel || '';
+          return await callLocalModel(localEndpoint, payload, activeModel);
+        }
+        // Gemini path
         if (!apiKeys || apiKeys.length === 0) {
           throw new Error("Please set your Gemini API key in Settings (Gear Icon in left sidebar).");
         }
@@ -1998,6 +2152,10 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           if (typeof data.aiInstructions.chat === 'string') loadedAiInstructions.chat = data.aiInstructions.chat;
         }
 
+        const loadedAiProvider = (data.aiProvider === 'local' || data.aiProvider === 'gemini') ? data.aiProvider : 'gemini';
+        const loadedLocalEndpoint = (typeof data.localEndpoint === 'string' && data.localEndpoint.trim()) ? data.localEndpoint : 'http://localhost:1234/v1/chat/completions';
+        const loadedLocalModel = data.localModel ?? '';
+
         return {
           entries: migratedEntries,
           tombstones: loadedTombstones,
@@ -2008,6 +2166,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           model: data.model || loadedTaskModels.assistant || DEFAULT_MODEL,
           taskModels: loadedTaskModels,
           theme: data.theme || 'default',
+          aiProvider: loadedAiProvider,
+          localEndpoint: loadedLocalEndpoint,
+          localModel: loadedLocalModel,
           assistantChats: (data.assistantChats && typeof data.assistantChats === 'object')
             ? data.assistantChats
             : (Array.isArray(data.assistantMessages) ? { workspace: data.assistantMessages } : { workspace: [] }),
@@ -2029,6 +2190,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
         model,
         taskModels,
         theme,
+        aiProvider,
+        localEndpoint,
+        localModel,
         assistantChats,
         archivedAssistantChats,
         appState,
@@ -2051,6 +2215,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           model,
           taskModels,
           theme,
+          aiProvider,
+          localEndpoint,
+          localModel,
           assistantChats,
           archivedAssistantChats,
           appState,
@@ -2061,7 +2228,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           isListSidebarOpen,
           isAssistantOpen
         };
-      }, [entries, tombstones, storedPrompts, promptConfig, aiInstructions, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
+      }, [entries, tombstones, storedPrompts, promptConfig, aiInstructions, apiKeys, model, taskModels, theme, aiProvider, localEndpoint, localModel, assistantChats, archivedAssistantChats, appState, fileHandle, editData, editingEntries, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
 
       // Non-Destructive Entry-Level 3-Way Merge Algorithm
       const mergeDatabases = (localState, incomingRawData) => {
@@ -2244,6 +2411,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           aiInstructions: localState.aiInstructions || incoming.aiInstructions || DEFAULT_AI_INSTRUCTIONS,
           apiKeys: (localState.apiKeys && localState.apiKeys.length > 0) ? localState.apiKeys : incoming.apiKeys,
           model: localState.model || incoming.model || DEFAULT_MODEL,
+          aiProvider: localState.aiProvider ?? incoming.aiProvider ?? 'gemini',
+          localEndpoint: localState.localEndpoint ?? incoming.localEndpoint ?? 'http://localhost:1234/v1/chat/completions',
+          localModel: localState.localModel ?? incoming.localModel ?? '',
           taskModels: localState.taskModels || incoming.taskModels || {
             metadata: DEFAULT_MODEL,
             prompts: DEFAULT_MODEL,
@@ -2305,6 +2475,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
                     model: currentModel,
                     taskModels: currentTaskModels,
                     theme: currentTheme,
+                    aiProvider: current.aiProvider,
+                    localEndpoint: current.localEndpoint,
+                    localModel: current.localModel,
                     isDirty: isDirtyRef.current,
                     lastSyncTime: lastSyncTimeRef.current
                   },
@@ -2334,6 +2507,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
                 if (merged.aiInstructions) setAiInstructions(merged.aiInstructions);
                 setTaskModels(currentTaskModels);
                 setModel(currentModel);
+                if (merged.aiProvider) setAiProvider(merged.aiProvider);
+                if (merged.localEndpoint) setLocalEndpoint(merged.localEndpoint);
+                if (merged.localModel !== undefined) setLocalModel(merged.localModel);
 
                 if (merged.addedCount > 0 || merged.updatedCount > 0 || merged.conflictCount > 0) {
                   setSyncNotification({
@@ -2367,6 +2543,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
             model: currentModel,
             taskModels: currentTaskModels,
             theme: currentTheme,
+            aiProvider: current.aiProvider ?? 'gemini',
+            localEndpoint: current.localEndpoint ?? 'http://localhost:1234/v1/chat/completions',
+            localModel: current.localModel ?? '',
             assistantMessages: (currentChats['workspace'] || []).slice(-50),
             assistantChats: currentChats,
             archivedAssistantChats: currentArchived,
@@ -2443,6 +2622,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
                 model: current.model,
                 taskModels: current.taskModels,
                 theme: current.theme,
+                aiProvider: current.aiProvider,
+                localEndpoint: current.localEndpoint,
+                localModel: current.localModel,
                 isDirty: isDirtyRef.current,
                 lastSyncTime: lastSyncTimeRef.current
               },
@@ -2462,6 +2644,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
             if (merged.aiInstructions) setAiInstructions(merged.aiInstructions);
             if (merged.taskModels) setTaskModels(merged.taskModels);
             if (merged.model) setModel(merged.model);
+          if (merged.aiProvider) setAiProvider(merged.aiProvider);
+          if (merged.localEndpoint) setLocalEndpoint(merged.localEndpoint);
+          if (merged.localModel !== undefined) setLocalModel(merged.localModel);
             if (!isDirtyRef.current && merged.layout) {
               setIsLeftSidebarOpen(merged.layout.isLeftSidebarOpen);
               setIsListSidebarOpen(merged.layout.isListSidebarOpen);
@@ -2491,7 +2676,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           saveWorkspaceToDisk();
         }, 1200);
         return () => clearTimeout(timer);
-      }, [entries, storedPrompts, apiKeys, model, taskModels, theme, assistantChats, archivedAssistantChats, tombstones, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
+      }, [entries, storedPrompts, apiKeys, model, taskModels, theme, aiProvider, localEndpoint, localModel, assistantChats, archivedAssistantChats, tombstones, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen]);
 
       // 2. Periodic sync (every 10 seconds): save if dirty, or pull external changes if clean
       useEffect(() => {
@@ -2659,6 +2844,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
             assistant: migrated.model || DEFAULT_MODEL
           });
           setTheme(migrated.theme);
+          setAiProvider(migrated.aiProvider ?? 'gemini');
+          setLocalEndpoint(migrated.localEndpoint ?? 'http://localhost:1234/v1/chat/completions');
+          setLocalModel(migrated.localModel ?? '');
           setAssistantChats(loadedChats);
           assistantChatsRef.current = loadedChats;
           setArchivedAssistantChats(migrated.archivedAssistantChats || { workspace: [] });
@@ -2777,6 +2965,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
             assistant: DEFAULT_MODEL
           });
           setTheme('default');
+          setAiProvider('gemini');
+          setLocalEndpoint('http://localhost:1234/v1/chat/completions');
+          setLocalModel('');
           setAssistantChats({ workspace: [] });
           setArchivedAssistantChats({ workspace: [] });
           setExpandedArchivedChatIds([]);
@@ -2839,6 +3030,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
               assistant: migrated.model || DEFAULT_MODEL
             });
             setTheme(migrated.theme);
+            setAiProvider(migrated.aiProvider ?? 'gemini');
+            setLocalEndpoint(migrated.localEndpoint ?? 'http://localhost:1234/v1/chat/completions');
+            setLocalModel(migrated.localModel ?? '');
             setAssistantChats(loadedChats);
             setArchivedAssistantChats(migrated.archivedAssistantChats || { workspace: [] });
             setExpandedArchivedChatIds([]);
@@ -2892,6 +3086,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
               model: current.model,
               taskModels: current.taskModels,
               theme: current.theme,
+              aiProvider: current.aiProvider,
+              localEndpoint: current.localEndpoint,
+              localModel: current.localModel,
               isDirty: true,
               lastSyncTime: lastSyncTimeRef.current
             },
@@ -2911,6 +3108,9 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           if (merged.aiInstructions) setAiInstructions(merged.aiInstructions);
           if (merged.taskModels) setTaskModels(merged.taskModels);
           if (merged.model) setModel(merged.model);
+          if (merged.aiProvider) setAiProvider(merged.aiProvider);
+          if (merged.localEndpoint) setLocalEndpoint(merged.localEndpoint);
+          if (merged.localModel !== undefined) setLocalModel(merged.localModel);
           isDirtyRef.current = true;
 
           const summary = `Merged successfully${sourceFileName ? ` with "${sourceFileName}"` : ''}: ${merged.addedCount} new note${merged.addedCount === 1 ? '' : 's'} added, ${merged.updatedCount} note${merged.updatedCount === 1 ? '' : 's'} updated to latest changes${merged.conflictCount ? `, ${merged.conflictCount} conflict copies preserved` : ''}.`;
@@ -2972,14 +3172,14 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           setMergeStatus({ type: 'success', message: summaryMsg });
 
           // Auto-generate summaries for imported text files with content if API keys exist
-          if (apiKeys && apiKeys.length > 0) {
+          if ((apiKeys && apiKeys.length > 0) || aiProvider === 'local') {
             (async () => {
               for (const entry of newEntries) {
                 const content = (entry.fullContent || '').trim();
                 if (content.length > 5) {
                   try {
                     const payload = buildMetadataPayload(['summary'], entry, content, { allProjects, allCategories, allTags });
-                    const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+                    const result = await handleAiCall(payload, taskModels.metadata || DEFAULT_MODEL);
                     const rawCandidate = result?.candidates?.[0];
                     const rawText = getCandidateText(rawCandidate || result);
                     const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
@@ -3230,9 +3430,19 @@ CONVERSATIONAL & CONCISE WRITING RULES:
 
       // Ingestion / Add entry
       const processInput = async (textContent, file = null) => {
-        if (!apiKeys || apiKeys.length === 0) {
+        if (aiProvider !== 'local' && (!apiKeys || apiKeys.length === 0)) {
           setShowKeyModal(true);
           return setError("Please set your Gemini API key in Settings first.");
+        }
+        // Local models can't handle PDFs (inlineData) or YouTube (Google Search tool)
+        if (aiProvider === 'local') {
+          if (file && file.type === 'application/pdf') {
+            return setError("PDF ingestion requires Gemini — switch AI Provider in Settings to process PDFs.");
+          }
+          const droppedData = (textContent || '').trim();
+          if (/^(https?:\/\/)?(youtube\.com|youtu\.be)\//.test(droppedData)) {
+            return setError("YouTube URL processing requires Gemini (needs web search) — switch AI Provider in Settings.");
+          }
         }
         setIsAnalyzing(true);
         setError(null);
@@ -3333,7 +3543,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           if (useSearchTool) payload.tools = [{ google_search: {} }];
 
           const metadataModel = taskModels.metadata || DEFAULT_MODEL;
-          const result = await handleGeminiCall(payload, metadataModel);
+          const result = await handleAiCall(payload, metadataModel);
           const parsed = parseAIJson(result.candidates?.[0]) || {};
           const nextNumericId = Math.floor(entries.reduce((max, e) => Math.max(max, e.numericId || 0), 0)) + 1;
 
@@ -3698,14 +3908,6 @@ CONVERSATIONAL & CONCISE WRITING RULES:
             throw new Error("No notes found in current list view to analyze.");
           }
 
-          const activeKey = apiKeys[0]?.key;
-          if (!activeKey) {
-            setShowKeyModal(true);
-            setError("Please configure your Gemini API key in Settings first.");
-            setPromptState({ isGenerating: false, draft: previousDraft || null });
-            return;
-          }
-
           const promptModel = taskModels.prompts || DEFAULT_MODEL;
           const promptTemperature = 1.0;
 
@@ -3795,7 +3997,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
             }
           };
 
-          const result = await callGemini(activeKey, payload, promptModel);
+          const result = await handleAiCall(payload, promptModel);
           const rawText = getCandidateText(result.candidates?.[0]);
           const parsed = parseAIJson(rawText) || {};
 
@@ -4211,7 +4413,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           }
           const contentToAnalyze = (liveContent || initialSavedEntry.fullContent || initialSavedEntry.summary || '').trim();
 
-          if ((needsTitle || needsSummary || needsTaxonomies || needsTakeaways) && contentToAnalyze.length > 5 && apiKeys && apiKeys.length > 0) {
+          if ((needsTitle || needsSummary || needsTaxonomies || needsTakeaways) && contentToAnalyze.length > 5 && ((apiKeys && apiKeys.length > 0) || aiProvider === 'local')) {
             autoGeneratedMetaIdsRef.current.add(id);
             setIsAnalyzing(true);
             setGeneratingField('metadata');
@@ -4223,7 +4425,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
               if (needsTaxonomies) requestedFields.push('taxonomies');
 
               const payload = buildMetadataPayload(requestedFields, initialSavedEntry, contentToAnalyze, { allProjects, allCategories, allTags });
-              const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+              const result = await handleAiCall(payload, taskModels.metadata || DEFAULT_MODEL);
               const rawCandidate = result?.candidates?.[0];
               const rawText = getCandidateText(rawCandidate || result);
               const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
@@ -4546,7 +4748,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
 
       // Focused Note AI Helpers (Margin Refresh Actions)
       const handleSuggestTitle = async (id) => {
-        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
+        if (aiProvider !== "local" && (!apiKeys || apiKeys.length === 0)) return setError("Configure your AI provider in Settings first.");
         setIsAnalyzing(true);
         setGeneratingField('title');
         try {
@@ -4559,7 +4761,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           const contentToAnalyze = noteContent || entry.summary || entry.promptQuestion || '';
 
           const payload = buildMetadataPayload(['title'], entry, contentToAnalyze, { allProjects, allCategories, allTags });
-          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+          const result = await handleAiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const rawCandidate = result?.candidates?.[0];
           const rawText = getCandidateText(rawCandidate || result);
           let parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
@@ -4613,7 +4815,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
       };
 
       const handleGenerateTLDR = async (id) => {
-        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
+        if (aiProvider !== "local" && (!apiKeys || apiKeys.length === 0)) return setError("Configure your AI provider in Settings first.");
         setIsAnalyzing(true);
         setGeneratingField('summary');
         try {
@@ -4626,7 +4828,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           const contentToAnalyze = noteContent || entry.summary || entry.promptQuestion || '';
 
           const payload = buildMetadataPayload(['summary'], entry, contentToAnalyze, { allProjects, allCategories, allTags });
-          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+          const result = await handleAiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const rawCandidate = result?.candidates?.[0];
           const rawText = getCandidateText(rawCandidate || result);
           const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
@@ -4634,9 +4836,38 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
 
           let finalSummary = updates.summary || null;
           if (!finalSummary && rawText) {
-            const sm = rawText.match(/"(?:summary|Summary|tldr|executive_summary)"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z]+"|"\s*\}|$)/i);
+            const sm = rawText.match(/"(?:summary|Summary|tldr|executive_summary)"\s*:\s*((?:[^"\\]|\\.)*)(?:"\s*,|"\s*\}|"\s*$)/i);
             if (sm) {
-              finalSummary = cleanExecutiveSummary(sm[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim(), contentToAnalyze);
+              finalSummary = cleanExecutiveSummary(sm[1].replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\').trim(), contentToAnalyze);
+            }
+          }
+          // For local models, if JSON parsing failed entirely, try to extract the actual response
+          // (model may have echoed the schema first, then the response)
+          if (!finalSummary && rawText && aiProvider === 'local') {
+            let raw = rawText.trim().replace(/```json\s*|```\s*/g, '').trim();
+            // If there are multiple JSON objects, skip schema-like ones and use the last one
+            if (raw.split('{').length > 2) {
+              const braceRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
+              let match;
+              let candidates = [];
+              while ((match = braceRegex.exec(raw)) !== null) {
+                try {
+                  const obj = JSON.parse(match[0]);
+                  if (obj.type === 'object' && obj.properties && !obj.summary && !obj.title) {
+                    continue; // Skip schema
+                  }
+                  candidates.push(obj);
+                } catch (e) {}
+              }
+              if (candidates.length > 0) {
+                const lastObj = candidates[candidates.length - 1];
+                if (lastObj.summary) {
+                  finalSummary = cleanExecutiveSummary(lastObj.summary, contentToAnalyze);
+                }
+              }
+            }
+            if (!finalSummary && raw.length > 20) {
+              finalSummary = cleanExecutiveSummary(raw, contentToAnalyze);
             }
           }
 
@@ -4657,7 +4888,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
       const handleGenerateAnswerSummary = handleGenerateTLDR;
 
       const handleGenerateTakeaways = async (id) => {
-        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
+        if (aiProvider !== "local" && (!apiKeys || apiKeys.length === 0)) return setError("Configure your AI provider in Settings first.");
         setIsAnalyzing(true);
         setGeneratingField('takeaways');
         try {
@@ -4670,7 +4901,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           const contentToAnalyze = noteContent || entry.summary || entry.promptQuestion || '';
 
           const payload = buildMetadataPayload(['takeaways'], entry, contentToAnalyze, { allProjects, allCategories, allTags });
-          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+          const result = await handleAiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const rawCandidate = result?.candidates?.[0];
           const rawText = getCandidateText(rawCandidate || result);
           const parsed = parseAIJson(rawCandidate) || parseAIJson(rawText);
@@ -4689,7 +4920,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
       };
 
       const handleGenerateTaxonomies = async (id) => {
-        if (!apiKeys || apiKeys.length === 0) return setError("Set your API key first in Settings.");
+        if (aiProvider !== "local" && (!apiKeys || apiKeys.length === 0)) return setError("Configure your AI provider in Settings first.");
         setIsAnalyzing(true);
         setGeneratingField('taxonomies');
         try {
@@ -4698,7 +4929,7 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
           const noteContent = getEntryContentForAnalysis(id, entry);
 
           const payload = buildMetadataPayload(['taxonomies'], entry, noteContent, { allProjects, allCategories, allTags });
-          const result = await handleGeminiCall(payload, taskModels.metadata || DEFAULT_MODEL);
+          const result = await handleAiCall(payload, taskModels.metadata || DEFAULT_MODEL);
           const parsed = parseAIJson(result.candidates?.[0]);
           const updates = applyMetadataResults(['taxonomies'], parsed, entry, noteContent);
           if (updates.projects || updates.categories || updates.tags) {
@@ -4915,9 +5146,9 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
       const sendAssistantMessage = async (overrideText = null) => {
         const queryText = (overrideText || assistantInput).trim();
         if (!queryText) return;
-        if (!apiKeys || apiKeys.length === 0) {
+        if (aiProvider !== 'local' && (!apiKeys || apiKeys.length === 0)) {
           setShowKeyModal(true);
-          return setError("Please configure your Gemini API key in Settings first.");
+          return setError("Please configure your AI provider in Settings first.");
         }
 
         setAssistantInput('');
@@ -4942,6 +5173,10 @@ Respond with valid JSON containing "title" (3-5 words) and "content" (50 words m
 
         try {
           if (isWebSearchRequested(queryText)) {
+            if (aiProvider === 'local') {
+              // Local models can't do web search — fall through to normal chat
+              // The model will respond from its training data
+            } else {
             const primaryDoc = selectedEntries.length > 0 ? selectedEntries[0] : (activeSingleEntry || null);
             const primaryContent = primaryDoc ? getEntryContentForAnalysis(primaryDoc.id, primaryDoc) : '';
             const webSearchSystemText = `You are a helpful AI Assistant for the user's personal knowledge base.
@@ -4974,7 +5209,7 @@ ${primaryContent ? `Content: ${primaryContent.substring(0, 3000)}` : ''}` : ''}`
             let totalOut = 0;
 
             try {
-              const res = await handleGeminiCall(webSearchPayload, activeAssistantModel);
+              const res = await handleAiCall(webSearchPayload, activeAssistantModel);
               const pTokens = extractUsageTokens(res, JSON.stringify(webSearchPayload), '');
               totalIn = pTokens.inputTokens;
               totalOut = pTokens.outputTokens;
@@ -4988,7 +5223,7 @@ ${primaryContent ? `Content: ${primaryContent.substring(0, 3000)}` : ''}` : ''}`
               console.warn("Assistant drawer web search failed with tool, falling back without tool:", err);
               const fallbackPayload = { ...webSearchPayload };
               delete fallbackPayload.tools;
-              const res = await handleGeminiCall(fallbackPayload, activeAssistantModel);
+              const res = await handleAiCall(fallbackPayload, activeAssistantModel);
               const pTokens = extractUsageTokens(res, JSON.stringify(fallbackPayload), '');
               totalIn = pTokens.inputTokens;
               totalOut = pTokens.outputTokens;
@@ -5013,6 +5248,7 @@ ${primaryContent ? `Content: ${primaryContent.substring(0, 3000)}` : ''}` : ''}`
             }));
             setIsAssistantThinking(false);
             return;
+            } // end else (non-local web search)
           }
 
           const currentScope = assistantScope;
@@ -5106,6 +5342,47 @@ ${primaryContent ? `Content: ${primaryContent.substring(0, 3000)}` : ''}` : ''}`
             let totalInputTokens = 0;
             let totalOutputTokens = 0;
 
+            const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
+            let finalReplyText = '';
+
+            // --- LOCAL MODEL PATH: Simple plain-text response, no JSON schema ---
+            if (aiProvider === 'local') {
+              const localSystemText = `You are a helpful AI Assistant for the user's personal knowledge base.
+Focus primarily on the active document: "${primaryDoc?.title || 'Selected Note'}" whose full Content and metadata are provided below.${promptInstructionContext}
+
+- NO SELF-REFERENCES: When referring to this active document ("${primaryDoc?.title || 'Selected Note'}", Ref #${primaryDoc?.numericId || primaryDoc?.id}), NEVER insert citation or reference tags (such as [[kb-ref:...]] or [Ref: ...]). The user is already in this note, so reference tags to it are broken and redundant. Refer to it as "this note" or by its title without reference brackets.
+- You may reference OTHER notes from the knowledge base using [[kb-ref:ID]] when relevant.
+- Stay inside the knowledge base by default. Do NOT search the web unless the user explicitly requests it.
+- Answer the user's question directly, conversationally, and in Markdown.
+
+${WHOLE_BRAIN_WRITING_RULES}
+
+=== PRIMARY ACTIVE DOCUMENT ===
+${contextText}
+
+${otherNotesSummaries ? `=== AVAILABLE OTHER NOTES IN KNOWLEDGE BASE ===\n${otherNotesSummaries}` : ''}`;
+
+              const localPayload = {
+                contents: [
+                  ...currentHistory.slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+                  { role: 'user', parts: [{ text: queryText }] }
+                ],
+                generationConfig: { temperature: 0.3 },
+                systemInstruction: { parts: [{ text: localSystemText }] }
+              };
+
+              try {
+                const localRes = await handleAiCall(localPayload, activeAssistantModel);
+                const lt = extractUsageTokens(localRes, JSON.stringify(localPayload), '');
+                totalInputTokens += lt.inputTokens;
+                totalOutputTokens += lt.outputTokens;
+                const rawLocal = getCandidateText(localRes.candidates?.[0] || localRes);
+                finalReplyText = rawLocal ? rawLocal.trim() : '';
+              } catch (localErr) {
+                console.warn("Local model single-entry chat error:", localErr);
+              }
+            } else {
+            // --- GEMINI PATH: JSON schema with on-demand content escalation ---
             const pass1SystemText = `You are a helpful AI Assistant for the user's personal knowledge base.
 Focus primarily on the active document: "${primaryDoc?.title || 'Selected Note'}" whose full Content and metadata are provided in === PRIMARY ACTIVE DOCUMENT ===.${promptInstructionContext}
 
@@ -5163,13 +5440,12 @@ ${otherNotesSummaries ? `=== AVAILABLE OTHER NOTES IN KNOWLEDGE BASE ===\n${othe
               }
             };
 
-            const activeAssistantModel = taskModels.assistant || DEFAULT_MODEL;
             let directReply = '';
             let contentIds = [];
             let takeawayIds = [];
 
             try {
-              const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
+              const pass1Res = await handleAiCall(pass1Payload, activeAssistantModel);
               const p1Tokens = extractUsageTokens(pass1Res, JSON.stringify(pass1Payload), '');
               totalInputTokens += p1Tokens.inputTokens;
               totalOutputTokens += p1Tokens.outputTokens;
@@ -5192,7 +5468,7 @@ ${otherNotesSummaries ? `=== AVAILABLE OTHER NOTES IN KNOWLEDGE BASE ===\n${othe
             const requestedSet = new Set([...contentIds, ...takeawayIds]);
             const matchedOtherNotes = otherNotes.filter(e => requestedSet.has(e.id));
 
-            let finalReplyText = directReply;
+            finalReplyText = directReply;
 
             // If Pass 1 requested other notes' full content or takeaways, run Pass 2!
             if (matchedOtherNotes.length > 0 || !finalReplyText) {
@@ -5262,7 +5538,7 @@ ${expandedBlocks.length > 0 ? `=== REQUESTED OTHER NOTES (FULL CONTENT ON-DEMAND
               };
 
               try {
-                const p2Res = await handleGeminiCall(pass2Payload, activeAssistantModel);
+                const p2Res = await handleAiCall(pass2Payload, activeAssistantModel);
                 const p2Tokens = extractUsageTokens(p2Res, JSON.stringify(pass2Payload), '');
                 totalInputTokens += p2Tokens.inputTokens;
                 totalOutputTokens += p2Tokens.outputTokens;
@@ -5282,12 +5558,13 @@ ${expandedBlocks.length > 0 ? `=== REQUESTED OTHER NOTES (FULL CONTENT ON-DEMAND
                 if (!finalReplyText) throw p2Err;
               }
             }
+            } // end Gemini path
 
             if (primaryDoc && finalReplyText) {
               finalReplyText = stripSelfReferences(finalReplyText, primaryDoc);
             }
 
-            finalReplyText = finalReplyText || directReply || "Done.";
+            finalReplyText = finalReplyText || "No response received.";
 
             setAssistantChats(prev => ({
               ...prev,
@@ -5434,6 +5711,9 @@ ${expandedBlocks.length > 0 ? `=== REQUESTED OTHER NOTES (FULL CONTENT ON-DEMAND
 
       const runWholeBrainQuery = async (queryText, recentMsgs, candidateNotes, activeAssistantModel) => {
         if (isWebSearchRequested(queryText)) {
+          if (aiProvider === 'local') {
+            // Local models can't do web search — fall through to normal KB query
+          } else {
           const webSearchSystemText = `You are an overarching Knowledge Base Assistant.
 The user has explicitly requested to look outside of their knowledge base library or specifically perform a web search.
 Use the Google Search tool to search the web for accurate, up-to-date external information to answer their query.
@@ -5458,7 +5738,7 @@ ${WHOLE_BRAIN_WRITING_RULES}`;
           let totalOut = 0;
 
           try {
-            const res = await handleGeminiCall(webSearchPayload, activeAssistantModel);
+            const res = await handleAiCall(webSearchPayload, activeAssistantModel);
             const pTokens = extractUsageTokens(res, JSON.stringify(webSearchPayload), '');
             totalIn = pTokens.inputTokens;
             totalOut = pTokens.outputTokens;
@@ -5472,7 +5752,7 @@ ${WHOLE_BRAIN_WRITING_RULES}`;
             console.warn("Whole Brain Web search failed with tool, falling back without tool:", err);
             const fallbackPayload = { ...webSearchPayload };
             delete fallbackPayload.tools;
-            const res = await handleGeminiCall(fallbackPayload, activeAssistantModel);
+            const res = await handleAiCall(fallbackPayload, activeAssistantModel);
             const pTokens = extractUsageTokens(res, JSON.stringify(fallbackPayload), '');
             totalIn = pTokens.inputTokens;
             totalOut = pTokens.outputTokens;
@@ -5485,6 +5765,7 @@ ${WHOLE_BRAIN_WRITING_RULES}`;
             inputTokens: totalIn,
             outputTokens: totalOut
           };
+          } // end else (non-local web search)
         }
 
         const filterScopeParts = [
@@ -5510,8 +5791,8 @@ ${WHOLE_BRAIN_WRITING_RULES}`;
         let totalInputTokens = 0;
         let totalOutputTokens = 0;
 
-        // Send ALL matching summaries through without any artificial count limit (user controls scope via type/taxonomy selections)
-        const candidateSummaries = candidateNotes.map(e => {
+        // Build summary lines for each candidate note
+        const buildSummaryLine = (e) => {
           const cleanSum = String(e.summary || '').trim();
           const hasTakeawaysFlag = Array.isArray(e.shortVersion) && e.shortVersion.length > 0;
           const hasContentFlag = Boolean(e.fullContent && String(e.fullContent).trim());
@@ -5525,7 +5806,39 @@ ${WHOLE_BRAIN_WRITING_RULES}`;
           else if (type === 'txt') typeTag = 'Text [External Third-Hand]';
           const promptQStr = (isPrompt && e.promptQuestion) ? ` | Prompt Question: "${e.promptQuestion}"` : '';
           return `[kb-ref:${e.id}] [${typeTag}] (Ref #${e.numericId || '?'}, Title: "${e.title || 'Untitled'}"${promptQStr}${availMeta ? `, Available on-demand: ${availMeta}` : ''}) — Summary: ${cleanSum || '(No summary recorded)'}`;
-        }).join('\n');
+        };
+
+        // For local models, trim candidate notes to fit within context window
+        // Reserve ~40% of context for system prompt, conversation history, and response
+        let trimmedNotes = candidateNotes;
+        let contextTrimmed = false;
+        if (aiProvider === 'local') {
+          // Estimate context window from local model config (default 8192)
+          const estimatedContext = 8192;
+          const budgetForSummaries = Math.floor(estimatedContext * 0.6);
+          // Estimate tokens: ~4 chars per token, build each line and accumulate
+          const summaryLines = candidateNotes.map(e => buildSummaryLine(e));
+          let accumulatedChars = 0;
+          let fitCount = 0;
+          for (let i = 0; i < summaryLines.length; i++) {
+            accumulatedChars += summaryLines[i].length;
+            if (accumulatedChars / 4 > budgetForSummaries) {
+              fitCount = i; // don't include this one
+              break;
+            }
+            fitCount = i + 1;
+          }
+          if (fitCount < candidateNotes.length) {
+            trimmedNotes = candidateNotes.slice(0, fitCount);
+            contextTrimmed = true;
+          }
+        }
+
+        const candidateSummaries = trimmedNotes.map(e => buildSummaryLine(e)).join('\n');
+        const activeCandidateCount = trimmedNotes.length;
+        const scopeBannerTrimmed = contextTrimmed
+          ? `${scopeBanner} — ⚠️ Trimmed to ${activeCandidateCount} notes to fit local model context window (8192 tokens). Increase context size in your local server settings.`
+          : scopeBanner;
 
         // Pass 1: Single-Pass Direct Synthesis OR On-Demand Escalation
         // If summaries suffice, the model writes "directReply" immediately (1 API call total).
@@ -5534,8 +5847,8 @@ ${WHOLE_BRAIN_WRITING_RULES}`;
         let takeawayIds = [];
         let contentIds = [];
 
-        const pass1SystemText = `You are an overarching Knowledge Base Assistant synthesizing information across the user's selected notes pool (${scopeBanner}).
-Your base context is strictly limited to the Executive Summaries below (all ${candidateNotes.length} matching notes in the user's current type/taxonomy selection are included).
+        const pass1SystemText = `You are an overarching Knowledge Base Assistant synthesizing information across the user's selected notes pool (${scopeBannerTrimmed}).
+Your base context is strictly limited to the Executive Summaries below (all ${activeCandidateCount} matching notes in the user's current type/taxonomy selection are included).
 
 DECISION & EFFICIENCY PROTOCOL:
 1. IF SUMMARIES SUFFICE: If you can answer the user's query accurately using the Executive Summaries alone, write your complete Markdown response in "directReply" (following the writing rules below) and return empty arrays [] for "takeawayIds" and "contentIds".
@@ -5549,7 +5862,7 @@ DECISION & EFFICIENCY PROTOCOL:
 
 ${WHOLE_BRAIN_WRITING_RULES}
 
-Available Note Summaries (${candidateNotes.length} notes):
+Available Note Summaries (${activeCandidateCount} notes):
 ${candidateSummaries}`;
 
         const pass1Payload = {
@@ -5587,7 +5900,7 @@ ${candidateSummaries}`;
         };
 
         try {
-          const pass1Res = await handleGeminiCall(pass1Payload, activeAssistantModel);
+          const pass1Res = await handleAiCall(pass1Payload, activeAssistantModel);
           const p1Tokens = extractUsageTokens(pass1Res, JSON.stringify(pass1Payload), '');
           totalInputTokens += p1Tokens.inputTokens;
           totalOutputTokens += p1Tokens.outputTokens;
@@ -5605,7 +5918,7 @@ ${candidateSummaries}`;
         const requestedSet = new Set([...takeawayIds, ...contentIds]);
 
         // Fast path: If Pass 1 answered directly and didn't request any valid note expansions, return immediately (1 API call total!)
-        const matchedNotes = candidateNotes.filter(e => requestedSet.has(e.id));
+        const matchedNotes = trimmedNotes.filter(e => requestedSet.has(e.id));
         if (directReply && matchedNotes.length === 0) {
           return {
             replyText: directReply,
@@ -5616,7 +5929,7 @@ ${candidateSummaries}`;
 
         // Pass 2 (only triggered when specific notes' Takeaways or Full Content were requested on demand):
         // Send ONLY the requested notes (their summary + requested takeaways and/or full content) rather than re-sending the entire pool of summaries!
-        const expandedBlocks = (matchedNotes.length > 0 ? matchedNotes : candidateNotes).map(e => {
+        const expandedBlocks = (matchedNotes.length > 0 ? matchedNotes : trimmedNotes).map(e => {
           const wantTakeaways = takeawayIds.includes(e.id);
           const wantContent = contentIds.includes(e.id);
           const type = getEntryType(e);
@@ -5644,6 +5957,31 @@ ${candidateSummaries}`;
           return parts.join('\n');
         });
 
+        // For local models, trim expanded blocks to avoid context overflow in Pass 2
+        let finalExpandedBlocks = expandedBlocks;
+        if (aiProvider === 'local' && expandedBlocks.length > 0) {
+          const estimatedContext = 8192;
+          const budgetForExpanded = Math.floor(estimatedContext * 0.5);
+          const systemAndHistoryChars = 1000 + ((recentMsgs || []).slice(-6).map(m => m.text.length).reduce((a, b) => a + b, 0) || 500) + queryText.length;
+          const remainingBudget = budgetForExpanded - (systemAndHistoryChars / 4);
+          if (remainingBudget > 0) {
+            let expandedChars = 0;
+            let expandedFit = 0;
+            const blockSeparator = '\n\n';
+            for (let i = 0; i < expandedBlocks.length; i++) {
+              expandedChars += expandedBlocks[i].length + blockSeparator.length;
+              if (expandedChars / 4 > remainingBudget) {
+                expandedFit = i;
+                break;
+              }
+              expandedFit = i + 1;
+            }
+            if (expandedFit < expandedBlocks.length) {
+              finalExpandedBlocks = expandedBlocks.slice(0, expandedFit);
+            }
+          }
+        }
+
         const pass2Payload = {
           contents: [
             ...(recentMsgs || []).slice(-6).map(m => ({ role: m.role, parts: [{ text: m.text }] })),
@@ -5652,17 +5990,17 @@ ${candidateSummaries}`;
           generationConfig: { temperature: 0.3 },
           systemInstruction: {
             parts: [{
-              text: `You are an overarching Knowledge Base Assistant synthesizing information from the user's selected notes (${scopeBanner}).
+              text: `You are an overarching Knowledge Base Assistant synthesizing information from the user's selected notes (${scopeBannerTrimmed}).
 
 ${WHOLE_BRAIN_WRITING_RULES}
 
 Requested Note Details (Summaries + On-Demand Takeaways/Content):
-${expandedBlocks.join('\n\n')}`
+${finalExpandedBlocks.join('\n\n')}`
             }]
           }
         };
 
-        const result = await handleGeminiCall(pass2Payload, activeAssistantModel);
+        const result = await handleAiCall(pass2Payload, activeAssistantModel);
         const candidate = result.candidates?.[0];
         const parts = candidate?.content?.parts || [];
         const finalReply = parts.map(p => p.text || '').filter(Boolean).join('\n').trim() || directReply || "No response received.";
@@ -5740,9 +6078,9 @@ ${expandedBlocks.join('\n\n')}`
       const handleSendWholeBrainMessage = async (overrideText = null) => {
         const queryText = (overrideText || wholeBrainInput).trim();
         if (!queryText) return;
-        if (!apiKeys || apiKeys.length === 0) {
+        if (aiProvider !== 'local' && (!apiKeys || apiKeys.length === 0)) {
           setShowKeyModal(true);
-          return setError("Please configure your Gemini API key in Settings first.");
+          return setError("Please configure your AI provider in Settings first.");
         }
         if (!activeSingleEntry) return;
 
@@ -5868,6 +6206,9 @@ ${expandedBlocks.join('\n\n')}`
         setTempTheme(theme);
         setTempPromptConfig({ ...DEFAULT_PROMPT_CONFIG, ...promptConfig });
         setTempAiInstructions({ ...DEFAULT_AI_INSTRUCTIONS, ...aiInstructions });
+        setTempAiProvider(aiProvider);
+        setTempLocalEndpoint(localEndpoint);
+        setTempLocalModel(localModel);
         setAiInstructionTab('context');
         setMergeStatus(null);
         setShowKeyModal(true);
@@ -5886,6 +6227,9 @@ ${expandedBlocks.join('\n\n')}`
         setTheme(tempTheme);
         setPromptConfig(tempPromptConfig);
         setAiInstructions(tempAiInstructions);
+        setAiProvider(tempAiProvider);
+        setLocalEndpoint(tempLocalEndpoint);
+        setLocalModel(tempLocalModel);
         setShowKeyModal(false);
       };
 
@@ -6072,45 +6416,92 @@ ${expandedBlocks.join('\n\n')}`
                       )}
                     </div>
                     <p className="text-[11px] text-[var(--text-muted)] mt-1.5 font-mono">
-                      Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">Google AI Studio</a>.
-                    </p>
+                    Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">Google AI Studio</a>.
+                  </p>
+                </div>
+
+                {/* AI Provider Selection */}
+                <div>
+                  <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono block mb-2">AI Provider</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setTempAiProvider('gemini'); }}
+                      className={`flex-1 py-2 px-3 rounded text-xs font-mono font-semibold border transition-colors ${
+                        tempAiProvider === 'gemini'
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
+                          : 'border-[var(--border)] bg-[var(--bg-main)] text-[var(--text-muted)] hover:border-[var(--accent)]/50'
+                      }`}
+                    >
+                      <span className="flex flex-col items-center gap-1">
+                        <i className="fa-solid fa-globe text-sm"></i>
+                        Gemini API
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setTempAiProvider('local'); }}
+                      className={`flex-1 py-2 px-3 rounded text-xs font-mono font-semibold border transition-colors ${
+                        tempAiProvider === 'local'
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
+                          : 'border-[var(--border)] bg-[var(--bg-main)] text-[var(--text-muted)] hover:border-[var(--accent)]/50'
+                      }`}
+                    >
+                      <span className="flex flex-col items-center gap-1">
+                        <i className="fa-solid fa-laptop text-sm"></i>
+                        Local Model
+                      </span>
+                    </button>
                   </div>
 
-                  {/* PWA / Install App */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono block mb-1.5">Install as App (PWA)</label>
-                    <div className="bg-[var(--bg-main)] rounded p-3 space-y-2 font-mono">
-                      <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-main)]">
-                        <span className="flex items-center gap-1.5">
-                          <i className={`fa-solid ${isStandalone ? 'fa-circle-check text-green-500' : 'fa-mobile-screen text-[var(--accent)]'}`}></i>
-                          {isStandalone ? 'Running as installed app' : 'Not installed'}
-                        </span>
-                        {!isStandalone && installPromptEvent && (
-                          <button type="button" onClick={handleInstallApp} className="btn-primary h-6 px-3 text-[11px] font-semibold">
-                            <i className="fa-solid fa-download text-[10px]"></i> Install
-                          </button>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
-                        <i className={`fa-solid ${swStatus === 'ready' ? 'fa-circle-check text-green-500' : 'fa-circle-info'}`}></i>
-                        {swStatus === 'ready' && 'Offline-ready: app files are cached for launching without a connection.'}
-                        {swStatus === 'checking' && 'Preparing offline cache...'}
-                        {swStatus === 'unavailable' && 'Offline cache needs the app to be served over http(s), not opened as a local file.'}
-                        {swStatus === 'unsupported' && 'This browser does not support offline caching.'}
-                        {swStatus === 'error' && 'Offline cache could not be set up.'}
-                      </div>
-                      {!isStandalone && !installPromptEvent && (
-                        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                          Safari (macOS): File &gt; Add to Dock. Chrome/Edge: use the install icon in the address bar.
+                  {tempAiProvider === 'local' && (
+                    <div className="mt-3 space-y-2.5 bg-[var(--bg-main)] p-3 rounded border border-[var(--border)]">
+                      <div>
+                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono block mb-1">
+                          <i className="fa-solid fa-plug text-[var(--accent)] text-[9px] mr-1"></i>
+                          Endpoint URL
+                        </label>
+                        <input
+                          type="text"
+                          value={tempLocalEndpoint}
+                          onChange={e => setTempLocalEndpoint(e.target.value)}
+                          placeholder="http://localhost:1234/v1/chat/completions"
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        />
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1.5 font-mono leading-relaxed">
+                          OpenAI-compatible endpoint. LM Studio: <span className="text-[var(--accent)]">http://localhost:1234/v1/chat/completions</span> &middot; Ollama: <span className="text-[var(--accent)]">http://localhost:11434/v1/chat/completions</span>
                         </p>
-                      )}
-                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                        Safari still needs the Local Sync Bridge to read and write your notes file, with or without installing.
-                      </p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-[var(--text-main)] font-mono block mb-1">
+                          <i className="fa-solid fa-brain text-[var(--accent)] text-[9px] mr-1"></i>
+                          Model Name
+                        </label>
+                        <input
+                          type="text"
+                          value={tempLocalModel}
+                          onChange={e => setTempLocalModel(e.target.value)}
+                          placeholder="e.g. llama3.2, mistral, phi3"
+                          className="w-full text-xs bg-[var(--bg-pane)] text-[var(--text-main)] border border-[var(--border)] rounded px-2.5 py-1.5 font-mono focus:border-[var(--accent)] focus:outline-none"
+                        />
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1.5 font-mono">
+                          Model ID as registered in your local server. Leave empty to use the server default.
+                        </p>
+                      </div>
+                      <div className="text-[10px] text-[var(--text-muted)] font-mono bg-[var(--bg-pane)] p-2 rounded border border-[var(--border)]/50">
+                        <p className="font-bold text-[var(--text-main)] mb-1">Notes:</p>
+                        <ul className="list-disc list-inside space-y-0.5 text-[10px]">
+                          <li>Web search &amp; PDF ingestion require Gemini — local models use text-only analysis</li>
+                          <li>Structured JSON output depends on model capability</li>
+                          <li>All chat, summaries, and metadata work with local models</li>
+                        </ul>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                </div>
 
                   {/* AI Models Configuration by Task */}
+                  {tempAiProvider === 'gemini' && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono">
@@ -6244,6 +6635,7 @@ ${expandedBlocks.join('\n\n')}`
                       </div>
                     </div>
                   </div>
+                  )}
 
                   {/* Theme Prompt Pool Settings */}
                   <div className="p-3.5 bg-[var(--bg-main)] rounded border border-[var(--border)]">
@@ -6483,6 +6875,39 @@ ${expandedBlocks.join('\n\n')}`
                         </button>
                       </div>
                     )}
+                  </div>
+                  {/* PWA / Install App */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider font-mono block mb-1.5">Install as App (PWA)</label>
+                    <div className="bg-[var(--bg-main)] rounded p-3 space-y-2 font-mono">
+                      <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-main)]">
+                        <span className="flex items-center gap-1.5">
+                          <i className={`fa-solid ${isStandalone ? 'fa-circle-check text-green-500' : 'fa-mobile-screen text-[var(--accent)]'}`}></i>
+                          {isStandalone ? 'Running as installed app' : 'Not installed'}
+                        </span>
+                        {!isStandalone && installPromptEvent && (
+                          <button type="button" onClick={handleInstallApp} className="btn-primary h-6 px-3 text-[11px] font-semibold">
+                            <i className="fa-solid fa-download text-[10px]"></i> Install
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
+                        <i className={`fa-solid ${swStatus === 'ready' ? 'fa-circle-check text-green-500' : 'fa-circle-info'}`}></i>
+                        {swStatus === 'ready' && 'Offline-ready: app files are cached for launching without a connection.'}
+                        {swStatus === 'checking' && 'Preparing offline cache...'}
+                        {swStatus === 'unavailable' && 'Offline cache needs the app to be served over http(s), not opened as a local file.'}
+                        {swStatus === 'unsupported' && 'This browser does not support offline caching.'}
+                        {swStatus === 'error' && 'Offline cache could not be set up.'}
+                      </div>
+                      {!isStandalone && !installPromptEvent && (
+                        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                          Safari (macOS): File &gt; Add to Dock. Chrome/Edge: use the install icon in the address bar.
+                        </p>
+                      )}
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                        Safari still needs the Local Sync Bridge to read and write your notes file, with or without installing.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -7071,7 +7496,7 @@ ${expandedBlocks.join('\n\n')}`
                                 }
                                 return true;
                               });
-                              const dataStr = JSON.stringify({ entries: exportEntries, tombstones, storedPrompts, promptConfig, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
+                              const dataStr = JSON.stringify({ entries: exportEntries, tombstones, storedPrompts, promptConfig, apiKeys, model: taskModels.assistant || model || DEFAULT_MODEL, taskModels, theme, aiProvider, localEndpoint, localModel, assistantChats, archivedAssistantChats, chats: archivedAssistantChats, assistantMessages: (assistantChats['workspace'] || []), layout: { isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, isLeftSidebarOpen, isListSidebarOpen, isAssistantOpen }, null, 2);
                               const blob = new Blob([dataStr], { type: "application/json" });
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement('a');
