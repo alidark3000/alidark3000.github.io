@@ -3,37 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ali Dark: Creative technologist in Brisbane Australia">
-    <title>Ali Dark | Creative Technologist</title>
+    <meta name="description" content="brisbane musician experimenting with electro and pop since 2002. thought leader in the haha omfg space.">
+    <title>ali dark</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <style>
         :root {
-            --bg-color: #ffffff;
-            --text-color: #111111;
-            --text-muted: #555555;
-            --line-color: #000000;
-            --link-color: #d32f2f;
-            --link-underline: rgba(211, 47, 47, 0.35);
-            --link-hover: #b71c1c;
-            --selection-bg: #dbeafe;
+            --bg-color: #ff6a00;
+            --grad-1: #ff1e00;
+            --grad-2: #ffe600;
+            --grad-3: #ff8800;
+            --grad-4: #ff1464;
+            --text-color: #0a0a0a;
+            --text-muted: #1a120e;
+            --line-color: #0a0a0a;
+            --link-color: #000000;
+            --link-underline: #ffffff;
+            --link-hover: #000000;
+            --selection-bg: rgba(255, 255, 255, 0.45);
 
-            --base-font-size: 1rem;
+            --base-font-size: 1.125rem;
             --line-height: 1.7;
-            --content-width: 720px;
-        }
-
-        /* Automatic Dark Mode based on System Settings */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #141414;
-                --text-color: #e3e3dc;
-                --text-muted: #95968f;
-                --line-color: #e3e3dc;
-                --link-color: #ff5252;
-                --link-underline: rgba(255, 82, 82, 0.4);
-                --link-hover: #ff7b7b;
-                --selection-bg: #37383a;
-            }
+            --content-width: 860px;
         }
 
         *, *::before, *::after {
@@ -50,12 +40,62 @@
             padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: ui-monospace, 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Menlo', 'Monaco', monospace;
+            font-family: 'Verdana', 'Geneva', 'Tahoma', sans-serif;
             font-size: var(--base-font-size);
             line-height: var(--line-height);
             font-weight: 400;
             letter-spacing: 0;
+            text-transform: lowercase;
             transition: background-color 0.2s ease, color 0.2s ease;
+            overflow-x: hidden;
+        }
+
+        .warm-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .warm-blob {
+            position: absolute;
+            width: 65vmax;
+            height: 65vmax;
+            border-radius: 50%;
+            filter: blur(85px);
+            will-change: transform;
+            transition: transform 6s ease-in-out;
+        }
+
+        .warm-blob-1 {
+            top: -20%;
+            left: -20%;
+            background: radial-gradient(circle at 40% 40%, var(--grad-1), transparent 68%);
+        }
+
+        .warm-blob-2 {
+            top: -15%;
+            right: -20%;
+            background: radial-gradient(circle at 60% 40%, var(--grad-2), transparent 68%);
+        }
+
+        .warm-blob-3 {
+            bottom: -25%;
+            right: -15%;
+            background: radial-gradient(circle at 55% 60%, var(--grad-3), transparent 68%);
+        }
+
+        .warm-blob-4 {
+            bottom: -20%;
+            left: -15%;
+            background: radial-gradient(circle at 40% 55%, var(--grad-4), transparent 68%);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .warm-blob {
+                transition: none;
+            }
         }
 
         .reader-wrapper {
@@ -70,14 +110,14 @@
         }
 
         h1 {
-            font-size: 1em;
+            font-size: 1.5em;
             font-weight: 700;
             line-height: 1.4;
             text-decoration: underline;
             text-decoration-thickness: 2px;
             text-underline-offset: 4px;
             margin: 0 0 0.75rem 0;
-            color: var(--text-color);
+            color: #ffffff;
         }
 
         .meta-line {
@@ -113,12 +153,12 @@
         }
 
         h2 {
-            font-size: 1em;
+            font-size: 1.2em;
             font-weight: 700;
             margin: 0 0 1.25rem 0;
             padding-bottom: 0.6rem;
-            border-bottom: 2px solid var(--line-color);
-            color: var(--text-color);
+            border-bottom: 2px solid #ffffff;
+            color: #ffffff;
         }
 
         .section-desc {
@@ -179,6 +219,14 @@
             font-weight: 400;
         }
 
+        .bandcamp-embed {
+            border: 0;
+            width: 100%;
+            height: 300px;
+            margin-top: 1.25rem;
+            display: block;
+        }
+
         /* Red Links */
         a {
             color: var(--link-color);
@@ -221,84 +269,95 @@
                 color: black !important;
                 font-size: 11pt;
             }
+
+            .warm-bg {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="warm-bg" aria-hidden="true">
+        <div class="warm-blob warm-blob-1"></div>
+        <div class="warm-blob warm-blob-2"></div>
+        <div class="warm-blob warm-blob-3"></div>
+        <div class="warm-blob warm-blob-4"></div>
+    </div>
     <div class="reader-wrapper">
         <header>
-            <h1>Ali Dark</h1>
-            <p class="meta-line"><strong>Role:</strong> Creative Technologist <span class="sep">/</span> <strong>Location:</strong> Brisbane, AU</p>
-            <p class="intro">I empower ADHD creatives to fearlessly explore their potential and find fulfilment. <a href="https://cls.alidark.com/about">More about me</a>.</p>
+            <h1>ali dark</h1>
+            <p class="intro">brisbane musician experimenting with electro and pop since 2002. thought leader in the haha omfg space.</p>
         </header>
 
         <main>
             <section>
-                <h2>creative lost souls</h2>
-                <p class="section-desc">A publication I write for creatives ADHDers like me who want to thrive. Grounded in systems thinking and candid self-reflection, I explore the intersections of AI, neuroplasticity, creative bottlenecks, and personal self-actualisation in a shifting world. Read the essays on <a href="https://cls.alidark.com">creative lost souls</a>.</p>
-                <ul id="cls-posts" class="simple-list">
-                    <li><a href="https://cls.alidark.com/p/create-like-a-child-edit-like-a-scientist">Create like a child (edit like a scientist)</a></li>
-                    <li><a href="https://cls.alidark.com/p/knowing-what-to-do-is-the-bottleneck">Knowing what to do is the bottleneck</a></li>
-                    <li><a href="https://cls.alidark.com/p/the-world-will-be-different-and-so">The world will be different and so will we.</a></li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Apps</h2>
-                <ul class="entries">
-                    <li>
-                        <p><a href="/player.html">ali player</a> &mdash; A browser-based audio player for your local music collection, with folder browsing, metadata tag reading, and queue playback.</p>
-                    </li>
-                    <li>
-                        <p><a href="/brain/">Brain</a> &mdash; A simple AI powered knowledge management tool with local storage (<a href="/brain/readme.html">overview</a>). Requires a Google AI Studio API key. You can chat with the docs and cross reference them.</p>
-                    </li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Links</h2>
-                <ul class="entries">
-                    <li>
-                        <p><a href="https://www.instagram.com/alidark3000/">Instagram</a> &mdash; Visuals, process notes, and creative updates from Brisbane.</p>
-                    </li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Games</h2>
-                <ul class="entries">
-                    <li>
-                        <p><a href="https://alidark.com/dots/">Dots &amp; Cubes &amp; Boxes</a> &mdash; A 3D version of the classic pen and paper game &ldquo;Dots &amp; Boxes,&rdquo; built with Gemini 2.5 Pro in 2025. It&rsquo;s a 2 player browser game.</p>
-                    </li>
-                    <li>
-                        <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">Glitch Arena</a> &mdash; An independently published PvP 3D Arena first person shooter, and a love letter to the games I grew up with. This passion project started in 2019 and is ongoing here and there &mdash; praised by Steam players as a &ldquo;smooth, easy to pick up AFPS game with its own mechanics&rdquo; and recommended &ldquo;for every old school player.&rdquo; Check the <a href="https://www.youtube.com/watch?v=RApjGd84EBQ">Glitch Arena intro video here</a>.</p>
-                    </li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Tools &amp; Gems</h2>
-                <ul class="entries">
-                    <li>
-                        <p><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">Chaos to Structure</a> &mdash; Paste in an unfiltered brain dump of notes, thoughts, or observations. The Gem distills core themes, uncovers underlying patterns and causal relationships, maps relevant mental models, and translates the raw input into concrete next steps and shareable ideas to move you from stuck to clarity.</p>
-                    </li>
-                    <li>
-                        <p><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">Direction Finder</a> &mdash; An interactive discovery interview exploring your core values, curiosities, limiting beliefs, and the people you care about serving. It synthesizes your profile into 30 aligned life and career directions, then deep-dives into your top picks with concrete micro-actions to reframe negative self-talk, leverage AI and uncover viable monetization paths.</p>
-                    </li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Music</h2>
+                <h2>music</h2>
                 <ul class="simple-list">
-                    <li><a href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">Caravan (SoundCloud)</a></li>
-                    <li><a href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">How We Do It (SoundCloud)</a></li>
+                    <li><a href="https://alidark3000.bandcamp.com/album/2026-demos">2026 demos (bandcamp)</a></li>
+                    <li><a href="https://soundcloud.com/alidark3000/caravan?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">caravan (2005, soundcloud)</a></li>
+                    <li><a href="https://soundcloud.com/alidark3000/how-we-do-it-2?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">how we do it (2017, soundcloud)</a></li>
+                </ul>
+                <iframe class="bandcamp-embed" src="https://bandcamp.com/EmbeddedPlayer/album=3133986524/size=large/bgcol=ffffff/linkcol=d32f2f/artwork=small/transparent=true/" title="2026 demos by ali dark" loading="lazy" seamless><a href="https://alidark3000.bandcamp.com/album/2026-demos">2026 demos by ali dark</a></iframe>
+            </section>
+
+            <section>
+                <h2>creative lost souls</h2>
+                <p class="section-desc">a publication i write for creatives adhders like me who want to thrive. grounded in systems thinking and candid self-reflection, i explore neuroplasticity, creative bottlenecks, and personal self-actualisation in a shifting world. read the essays on <a href="https://cls.alidark.com">creative lost souls</a>.</p>
+                <ul id="cls-posts" class="simple-list">
+                    <li><a href="https://cls.alidark.com/p/create-like-a-child-edit-like-a-scientist">create like a child (edit like a scientist)</a></li>
+                    <li><a href="https://cls.alidark.com/p/knowing-what-to-do-is-the-bottleneck">knowing what to do is the bottleneck</a></li>
+                    <li><a href="https://cls.alidark.com/p/the-world-will-be-different-and-so">the world will be different and so will we.</a></li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>apps</h2>
+                <ul class="entries">
+                    <li>
+                        <p><a href="player.html">ali player</a> &mdash; a browser-based audio player for your local music collection, with folder browsing, metadata tag reading, and queue playback.</p>
+                    </li>
+                    <li>
+                        <p><a href="brain/index.html">brain</a> &mdash; a simple ai powered knowledge management tool with local storage (<a href="brain/readme.html">overview</a>). requires a google ai studio api key. you can chat with the docs and cross reference them.</p>
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>links</h2>
+                <ul class="entries">
+                    <li>
+                        <p><a href="https://www.instagram.com/alidark3000/">instagram</a> &mdash; visuals, process notes, and creative updates from brisbane.</p>
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>games</h2>
+                <ul class="entries">
+                    <li>
+                        <p><a href="https://alidark.com/dots/">dots &amp; cubes &amp; boxes</a> &mdash; a 3d version of the classic pen and paper game &ldquo;dots &amp; boxes,&rdquo; built with gemini 2.5 pro in 2025. it&rsquo;s a 2 player browser game.</p>
+                    </li>
+                    <li>
+                        <p><a href="https://store.steampowered.com/app/1083800/Glitch_Arena/">glitch arena</a> &mdash; an independently published pvp 3d arena first person shooter, and a love letter to the games i grew up with. this passion project started in 2019 and is ongoing here and there &mdash; praised by steam players as a &ldquo;smooth, easy to pick up afps game with its own mechanics&rdquo; and recommended &ldquo;for every old school player.&rdquo; check the <a href="https://www.youtube.com/watch?v=RApjGd84EBQ">glitch arena intro video here</a>.</p>
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>tools &amp; gems</h2>
+                <ul class="entries">
+                    <li>
+                        <p><a href="https://gemini.google.com/gem/1n4-FYkQEEsEhBBPgO_kRBCtYco9SeJTI?usp=sharing">chaos to structure</a> &mdash; paste in an unfiltered brain dump of notes, thoughts, or observations. the gem distills core themes, uncovers underlying patterns and causal relationships, maps relevant mental models, and translates the raw input into concrete next steps and shareable ideas to move you from stuck to clarity.</p>
+                    </li>
+                    <li>
+                        <p><a href="https://gemini.google.com/gem/14yA8-drHgQ4DOPDPXy6elV8FBTFJKtJD?usp=sharing">direction finder</a> &mdash; an interactive discovery interview exploring your core values, curiosities, limiting beliefs, and the people you care about serving. it synthesizes your profile into 30 aligned life and career directions, then deep-dives into your top picks with concrete micro-actions to reframe negative self-talk, leverage ai and uncover viable monetization paths.</p>
+                    </li>
                 </ul>
             </section>
         </main>
 
         <footer>
-            <p>Ali Dark &middot; Brisbane, Australia</p>
+            <p>ali dark &middot; brisbane, australia</p>
         </footer>
     </div>
 
@@ -363,6 +422,30 @@
                             console.warn('Could not refresh RSS feed:', err);
                         });
                 });
+        })();
+
+        (function () {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            var blobs = document.querySelectorAll('.warm-blob');
+            if (!blobs.length) return;
+
+            function wander(blob) {
+                var x = (Math.random() * 70 - 35).toFixed(1);
+                var y = (Math.random() * 70 - 35).toFixed(1);
+                var scale = (0.8 + Math.random() * 0.6).toFixed(2);
+                var duration = 4 + Math.random() * 3.5;
+                blob.style.transitionDuration = duration.toFixed(1) + 's';
+                blob.style.transform = 'translate3d(' + x + 'vw, ' + y + 'vh, 0) scale(' + scale + ')';
+                setTimeout(function () {
+                    wander(blob);
+                }, duration * 1000);
+            }
+
+            blobs.forEach(function (blob) {
+                setTimeout(function () {
+                    wander(blob);
+                }, 50);
+            });
         })();
     </script>
 </body>

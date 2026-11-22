@@ -128,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.135";
+    const APP_VERSION = "v2.8.136";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -749,6 +749,126 @@
       };
     };
 
+    const matchesLocalModel = (modelIds, modelName) => {
+      if (!Array.isArray(modelIds) || modelIds.length === 0) return false;
+      const trimmed = (modelName || '').trim();
+      if (!trimmed) return false;
+      return modelIds.some(id => id === trimmed || (!trimmed.includes(':') && id === `${trimmed}:latest`));
+    };
+
+    const parseLocalModelIds = (data) => {
+      const rawList = Array.isArray(data?.data) ? data.data
+        : Array.isArray(data?.models) ? data.models
+        : Array.isArray(data) ? data
+        : null;
+      if (!rawList) return null;
+      return rawList
+        .map(m => typeof m === 'string' ? m : (m?.id || m?.name || m?.model || ''))
+        .filter(Boolean);
+    };
+
+    const probeLocalChatEndpoint = async (endpointUrl, modelName, signal) => {
+      try {
+        const res = await fetch(endpointUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: modelName || '', messages: [] }),
+          signal
+        });
+        let data = null;
+        try { data = await res.json(); } catch {}
+        const errMsg = typeof data?.error === 'string'
+          ? data.error
+          : (data?.error?.message || data?.message || '');
+        if (res.ok && data && typeof data === 'object') {
+          return { endpointOk: true, modelOk: true };
+        }
+        if (res.status === 400 && data && typeof data === 'object') {
+          return { endpointOk: true, modelOk: !/\bmodel\b/i.test(errMsg) };
+        }
+        if (res.status === 404 && data && typeof data === 'object' && /\bmodel\b/i.test(errMsg)) {
+          return { endpointOk: true, modelOk: false };
+        }
+        return { endpointOk: false, modelOk: false };
+      } catch (e) {
+        if (e?.name === 'AbortError') throw e;
+        return { endpointOk: false, modelOk: false };
+      }
+    };
+
+    const verifyLocalModelConnection = async (endpoint, modelName, signal) => {
+      const trimmedEndpoint = (endpoint || '').trim().replace(/\/+$/, '');
+      const trimmedModel = (modelName || '').trim();
+      if (!trimmedEndpoint) return { endpointOk: false, modelOk: false, models: null };
+
+      let parsed;
+      try {
+        parsed = new URL(trimmedEndpoint);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return { endpointOk: false, modelOk: false, models: null };
+        }
+      } catch {
+        return { endpointOk: false, modelOk: false, models: null };
+      }
+
+      const isStandardChatPath = /\/chat\/completions$/i.test(parsed.pathname);
+      if (isStandardChatPath) {
+        const modelsUrl = trimmedEndpoint.replace(/\/chat\/completions$/i, '/models');
+        const tryFetchModels = async (url) => {
+          const res = await fetch(url, { method: 'GET', signal });
+          if (!res.ok) return null;
+          let data = null;
+          try { data = await res.json(); } catch { return null; }
+          return parseLocalModelIds(data);
+        };
+
+        try {
+          let modelIds = await tryFetchModels(modelsUrl);
+          if (modelIds === null && parsed.pathname.toLowerCase() === '/v1/chat/completions') {
+            // Fallback for older Ollama servers that expose /api/tags without /v1/models
+            try {
+              const tagsModels = await tryFetchModels(`${parsed.origin}/api/tags`);
+              if (tagsModels !== null) {
+                const chatCheck = await probeLocalChatEndpoint(trimmedEndpoint, trimmedModel, signal);
+                if (chatCheck.endpointOk) {
+                  modelIds = tagsModels;
+                }
+              }
+            } catch (e) {
+              if (e?.name === 'AbortError') throw e;
+            }
+          }
+
+          if (modelIds !== null) {
+            if (trimmedModel) {
+              return {
+                endpointOk: true,
+                modelOk: matchesLocalModel(modelIds, trimmedModel),
+                models: modelIds
+              };
+            }
+            if (modelIds.length === 0) {
+              return { endpointOk: true, modelOk: false, models: modelIds };
+            }
+            // Empty model name: check whether the server accepts a default model (e.g. LM Studio) or requires one (e.g. Ollama)
+            const probe = await probeLocalChatEndpoint(trimmedEndpoint, '', signal);
+            return {
+              endpointOk: true,
+              modelOk: probe.modelOk,
+              models: modelIds
+            };
+          }
+        } catch (e) {
+          if (e?.name === 'AbortError') throw e;
+          return { endpointOk: false, modelOk: false, models: null };
+        }
+      }
+
+      // Non-standard path or server without /models: probe the exact chat endpoint directly
+      const probe = await probeLocalChatEndpoint(trimmedEndpoint, trimmedModel, signal);
+      return { endpointOk: probe.endpointOk, modelOk: probe.modelOk, models: null };
+    };
+
 
     const extractUsageTokens = (result, fallbackInputText = '', fallbackOutputText = '') => {
       const usage = result?.usageMetadata;
@@ -1320,7 +1440,69 @@ CONVERSATIONAL & CONCISE WRITING RULES:
       const [tempAiProvider, setTempAiProvider] = useState('gemini');
       const [tempLocalEndpoint, setTempLocalEndpoint] = useState('http://localhost:1234/v1/chat/completions');
       const [tempLocalModel, setTempLocalModel] = useState('');
+      const [localCheck, setLocalCheck] = useState({ endpointOk: false, modelOk: false });
+      const localCheckCacheRef = useRef({ endpoint: '', models: null, endpointOk: false });
       const [tempTheme, setTempTheme] = useState('default');
+
+      // Live verification of local model endpoint & model name on every character change
+      useEffect(() => {
+        if (!showKeyModal || tempAiProvider !== 'local') {
+          localCheckCacheRef.current = { endpoint: '', models: null, endpointOk: false };
+          setLocalCheck({ endpointOk: false, modelOk: false });
+          return;
+        }
+
+        const trimmedEndpoint = (tempLocalEndpoint || '').trim().replace(/\/+$/, '');
+        const trimmedModel = (tempLocalModel || '').trim();
+        const cache = localCheckCacheRef.current;
+        const sameEndpoint = cache.endpoint !== '' && cache.endpoint === trimmedEndpoint;
+
+        if (!sameEndpoint) {
+          localCheckCacheRef.current = { endpoint: '', models: null, endpointOk: false };
+          setLocalCheck({ endpointOk: false, modelOk: false });
+        } else if (cache.endpointOk && Array.isArray(cache.models) && trimmedModel) {
+          setLocalCheck({
+            endpointOk: true,
+            modelOk: matchesLocalModel(cache.models, trimmedModel)
+          });
+        } else {
+          setLocalCheck({ endpointOk: cache.endpointOk, modelOk: false });
+        }
+
+        if (!trimmedEndpoint) return;
+
+        let cancelled = false;
+        const controller = new AbortController();
+        let timeoutId = null;
+        const debounceId = setTimeout(async () => {
+          timeoutId = setTimeout(() => controller.abort(), 3000);
+          try {
+            const result = await verifyLocalModelConnection(trimmedEndpoint, trimmedModel, controller.signal);
+            if (!cancelled) {
+              localCheckCacheRef.current = {
+                endpoint: trimmedEndpoint,
+                models: result.models,
+                endpointOk: result.endpointOk
+              };
+              setLocalCheck({ endpointOk: result.endpointOk, modelOk: result.modelOk });
+            }
+          } catch (e) {
+            if (!cancelled) {
+              localCheckCacheRef.current = { endpoint: '', models: null, endpointOk: false };
+              setLocalCheck({ endpointOk: false, modelOk: false });
+            }
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        }, 120);
+
+        return () => {
+          cancelled = true;
+          clearTimeout(debounceId);
+          clearTimeout(timeoutId);
+          controller.abort();
+        };
+      }, [showKeyModal, tempAiProvider, tempLocalEndpoint, tempLocalModel]);
 
       // PWA install + offline support
       const [installPromptEvent, setInstallPromptEvent] = useState(null);
@@ -6458,7 +6640,10 @@ ${finalExpandedBlocks.join('\n\n')}`
                     <div className="mt-3 space-y-2.5 bg-[var(--bg-main)] p-3 rounded border border-[var(--border)]">
                       <div>
                         <label className="text-[10px] font-bold text-[var(--text-main)] font-mono block mb-1">
-                          <i className="fa-solid fa-plug text-[var(--accent)] text-[9px] mr-1"></i>
+                          <i
+                            className={`fa-solid fa-plug ${localCheck.endpointOk ? 'text-emerald-500' : 'text-[var(--accent)]'} text-[9px] mr-1 transition-colors`}
+                            title={localCheck.endpointOk ? 'Connected to local endpoint' : 'Local endpoint not connected'}
+                          ></i>
                           Endpoint URL
                         </label>
                         <input
@@ -6474,7 +6659,10 @@ ${finalExpandedBlocks.join('\n\n')}`
                       </div>
                       <div>
                         <label className="text-[10px] font-bold text-[var(--text-main)] font-mono block mb-1">
-                          <i className="fa-solid fa-brain text-[var(--accent)] text-[9px] mr-1"></i>
+                          <i
+                            className={`fa-solid fa-brain ${localCheck.modelOk ? 'text-emerald-500' : 'text-[var(--accent)]'} text-[9px] mr-1 transition-colors`}
+                            title={localCheck.modelOk ? 'Model connected on local server' : 'Model not found on local server'}
+                          ></i>
                           Model Name
                         </label>
                         <input

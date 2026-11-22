@@ -140,7 +140,7 @@ The AI Assistant lets you chat with either a single open note or your broader kn
 
 ## 9. Settings & Workspace Management
 
-- **AI Provider Selection:** Choose between **Gemini API** (Google's cloud models) or **Local Model** (any OpenAI-compatible endpoint like LM Studio, Ollama, or llama.cpp). Local models run entirely on your machine — no API key or internet required. When using a local provider, enter your server's endpoint URL (e.g. `http://localhost:1234/v1/chat/completions`) and optionally specify a model name. Web search and PDF ingestion remain Gemini-only features.
+- **AI Provider Selection:** Choose between **Gemini API** (Google's cloud models) or **Local Model** (any OpenAI-compatible endpoint like LM Studio, Ollama, or llama.cpp). Local models run entirely on your machine — no API key or internet required. When using a local provider, enter your server's endpoint URL (e.g. `http://localhost:1234/v1/chat/completions`) and optionally specify a model name; both fields are verified live as you type, turning their heading icons green when connected instead of red. Web search and PDF ingestion remain Gemini-only features.
 - **API Key Management:** Store and rotate multiple Google Gemini API keys to distribute usage across quotas.
 - **Task-Specific Model Assignment:** Assign distinct Gemini models for Metadata & Summaries, Theme Prompts, and AI Assistant Copilot (Gemini-only).
 - **AI Instructions & User Context:** Customize system instructions and inject personal profile background:

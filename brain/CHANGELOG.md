@@ -1,11 +1,13 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.135** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.136** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.135 (2026-11-09) — *Latest*
+## v2.8.136 (2026-11-22) — *Latest*
+
+- **Live Local Model Endpoint & Model Verification:** Settings now verify the Local Model **Endpoint URL** and **Model Name** live after every character change (with automatic request cancellation and model-list validation against `/models` / `/api/tags`, plus Ollama `:latest` and server-default handling). The plug icon on the **Endpoint URL** heading and brain icon on the **Model Name** heading turn green when connected instead of red.
 
 - **Single Entry Chat Fix for Local Models:** Fixed single entry AI Assistant chat returning "Done." for local models (Ollama, LM Studio, etc.). Lightweight local models couldn't follow the complex JSON schema instructions used by Gemini, so they'd just echo back placeholder text. Local models now use a simplified plain-text system prompt without JSON schema wrapping, producing proper conversational responses. Gemini retains the full on-demand content escalation pipeline.
 
