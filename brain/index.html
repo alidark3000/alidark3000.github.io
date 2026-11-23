@@ -128,7 +128,7 @@
     //      round two-digit entry (e.g. "v2.8").
     // 3. Update README.md and readme.html to reflect the modified functionality.
     // =========================================================================
-    const APP_VERSION = "v2.8.136";
+    const APP_VERSION = "v2.8.137";
 
     const isMediaSource = (url) => {
       if (!url) return false;
@@ -613,7 +613,7 @@
       return raw;
     }
 
-    async function verifyPermission(fileHandle, readWrite) {
+    async function verifyPermission(fileHandle, readWrite, allowPrompt = true) {
       if (!fileHandle) return false;
       if (fileHandle.isBridgeHandle) {
         const status = await checkSafariBridgeStatus(fileHandle.path);
@@ -621,6 +621,10 @@
       }
       const options = { mode: readWrite ? 'readwrite' : 'read' };
       if ((await fileHandle.queryPermission(options)) === 'granted') return true;
+      if (!allowPrompt) return false;
+      if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.isActive) {
+        return false;
+      }
       if ((await fileHandle.requestPermission(options)) === 'granted') return true;
       return false;
     }
@@ -2155,7 +2159,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
             if (handle) {
               setSavedHandle(handle);
               try {
-                const loaded = await loadWorkspaceData(handle);
+                const loaded = await loadWorkspaceData(handle, { allowPermissionPrompt: false });
                 if (!loaded && isMounted) {
                   setAppState('landing');
                 }
@@ -2970,10 +2974,10 @@ CONVERSATIONAL & CONCISE WRITING RULES:
         };
       };
 
-      const loadWorkspaceData = async (rawHandle) => {
+      const loadWorkspaceData = async (rawHandle, { allowPermissionPrompt = true } = {}) => {
         try {
           const handle = hydrateFileHandle(rawHandle);
-          const hasPerm = await verifyPermission(handle, true);
+          const hasPerm = await verifyPermission(handle, true, allowPermissionPrompt);
           if (!hasPerm) {
             setAppState('landing');
             return false;
@@ -3053,6 +3057,7 @@ CONVERSATIONAL & CONCISE WRITING RULES:
           if (typeof idbKeyval !== 'undefined') {
             await idbKeyval.set('kb_file_handle', serializeFileHandleForStorage(handle));
           }
+          setError(null);
           setAppState('workspace');
           return true;
         } catch (err) {
@@ -3063,7 +3068,10 @@ CONVERSATIONAL & CONCISE WRITING RULES:
         }
       };
 
-      const handleResume = () => loadWorkspaceData(savedHandle);
+      const handleResume = () => {
+        setError(null);
+        return loadWorkspaceData(savedHandle);
+      };
 
       const handleOpenFile = async () => {
         setError(null);

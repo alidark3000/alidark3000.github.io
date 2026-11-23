@@ -1,11 +1,13 @@
 # Ali Brain • Release Notes & Changelog
 
 > **Local-First Autonomous Personal Knowledge Base**  
-> Current Version: **v2.8.136** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
+> Current Version: **v2.8.137** • [Online App](index.html) • [System Manual](readme.html) • [HTML Changelog](changelog.html)
 
 ---
 
-## v2.8.136 (2026-11-22) — *Latest*
+## v2.8.137 (2026-11-22) — *Latest*
+
+- **Startup File Permission & Stale Error Modal Fix:** Fixed a `SecurityError` (`User activation is required to request permissions`) on initial app load when the browser hasn't persisted write permission for the recent JSON file handle. Auto-load now checks `queryPermission` without calling `requestPermission` in the background, falling back cleanly to the landing screen so the user can click Resume with a user gesture. Also cleared stale open-workspace errors on resume and successful load so a previous notice modal never lingers over the loaded workspace.
 
 - **Live Local Model Endpoint & Model Verification:** Settings now verify the Local Model **Endpoint URL** and **Model Name** live after every character change (with automatic request cancellation and model-list validation against `/models` / `/api/tags`, plus Ollama `:latest` and server-default handling). The plug icon on the **Endpoint URL** heading and brain icon on the **Model Name** heading turn green when connected instead of red.
 
